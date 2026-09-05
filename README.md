@@ -1,5 +1,7 @@
 # Flatts's Things
 
+**Status:** v0.1.0, unreleased. One family shipped and verified in-world. Last reviewed 2026-09-05.
+
 A grab bag of blocks, tools and small features that vanilla Minecraft never shipped.
 
 There is no tech tree here and nothing gates anything else. Each thing stands on its own, which
@@ -56,6 +58,7 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Regenerate plate resources (textures, models, recipes, tags, lang) | `python tools/generate_plates.py` |
 | Build the dev world (once) | `python tools/make_dev_world.py` |
 | Check for banned dashes | `python tools/check_dashes.py` |
+| Check docs carry a dated status banner | `python tools/check_docs.py` |
 | Screenshot every plate beside its vanilla counterpart | `./gradlew runClient`, then `python tools/shoot_plates.py` |
 
 **Never pipe gradle to `tail` or `head` and trust the exit code.** The pipe reports the pager's

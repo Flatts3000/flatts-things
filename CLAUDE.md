@@ -7,8 +7,14 @@ repository.
 9.5.1 via moddev 2.0.141. A grab bag of blocks, tools and small features vanilla never shipped. Mod
 id / package: `flattsthings` / `com.flatts.flattsthings`.
 
-**Status:** v0.1.0. One family shipped, the **Player Pressure Plates**: a player-only counterpart to
-each of the fourteen vanilla `PressurePlateBlock`s (`docs/player_pressure_plate_spec.md`).
+**Status:** v0.1.0, unreleased. One family shipped, the **Player Pressure Plates**: a player-only
+counterpart to each of the fourteen vanilla `PressurePlateBlock`s
+(`docs/player_pressure_plate_spec.md`), verified in-world. Last reviewed 2026-09-05.
+
+**Open questions awaiting a ruling:** the recipe gate (#6), whether fake players press the plate
+(#7), furnace-fuel parity on the wooden variants (#8), and whether to adopt texgen (#9). Everything
+those four touch is an assumption in this repo, not a decision, and is marked as such where it
+appears.
 
 ## Build and test
 
@@ -179,6 +185,28 @@ two real defects that a green suite hid.
   copied from - so the two agreed by construction. **An expectation taken from the thing under test
   is not a test.** It now resolves the expected block from the material name through the registry.
 - The generator's determinism was documented before it was true (see above).
+
+## Writing things down
+
+**Every markdown file opens with a dated `**Status:**` banner**, and `tools/check_docs.py` fails the
+build if one is missing or older than 180 days. That is the house convention from all four sibling
+repos, and it exists because undated claims decay silently: recompile's own GitHub description still
+reads "Design phase, no code yet" at v0.18.0, and its CLAUDE.md claims a branch protection rule the
+repo does not have.
+
+**Date decisions inline, in the house form** - `(owner, 2026-09-05)` - directly after the sentence they
+settle.
+
+**Annotate superseded reasoning, do not delete it.** When a decision is overturned, the old argument
+stays and is marked wrong, the way recompile's `market_spec.md` says a prior invariant "was true...
+until now, and anything reasoning from it is reasoning from a fact that has expired". A doc that
+silently rewrites itself teaches nobody why the change happened, and the next person re-derives the
+rejected option from scratch.
+
+**Distrust this file's own lists.** It has already been wrong three times in one day: it claimed
+there were no JUnit tests when there were five, pointed at a `tools/make_textures.py` that had been
+renamed, and asserted the generator was deterministic before it was. Derive a set from the code when
+you can; a sentence that reads as complete is the failure mode.
 
 ## House style, enforced
 
