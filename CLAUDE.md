@@ -267,7 +267,9 @@ Not chased, because `tick freeze` stops time, weather and every other tick anywa
 
 ## Releasing
 
-CurseForge project **1683375**, slug `flatts-things`. Nothing has been published yet.
+CurseForge project **1683375**, slug `flatts-things`. **v0.1.0 was uploaded on 2026-09-05 and is
+Under Review.** A new project is invisible and its files do not synchronize until a moderator
+approves it, so an upload is not yet a release.
 
 ```bash
 JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew publishCurseForge
@@ -284,8 +286,13 @@ Before running it:
 3. Put `CURSEFORGE_API_KEY=<token>` in `.env` at the repo root. It is gitignored; see `.env.example`.
    The task also accepts the env var or a `cfApiToken` gradle property. Without any of them it throws
    before uploading anything.
-4. Refresh the gallery if the visuals changed: `python tools/shoot_gallery.py --promote`, and paste
-   `docs/curseforge_page.md` to the listing.
+4. Refresh the gallery if the visuals changed: `python tools/shoot_gallery.py --promote`.
+
+**Two parts of a release the API cannot do, so they are manual every time.** The upload API takes a
+file and its changelog and nothing else: the **description** and the **gallery images** are console
+work. Paste `docs/curseforge_page.md` into Description, and drag `docs/cf_image_gallery/*.png` into
+Media. Sky Frogs has the same shape of problem with its server-pack flag and solves it by writing the
+manual step into the checklist rather than hoping somebody remembers.
 
 **The publish task is registered conditionally and that is load-bearing rather than tidy.**
 CurseForgeGradle resolves the project id while *configuring* the task, so registering it

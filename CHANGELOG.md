@@ -1,8 +1,8 @@
 # Changelog
 
-**Status:** current, reviewed 2026-09-05. v0.1.0 is written but **not published anywhere yet**.
-CurseForge project 1683375 exists and `./gradlew publishCurseForge` is wired; no file has been
-uploaded.
+**Status:** current, reviewed 2026-09-05. **v0.1.0 was uploaded to CurseForge on 2026-09-05 and is
+Under Review.** A new project is not visible to anyone and its files do not synchronize across
+CurseForge until a moderator approves it, so this is uploaded rather than released.
 
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
