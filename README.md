@@ -10,19 +10,25 @@ entry.
 
 ## What's in it
 
-### Player Pressure Plate
+### Player Pressure Plates
 
-A pressure plate only a player can press.
+A player-only counterpart to every vanilla pressure plate. Fourteen of them, one per vanilla plate,
+each crafted shapelessly from that plate plus an ender pearl.
 
 Vanilla ships two sensitivities and neither is this one. A wooden plate fires for any entity, so an
 arrow you shot at it opens your door. A stone plate fires for any living entity, so a wandering cow
 does. Neither can say "a player, and nothing else", which is what a door, a shop counter or a
 trapped corridor actually wants.
 
-Everything else about it is vanilla on purpose: the same 20-tick hold, the same click sounds, the
-same redstone output of 15, the same look on the floor. The sensitivity is the whole feature.
+Each variant is its vanilla counterpart in every respect but that: same hardness, map colour, note
+block instrument, flammability, click sounds, 20-tick hold, redstone output of 15, and the same
+vanilla tags, so a wooden one is still axe-mineable and a stone one still pickaxe-mineable.
+Properties are copied from the vanilla block rather than restated, so they cannot drift. The texture is the one
+visible difference, carrying a small figure so you can tell the two apart on the floor.
 
-Craft it from a stone pressure plate and an ender pearl.
+The two **weighted** plates have no counterpart. `light_weighted_pressure_plate` and
+`heavy_weighted_pressure_plate` are a different block that counts dropped item stacks and outputs a
+proportional signal; "player-only" has no meaning for a block whose whole job is weighing items.
 
 ## Build and test
 
@@ -40,7 +46,7 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | In-world GameTests (the real test layer) | `./gradlew runGameTestServer` |
 | Dev client | `./gradlew runClient` |
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
-| Regenerate block textures | `python tools/make_textures.py` |
+| Regenerate plate resources (textures, models, recipes, lang) | `python tools/generate_plates.py` |
 
 **Never pipe gradle to `tail` or `head` and trust the exit code.** The pipe reports the pager's
 status (0) and masks a Gradle failure. Redirect to a file and check `$?`, or use `PIPESTATUS`.

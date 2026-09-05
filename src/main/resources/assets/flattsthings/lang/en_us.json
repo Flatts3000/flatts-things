@@ -1,5 +1,17 @@
 {
   "itemGroup.flattsthings": "Flatts's Things",
-
-  "block.flattsthings.player_pressure_plate": "Player Pressure Plate"
+  "block.flattsthings.stone_player_pressure_plate": "Stone Player Pressure Plate",
+  "block.flattsthings.polished_blackstone_player_pressure_plate": "Polished Blackstone Player Pressure Plate",
+  "block.flattsthings.oak_player_pressure_plate": "Oak Player Pressure Plate",
+  "block.flattsthings.spruce_player_pressure_plate": "Spruce Player Pressure Plate",
+  "block.flattsthings.birch_player_pressure_plate": "Birch Player Pressure Plate",
+  "block.flattsthings.jungle_player_pressure_plate": "Jungle Player Pressure Plate",
+  "block.flattsthings.acacia_player_pressure_plate": "Acacia Player Pressure Plate",
+  "block.flattsthings.cherry_player_pressure_plate": "Cherry Player Pressure Plate",
+  "block.flattsthings.dark_oak_player_pressure_plate": "Dark Oak Player Pressure Plate",
+  "block.flattsthings.pale_oak_player_pressure_plate": "Pale Oak Player Pressure Plate",
+  "block.flattsthings.mangrove_player_pressure_plate": "Mangrove Player Pressure Plate",
+  "block.flattsthings.bamboo_player_pressure_plate": "Bamboo Player Pressure Plate",
+  "block.flattsthings.crimson_player_pressure_plate": "Crimson Player Pressure Plate",
+  "block.flattsthings.warped_player_pressure_plate": "Warped Player Pressure Plate"
 }

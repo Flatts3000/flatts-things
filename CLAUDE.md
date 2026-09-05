@@ -6,7 +6,8 @@ repository.
 **What this is:** a standalone **NeoForge** mod (MC 26.1.2). A grab bag of blocks, tools and small
 features that vanilla never shipped. Mod id / package: `flattsthings` / `com.flatts.flattsthings`.
 
-**Status:** v0.1.0. One block shipped, the **Player Pressure Plate** (`docs/player_pressure_plate_spec.md`).
+**Status:** v0.1.0. One family shipped, the **Player Pressure Plates**: a player-only counterpart to
+each of the fourteen vanilla `PressurePlateBlock`s (`docs/player_pressure_plate_spec.md`).
 
 ## The shape of this mod, and what follows from it
 
@@ -15,10 +16,25 @@ its main risk: with no progression to hide behind, each addition is judged alone
 as good as its worst entry. A thing earns its place by being something vanilla should plausibly have
 and does not.
 
-**Prefer vanilla parity everywhere except the one thing that is the feature.** The Player Pressure
-Plate keeps vanilla's hold time, sounds, signal strength, block properties and silhouette, and
-changes only the sensitivity. A player should be able to guess how a thing behaves from the vanilla
-block it resembles, and be right about everything except the part that is new.
+**Prefer vanilla parity everywhere except the one thing that is the feature.** The player plates keep
+vanilla's hold time, sounds, signal strength, block properties and silhouette, and change only the
+sensitivity. A player should be able to guess how a thing behaves from the vanilla block it
+resembles, and be right about everything except the part that is new.
+
+**Copy vanilla properties, do not restate them.** `FTBlocks.propertiesOf` uses
+`Properties.ofLegacyCopy(vanillaBlock)`. Restating fourteen property chains by hand is how a variant
+ends up subtly wrong, and the traps are not where you would guess - crimson and warped are the two
+woods that are NOT `ignitedByLava`. Use `ofLegacyCopy`, never `ofFullCopy`: the full copy also
+carries `drops` and `descriptionId`, so the block would roll the VANILLA loot table under the
+VANILLA name, and both failures read as data problems rather than code ones.
+
+**When a thing comes in variants, the list will exist twice** - once in Java, once in
+`tools/plate_variants.py` - and that is accepted rather than engineered away, because the two sides
+need different data. It is safe only because two tests close the loop:
+`every_vanilla_pressure_plate_has_a_player_counterpart` catches a variant missing from the JAVA side
+by walking the registry rather than the list, and `RegistryCompletenessTests` catches one missing
+from the GENERATOR side by finding a registered block with no files. Add a variant kind without
+both, and the next one silently half-ships.
 
 **Growth is by accretion, so the completeness sweep is load-bearing.**
 `gametest/RegistryCompletenessTests` asserts every registered item and block has a translated name, a
@@ -42,7 +58,7 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | In-world GameTests (the real test layer) | `./gradlew runGameTestServer` |
 | Dev client | `./gradlew runClient` |
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
-| Regenerate block textures | `python tools/make_textures.py` |
+| Regenerate plate resources (textures, models, recipes, lang) | `python tools/generate_plates.py` |
 
 **Never pipe gradle to `tail`/`head` and trust the exit code** - the pipe reports the pager's status
 (0) and masks a Gradle failure. Redirect to a file and check `$?`, or use `PIPESTATUS`.
@@ -72,9 +88,13 @@ movement. A mock server player is not driven by client packets and a `spawnWithN
 not wander, so waiting for either to step on a plate is a test that passes by timing out. Call
 `entityInside` directly with a real entity positioned in a real level.
 
-**Drive a new test RED before trusting it.** The plate suite was verified by swapping `Player.class`
-for `Entity.class` in the block: exactly the two feature assertions failed and both controls stayed
-green. A suite that has never failed is not evidence.
+**Drive a new test RED before trusting it, and mean it.** This is not a formality here; it has already
+paid twice. Swapping `Player.class` for `Entity.class` in the block failed exactly the two feature
+assertions and left both controls green, as intended. But the vanilla-parity sweep PASSED when a
+variant was deliberately pointed at the wrong vanilla block, because it compared each plate against
+`variant.vanilla()` - the same field its properties were copied from - so the two agreed by
+construction. **An expectation taken from the thing under test is not a test.** It now resolves the
+expected block from the material name via the registry, and fails as it should.
 
 ## 26.1 API notes worth keeping
 

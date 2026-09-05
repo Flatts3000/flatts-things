@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/pressure_plate_down",
+  "textures": {
+    "texture": "flattsthings:block/cherry_player_pressure_plate"
+  }
+}

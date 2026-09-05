@@ -26,10 +26,10 @@ public final class FTCreativeTabs {
             "flattsthings",
             () -> CreativeModeTab.builder()
                 .title(Component.translatable("itemGroup.flattsthings"))
-                .icon(() -> FTItems.PLAYER_PRESSURE_PLATE.get().getDefaultInstance())
+                .icon(() -> FTItems.PLATES.get("stone").get().getDefaultInstance())
                 .displayItems((parameters, output) -> {
-                    // --- Redstone ---
-                    output.accept(FTItems.PLAYER_PRESSURE_PLATE.get());
+                    // --- Redstone: the player pressure plates, in vanilla's material order ---
+                    FTItems.PLATES.values().forEach(plate -> output.accept(plate.get()));
                 })
                 .build());
 

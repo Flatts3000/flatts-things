@@ -6,7 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "flattsthings:player_pressure_plate"
+          "name": "flattsthings:polished_blackstone_player_pressure_plate"
         }
       ],
       "conditions": [

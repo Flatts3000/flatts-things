@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "redstone",
+  "ingredients": [
+    "minecraft:acacia_pressure_plate",
+    "minecraft:ender_pearl"
+  ],
+  "result": {
+    "id": "flattsthings:acacia_player_pressure_plate",
+    "count": 1
+  }
+}
