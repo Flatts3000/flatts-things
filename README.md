@@ -26,6 +26,10 @@ vanilla tags, so a wooden one is still axe-mineable and a stone one still pickax
 Properties are copied from the vanilla block rather than restated, so they cannot drift. The texture is the one
 visible difference, carrying a small figure so you can tell the two apart on the floor.
 
+![Every player pressure plate beside its vanilla counterpart](docs/img/plates_comparison.png)
+
+Front to back: the pressed state, the player plates, and the vanilla plates they are made from.
+
 The two **weighted** plates have no counterpart. `light_weighted_pressure_plate` and
 `heavy_weighted_pressure_plate` are a different block that counts dropped item stacks and outputs a
 proportional signal; "player-only" has no meaning for a block whose whole job is weighing items.
@@ -49,7 +53,9 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Merged coverage, both layers | `./gradlew test runGameTestServer -PgameTestCoverage coverageReport` |
 | Dev client | `./gradlew runClient` |
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
-| Regenerate plate resources (textures, models, recipes, lang) | `python tools/generate_plates.py` |
+| Regenerate plate resources (textures, models, recipes, tags, lang) | `python tools/generate_plates.py` |
+| Build the dev world (once) | `python tools/make_dev_world.py` |
+| Screenshot every plate beside its vanilla counterpart | `./gradlew runClient`, then `python tools/shoot_plates.py` |
 
 **Never pipe gradle to `tail` or `head` and trust the exit code.** The pipe reports the pager's
 status (0) and masks a Gradle failure. Redirect to a file and check `$?`, or use `PIPESTATUS`.
