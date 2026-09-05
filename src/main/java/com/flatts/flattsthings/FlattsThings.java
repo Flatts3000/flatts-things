@@ -1,6 +1,7 @@
 package com.flatts.flattsthings;
 
 import com.flatts.flattsthings.gametest.FTGameTests;
+import com.flatts.flattsthings.registry.FTAttachments;
 import com.flatts.flattsthings.registry.FTBlocks;
 import com.flatts.flattsthings.registry.FTCreativeTabs;
 import com.flatts.flattsthings.registry.FTItems;
@@ -28,6 +29,10 @@ public final class FlattsThings {
         FTBlocks.register(modEventBus);
         FTItems.register(modEventBus);
         FTCreativeTabs.register(modEventBus);
+
+        // Per-player storage. Independent of the block registries above, so its position here is
+        // convention rather than a constraint.
+        FTAttachments.register(modEventBus);
 
         // In-world GameTests (the CI gameTest job runs these).
         FTGameTests.register(modEventBus);
