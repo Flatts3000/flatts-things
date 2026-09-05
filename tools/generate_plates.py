@@ -185,8 +185,18 @@ def generate(v: Variant) -> None:
     })
 
 
+# Keys that are not per-variant. The generator owns en_us.json wholesale, so anything hand-added to
+# that file is silently erased on the next run - which is exactly the kind of quiet loss the rest of
+# this repo is built to prevent. New non-plate strings go here.
+STATIC_LANG = {
+    "itemGroup.flattsthings": "Flatts's Things",
+    "container.flattsthings.tool_slots": "Tool Slots",
+    "key.flattsthings.tool_slots": "Open Tool Slots",
+}
+
+
 def write_lang() -> None:
-    entries = {"itemGroup.flattsthings": "Flatts's Things"}
+    entries = dict(STATIC_LANG)
     for v in VARIANTS:
         entries[f"block.{NS}.{block_id(v)}"] = f"{v.display} Player Pressure Plate"
     write_json(ASSETS / "lang/en_us.json", entries)

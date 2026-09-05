@@ -73,6 +73,13 @@ merged line rate at the 80 percent floor.
 
 So run it as one invocation: `./gradlew test runGameTestServer -PgameTestCoverage coverageReport`.
 
+**The report and the gate measure different sets on purpose.** `client/**` never loads on the server
+the tests run on, so no GameTest and no JUnit test can reach a line of it. The report counts it
+anyway, because hiding it would make the headline look better while removing the evidence that those
+lines have no automated coverage at all. `coverageVerification` excludes it, because a floor that
+fails for reasons nobody can act on is a floor people learn to bypass. The gap between the two
+figures is exactly the client surface, and the only thing that closes it is looking at the screen.
+
 ### Checking an API against the real 26.1 source
 
 After any build, the decompiled game sources sit at
@@ -324,6 +331,26 @@ The `else` branch registers a task that explains what to set.
   will not find it.
 - **A block's tags** come from `BuiltInRegistries.BLOCK.wrapAsHolder(block).tags()`; there is no
   `getTags()` on `BlockBehaviour`.
+
+### The client and networking layer moved a long way in 26.1
+
+Anything written against an older version will not compile, and the renames are not guessable. All of
+these were found by reading the 26.1 sources after the obvious version failed.
+
+| Older API | 26.1 |
+| --- | --- |
+| `GuiGraphics` | `GuiGraphicsExtractor`. The whole render path is an "extract" model now |
+| `Screen.renderBg(...)` | `Screen.extractBackground(GuiGraphicsExtractor, int, int, float)` |
+| `this.imageWidth = 176` in the body | **final**; pass through `super(menu, inventory, title, width, height)` |
+| `new KeyMapping(name, type, key, "key.categories.inventory")` | takes a `KeyMapping.Category`, e.g. `KeyMapping.Category.INVENTORY` |
+| `@EventBusSubscriber(bus = Bus.MOD)` | no `bus` argument at all; routing is by event type |
+| `PacketDistributor.sendToServer(...)` | `ClientPacketDistributor.sendToServer(...)`; `PacketDistributor` is server-to-client only |
+| `IMenuTypeExtension.create(Menu::new)` | the factory is `IContainerFactory`, three arguments including a `RegistryFriendlyByteBuf` |
+
+**Screens here are painted, not textured.** `graphics.fill(...)` for the panel in vanilla's palette,
+and `graphics.blitSprite(RenderPipelines.GUI_TEXTURED, Identifier.withDefaultNamespace("container/slot"), ...)`
+for the slots. That inherits the vanilla look exactly and ships no art asset that a resource pack
+could leave stranded.
 
 ## The commit trailers, and why the first four lack them
 

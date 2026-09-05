@@ -1,5 +1,7 @@
 {
   "itemGroup.flattsthings": "Flatts's Things",
+  "container.flattsthings.tool_slots": "Tool Slots",
+  "key.flattsthings.tool_slots": "Open Tool Slots",
   "block.flattsthings.stone_player_pressure_plate": "Stone Player Pressure Plate",
   "block.flattsthings.polished_blackstone_player_pressure_plate": "Polished Blackstone Player Pressure Plate",
   "block.flattsthings.oak_player_pressure_plate": "Oak Player Pressure Plate",

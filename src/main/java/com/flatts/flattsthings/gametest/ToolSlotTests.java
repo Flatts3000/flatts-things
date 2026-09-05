@@ -1,6 +1,8 @@
 package com.flatts.flattsthings.gametest;
 
 import com.flatts.flattsthings.content.ToolSlots;
+import com.flatts.flattsthings.content.ToolSlotsContainer;
+import com.flatts.flattsthings.content.menu.ToolSlotsMenu;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -104,6 +106,108 @@ final class ToolSlotTests {
             }
             helper.assertTrue(threw, "putting cobblestone in a tool slot must be refused loudly");
             helper.assertTrue(ToolSlots.of(player).isEmpty(), "the refused item must not have landed");
+            helper.succeed();
+        });
+
+        // ---------------- the menu (slice two) ----------------
+
+        FTGameTests.test("the_menu_exposes_the_slots_plus_the_player_inventory", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
+            int expected = ToolSlots.SIZE + 36;
+            helper.assertTrue(menu.slots.size() == expected,
+                "expected " + expected + " slots, got " + menu.slots.size());
+            helper.succeed();
+        });
+
+        // mayPlace is what actually guards a tool slot during play. The container deliberately does
+        // not re-check, so if this were wrong nothing else would stop cobblestone going in.
+        FTGameTests.test("a_tool_slot_refuses_a_non_tool_through_the_menu", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
+            helper.assertTrue(menu.slots.get(0).mayPlace(new ItemStack(Items.DIAMOND_PICKAXE)),
+                "a pickaxe must be allowed in a tool slot");
+            helper.assertFalse(menu.slots.get(0).mayPlace(new ItemStack(Items.COBBLESTONE)),
+                "cobblestone must be refused by the slot itself");
+            helper.succeed();
+        });
+
+        FTGameTests.test("a_tool_slot_holds_only_one", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
+            helper.assertTrue(menu.slots.get(0).getMaxStackSize() == 1,
+                "a tool slot holds one, got " + menu.slots.get(0).getMaxStackSize());
+            helper.succeed();
+        });
+
+        // Shift-clicking a tool out of the inventory should land it in a tool slot, and the change
+        // must reach the attachment rather than only the menu's working copy.
+        FTGameTests.test("shift_clicking_a_tool_moves_it_into_a_slot", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));
+            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
+
+            int hotbarSlot = ToolSlots.SIZE + 27;
+            menu.quickMoveStack(player, hotbarSlot);
+
+            helper.assertTrue(ToolSlots.get(player, 0).is(Items.DIAMOND_AXE),
+                "the axe should now be in tool slot 0, found " + ToolSlots.get(player, 0).getItem());
+            helper.assertTrue(player.getInventory().getItem(0).isEmpty(),
+                "the axe should have left the hotbar");
+            helper.succeed();
+        });
+
+        FTGameTests.test("shift_clicking_a_tool_out_returns_it_to_the_inventory", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlots.set(player, 0, new ItemStack(Items.IRON_HOE));
+            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
+
+            menu.quickMoveStack(player, 0);
+
+            helper.assertTrue(ToolSlots.get(player, 0).isEmpty(),
+                "the hoe should have left the tool slot");
+            helper.assertTrue(player.getInventory().contains(new ItemStack(Items.IRON_HOE)),
+                "the hoe should be back in the inventory");
+            helper.succeed();
+        });
+
+        // The Container methods vanilla calls during dragging and dropping. They were written and
+        // never exercised, which the coverage gate is what noticed.
+        FTGameTests.test("the_container_removes_takes_and_clears", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlotsContainer container = new ToolSlotsContainer(player);
+            helper.assertTrue(container.isEmpty(), "a fresh container is empty");
+            helper.assertTrue(container.getContainerSize() == ToolSlots.SIZE,
+                "the container is the size of the slot set");
+
+            container.setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
+            helper.assertFalse(container.isEmpty(), "it is not empty once something is in it");
+            helper.assertTrue(ToolSlots.get(player, 0).is(Items.DIAMOND_PICKAXE),
+                "setItem must reach the attachment, not only the working copy");
+
+            ItemStack removed = container.removeItem(0, 1);
+            helper.assertTrue(removed.is(Items.DIAMOND_PICKAXE),
+                "removeItem returns what it took, got " + removed.getItem());
+            helper.assertTrue(ToolSlots.get(player, 0).isEmpty(), "the removal reached the attachment");
+
+            container.setItem(1, new ItemStack(Items.IRON_AXE));
+            ItemStack taken = container.removeItemNoUpdate(1);
+            helper.assertTrue(taken.is(Items.IRON_AXE), "removeItemNoUpdate returns the stack");
+
+            container.setItem(2, new ItemStack(Items.SHEARS));
+            container.clearContent();
+            helper.assertTrue(container.isEmpty(), "clearContent empties it");
+            helper.assertTrue(ToolSlots.of(player).isEmpty(), "and that reaches the attachment too");
+            helper.succeed();
+        });
+
+        // stillValid is what stops a menu surviving into somebody else's hands.
+        FTGameTests.test("the_container_belongs_to_one_player", 20, helper -> {
+            ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+            ServerPlayer other = helper.makeMockServerPlayerInLevel();
+            ToolSlotsContainer container = new ToolSlotsContainer(owner);
+            helper.assertTrue(container.stillValid(owner), "the owner may use it");
+            helper.assertFalse(container.stillValid(other), "nobody else may");
             helper.succeed();
         });
 

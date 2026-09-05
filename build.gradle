@@ -36,6 +36,24 @@ ext.COVERAGE_EXCLUDES = [
     'com/flatts/flattsthings/gametest/**',
 ]
 
+/**
+ * What the GATE additionally ignores, and why it is not the same list as the report's.
+ *
+ * <p>`client/**` never loads on the server the tests run on, so no GameTest and no JUnit test can
+ * reach a line of it however well written. Counting it in a hard floor does not measure test
+ * quality, it measures how much client code exists, and a gate that fails for reasons nobody can
+ * act on is a gate people learn to bypass.
+ *
+ * <p><b>The REPORT still counts it, deliberately.</b> Hiding client code there would make the
+ * headline number look better while removing the evidence that those lines have no automated
+ * coverage at all. So the report is the honest figure and the gate is the actionable one, and the
+ * gap between them is the client surface. Recompile draws the same line and argues the subtraction
+ * in a doc rather than in its build file.
+ */
+ext.COVERAGE_GATE_EXCLUDES = COVERAGE_EXCLUDES + [
+    'com/flatts/flattsthings/client/**',
+]
+
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
@@ -345,7 +363,7 @@ tasks.register('coverageVerification', JacocoCoverageVerification) {
     ).filter { it.exists() })
     sourceDirectories.setFrom(files('src/main/java'))
     classDirectories.setFrom(files(sourceSets.main.output.classesDirs.files.collect {
-        fileTree(dir: it, exclude: COVERAGE_EXCLUDES)
+        fileTree(dir: it, exclude: COVERAGE_GATE_EXCLUDES)
     }))
     violationRules {
         rule {
