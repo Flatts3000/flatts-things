@@ -123,10 +123,25 @@ catches a variant missing from the JAVA side, and `RegistryCompletenessTests` ca
 from the GENERATOR side by finding a registered block with no files. Add a new variant *kind* without
 both, and the next one silently half-ships.
 
-**Generated resources are committed, and the generator must stay deterministic.** Re-running
-`tools/generate_plates.py` has to produce an empty diff. It did not at first: the seed came from
-`hash(material)`, and Python salts string hashing per interpreter run, so every invocation redrew all
-fourteen textures. Run it twice and diff before believing otherwise.
+**Generated resources are committed, and the generator must stay deterministic** - but be precise
+about which determinism, because two claims live here and only one is true.
+
+**Seed determinism is real and enforced.** The seed once came from `hash(material)`, and Python salts
+string hashing per interpreter run, so every invocation redrew all fourteen textures.
+`tools/test_generate_plates.py` runs the generator twice in separate processes under different
+`PYTHONHASHSEED` values and compares bytes. The separate processes are the whole point: a
+same-process double-run shares one hash salt and would have passed against the original bug.
+
+**Cross-machine PNG byte equality is NOT true and is not worth chasing.** Pillow and zlib emit
+different compressed bytes for identical pixels across versions and platforms. Found when a
+`git diff --exit-code` CI step passed on Windows and failed on the Linux runner with all fourteen
+textures differing and every pixel identical.
+
+**So `git status` after regenerating is not a signal.** It may show every texture modified with
+nothing changed. Run `python tools/test_generate_plates.py`, which compares PNGs by pixel and
+everything else by byte. That is the check; the diff is noise.
+
+The `tools` CI job runs it.
 
 ## Testing conventions that are not optional here
 
