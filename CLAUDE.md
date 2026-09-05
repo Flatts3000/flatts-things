@@ -352,6 +352,21 @@ and `graphics.blitSprite(RenderPipelines.GUI_TEXTURED, Identifier.withDefaultNam
 for the slots. That inherits the vanilla look exactly and ships no art asset that a resource pack
 could leave stranded.
 
+## Events that only fire on one side
+
+**`PlayerInteractEvent.LeftClickBlock` is CLIENT ONLY in 26.1.** It is posted from
+`MultiPlayerGameMode` and nothing posts it server-side, so a server-side handler for it never runs.
+It reads as exactly the right hook for "the player started digging" and it is not one.
+
+That cost a working-looking implementation. The test that caught it drove
+`ServerPlayerGameMode.handleBlockBreakAction` - vanilla's own break path - rather than posting the
+event by hand, and posting by hand had hidden the bug completely.
+
+**So before hooking an event, check where it is actually posted.** `grep` the NeoForge sources for
+the hook that constructs it and see which class calls that hook. The auto-swap ended up on
+`PlayerEvent.BreakSpeed`, which fires server-side every tick of a dig, acted on only when the block
+position changes so that it means "the start of a dig".
+
 ## The commit trailers, and why the first four lack them
 
 Every commit from `f084abb` onward carries `Co-Authored-By` and `Claude-Session`. The first four do

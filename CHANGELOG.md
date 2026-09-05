@@ -11,6 +11,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Tool slots, auto-swap** (#24, third of three slices). Hit a block and the right tool comes out of
+  your slots into your hand; stop, and whatever you were carrying comes back. Selection uses vanilla's
+  own destroy-speed arithmetic, so a modded pickaxe sorts against a vanilla one correctly. Ties go to
+  what you are already holding.
 - **Tool slots, screen** (#24, second of three slices). Press **V**, or run `/toolslots`, and put
   your pickaxe, axe, shovel and sword somewhere that is not your hotbar. Shift-click moves tools in
   and out. The screen is painted in vanilla's own palette and uses vanilla's slot sprite, so it ships

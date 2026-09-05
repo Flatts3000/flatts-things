@@ -57,6 +57,7 @@ public final class FTGameTests {
     public static void register(IEventBus modEventBus) {
         PlayerPressurePlateTests.register();
         ToolSlotTests.register();
+        ToolSwapTests.register();
         PlateDataTests.register();
         RegistryCompletenessTests.register();
 
