@@ -156,5 +156,15 @@ final class RegistryCompletenessTests {
             });
             report(helper, missing, "mod items absent from the creative tab");
         });
+
+        // The icon is a Supplier that nothing else ever calls: buildContents does not touch it, so
+        // an icon pointing at an unregistered item throws on the CLIENT when the tab is first drawn
+        // and never on a server, which is to say never in this suite. One call is enough to prove
+        // the supplier resolves.
+        FTGameTests.test("the_creative_tab_icon_resolves", 20, helper -> {
+            ItemStack icon = FTCreativeTabs.FLATTS_THINGS_TAB.get().getIconItem();
+            helper.assertTrue(!icon.isEmpty(), "the creative tab icon must resolve to a real item");
+            helper.succeed();
+        });
     }
 }
