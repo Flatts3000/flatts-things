@@ -154,6 +154,18 @@ What IS worth sweeping across all fourteen is the wiring, not the behaviour:
 | `every_variant_matches_its_vanilla_block_properties` | a variant pointed at the wrong vanilla block |
 | `every_variant_is_in_the_same_vanilla_tags_as_its_counterpart` | a variant missing a vanilla tag, so it mines wrong |
 
+`gametest/PlateDataTests` covers the generated JSON, which is a different claim from the file
+existence the completeness sweep checks:
+
+| Test | Catches |
+| --- | --- |
+| `every_variant_has_a_recipe_that_actually_crafts` | a recipe silently dropped at load, or crafting the wrong thing |
+| `every_variant_drops_itself_when_broken` | a loot table naming the wrong item, or nothing |
+
+Both matter more than they look. All twenty-eight of those files come from one generator, so a single
+wrong f-string breaks every one at once, and a recipe naming an item that does not exist is dropped
+during load with a log line and no failure anywhere.
+
 The two controls exist because the negatives can pass for the wrong reason. If the entity were never
 actually inside the plate's box, nothing would press anything and both negatives would be green; the
 controls fail in that case instead.
