@@ -154,3 +154,11 @@ jobs:
       # is the wrong question for a PNG across machines.
       - name: Test the resource generator
         run: python tools/test_generate_plates.py
+
+      - name: Test the dash linter
+        run: python tools/test_check_dashes.py
+
+      # The house rule is ASCII punctuation only. Enforced here rather than trusted, the way the
+      # pack repos do it.
+      - name: No em-dashes or en-dashes
+        run: python tools/check_dashes.py
