@@ -1,6 +1,8 @@
 # Player Pressure Plates
 
-**Status:** shipped in v0.1.0. Fourteen variants, one per vanilla `PressurePlateBlock`.
+**Status:** shipped in v0.1.0 and verified in-world 2026-09-05. Fourteen variants, one per
+vanilla `PressurePlateBlock`. **Four decisions in this document are unratified assumptions,
+not rulings** - see "Open questions" at the end.
 
 ## The gap
 
@@ -206,6 +208,18 @@ Rebuild it with `python tools/shoot_plates.py` against a running `./gradlew runC
 This is the only evidence that the textures are right. No GameTest can see a texture, and until this
 shot existed the fourteen were verified as PNG files and by the game loading them, which is a claim
 about the file rather than about the block.
+
+## Open questions
+
+**These are assumptions I made while building, not rulings.** They are written flatly elsewhere in
+this document because a spec has to say something; this section is the correction to that.
+
+| Question | Currently | Issue |
+| --- | --- | --- |
+| The recipe gate | vanilla plate plus one ender pearl, not reversible | #6 |
+| Do fake players press it? | yes, because a fake player is a `Player` | #7 |
+| Fuel parity on the wooden variants | inherited from the item tag, never chosen | #8 |
+| texgen vs the local generator | local generator | #9 |
 
 ## Known limits
 

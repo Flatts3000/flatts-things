@@ -162,3 +162,8 @@ jobs:
       # pack repos do it.
       - name: No em-dashes or en-dashes
         run: python tools/check_dashes.py
+
+      # Every markdown file must carry a dated status banner. Cannot check whether the content is
+      # true - that is what a SCRUB pass is for - only that somebody claimed a date.
+      - name: Docs carry a current status banner
+        run: python tools/check_docs.py

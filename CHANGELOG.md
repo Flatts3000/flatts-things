@@ -1,5 +1,7 @@
 # Changelog
 
+**Status:** current. v0.1.0 is not released anywhere; there is no CurseForge project yet (#11). Last reviewed 2026-09-05.
+
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
