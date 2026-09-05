@@ -50,9 +50,20 @@ job name is load-bearing** if branch protection is ever configured to require th
 Neither layer is the truth alone. `jacocoTestReport` sees only JUnit and reports the block package at
 almost nothing, when nearly all of it has thorough in-world coverage; `gameTest.exec` sees only the
 GameTests and misses the pure logic the unit layer exists for. **`coverageReport` merges them, and is
-the only number worth quoting.** The GameTest half needs `-PgameTestCoverage`, and the task refuses
-to run against a leftover `gameTest.exec` without that flag, because a stale file reports an old run
-as the current one and looks identical to a fresh number.
+the only number worth quoting.** The `coverage` CI job runs it and `coverageVerification` gates the
+merged line rate at the 80 percent floor.
+
+`verifyCoverageInputs` guards it, and both of its checks exist because the naive versions were wrong:
+
+- **It asks whether the producing task ran in THIS build**, not whether a flag was passed. The first
+  guard only fired when `-PgameTestCoverage` was absent, which left the hole it was written to close:
+  run the GameTests, watch one fail, fix the code, then run `test coverageReport -PgameTestCoverage`
+  without the GameTests, and the pre-fix data is merged and reported as current.
+- **It fails when there is no data at all.** JaCoCo marks `executionData` `@SkipWhenEmpty`, so a bare
+  `./gradlew coverageReport` on a clean tree is skipped NO-SOURCE and exits 0 having measured
+  nothing, which reads exactly like success.
+
+So run it as one invocation: `./gradlew test runGameTestServer -PgameTestCoverage coverageReport`.
 
 ### Checking an API against the real 26.1 source
 

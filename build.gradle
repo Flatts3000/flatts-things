@@ -148,6 +148,55 @@ jacocoTestReport {
     }
 }
 
+
+/**
+ * The staleness and emptiness guards for {@code coverageReport}, as their own task.
+ *
+ * <p>THEY CANNOT LIVE IN {@code coverageReport.doFirst}, which is where they started. JaCoCo marks
+ * {@code executionData} {@code @SkipWhenEmpty}, so with no exec files at all the report task is
+ * skipped NO-SOURCE, its {@code doFirst} never runs, and the build exits 0 having measured nothing.
+ * A separate task always runs and can always fail.
+ *
+ * <p>THE STALENESS CHECK ASKS WHETHER THE PRODUCING TASK RAN IN THIS BUILD, not whether a flag was
+ * passed. The first version only fired when {@code -PgameTestCoverage} was ABSENT, which left the
+ * exact hole it existed to close: run the GameTests, watch one fail, fix the code, then run
+ * {@code test coverageReport -PgameTestCoverage} without the GameTests - and the pre-fix exec file
+ * is merged and reported as current. Its own error text even advised passing the flag that disabled
+ * it. Both halves are covered now; the JUnit half never had a guard at all.
+ */
+tasks.register('verifyCoverageInputs') {
+    group = 'verification'
+    description = 'Fail if coverage data is missing entirely, or left over from an earlier build.'
+    mustRunAfter tasks.named('test'), tasks.named('runGameTestServer')
+    doLast {
+        def graph = gradle.taskGraph
+        def checks = [
+            [tasks.named('test').get(),               'jacoco/test.exec',     'test'],
+            [tasks.named('runGameTestServer').get(),  'jacoco/gameTest.exec', 'runGameTestServer -PgameTestCoverage'],
+        ]
+        boolean any = false
+        checks.each { producer, relative, how ->
+            File exec = project.layout.buildDirectory.file(relative).get().asFile
+            if (!exec.exists()) {
+                return
+            }
+            any = true
+            if (!graph.hasTask(producer)) {
+                throw new GradleException(
+                    "build/${relative} is left over from an earlier build and ${producer.name} did "
+                        + "not run in this one. Merging it would report stale coverage as current. "
+                        + "Run `${how}` in the same invocation, or delete the file.")
+            }
+        }
+        if (!any) {
+            throw new GradleException(
+                "no coverage data was produced. coverageReport would be skipped NO-SOURCE and the "
+                    + "build would pass having measured nothing. Run: "
+                    + "./gradlew test runGameTestServer -PgameTestCoverage coverageReport")
+        }
+    }
+}
+
 /**
  * THE NUMBER THAT MEANS SOMETHING: both layers at once.
  *
@@ -165,23 +214,11 @@ tasks.register('coverageReport', JacocoReport) {
     // declared relationship, so the report could otherwise run before either exec file was written.
     mustRunAfter tasks.named('test'), tasks.named('runGameTestServer')
 
+    dependsOn tasks.named('verifyCoverageInputs')
     executionData.setFrom(files(
         project.layout.buildDirectory.file('jacoco/test.exec'),
         project.layout.buildDirectory.file('jacoco/gameTest.exec')
     ).filter { it.exists() })
-    doFirst {
-        File gameTestExec = project.layout.buildDirectory.file('jacoco/gameTest.exec').get().asFile
-        // A LEFTOVER FILE WOULD REPORT LAST WEEK'S RUN AS THIS ONE'S. `append=false` truncates it
-        // only when the agent actually attaches, so without -PgameTestCoverage it simply survives
-        // from an earlier instrumented run and gets merged in silently - a stale number that looks
-        // exactly like a fresh one.
-        if (!project.hasProperty('gameTestCoverage') && gameTestExec.exists()) {
-            throw new GradleException(
-                "build/jacoco/gameTest.exec is left over from an earlier instrumented run and this "
-                    + "one did not produce it. Merging it would report stale GameTest coverage as "
-                    + "current. Re-run with -PgameTestCoverage, or delete the file.")
-        }
-    }
     sourceDirectories.setFrom(files('src/main/java'))
     classDirectories.setFrom(files(sourceSets.main.output.classesDirs.files.collect {
         fileTree(dir: it, exclude: COVERAGE_EXCLUDES)
@@ -252,4 +289,33 @@ tasks.register('prepareAllRuns') {
     dependsOn 'prepareClientRun',
               'prepareServerRun',
               'prepareGameTestServerRun'
+}
+
+/**
+ * The 80 percent floor from the house testing rules, applied to the MERGED data.
+ *
+ * <p>Run in CI by the `coverage` job. Without it the figures in a PR body are a one-time local
+ * measurement that no later change can visibly regress.
+ */
+tasks.register('coverageVerification', JacocoCoverageVerification) {
+    group = 'verification'
+    description = 'Fail if merged coverage drops below the floor.'
+    dependsOn tasks.named('coverageReport')
+    executionData.setFrom(files(
+        project.layout.buildDirectory.file('jacoco/test.exec'),
+        project.layout.buildDirectory.file('jacoco/gameTest.exec')
+    ).filter { it.exists() })
+    sourceDirectories.setFrom(files('src/main/java'))
+    classDirectories.setFrom(files(sourceSets.main.output.classesDirs.files.collect {
+        fileTree(dir: it, exclude: COVERAGE_EXCLUDES)
+    }))
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+    }
 }
