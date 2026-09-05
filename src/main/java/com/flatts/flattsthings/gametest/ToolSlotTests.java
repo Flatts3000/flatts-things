@@ -1,6 +1,7 @@
 package com.flatts.flattsthings.gametest;
 
 import com.flatts.flattsthings.content.ToolSlots;
+import com.flatts.flattsthings.content.ToolSlotsContainer;
 import com.flatts.flattsthings.content.menu.ToolSlotsMenu;
 import java.util.ArrayList;
 import java.util.List;
@@ -167,6 +168,46 @@ final class ToolSlotTests {
                 "the hoe should have left the tool slot");
             helper.assertTrue(player.getInventory().contains(new ItemStack(Items.IRON_HOE)),
                 "the hoe should be back in the inventory");
+            helper.succeed();
+        });
+
+        // The Container methods vanilla calls during dragging and dropping. They were written and
+        // never exercised, which the coverage gate is what noticed.
+        FTGameTests.test("the_container_removes_takes_and_clears", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlotsContainer container = new ToolSlotsContainer(player);
+            helper.assertTrue(container.isEmpty(), "a fresh container is empty");
+            helper.assertTrue(container.getContainerSize() == ToolSlots.SIZE,
+                "the container is the size of the slot set");
+
+            container.setItem(0, new ItemStack(Items.DIAMOND_PICKAXE));
+            helper.assertFalse(container.isEmpty(), "it is not empty once something is in it");
+            helper.assertTrue(ToolSlots.get(player, 0).is(Items.DIAMOND_PICKAXE),
+                "setItem must reach the attachment, not only the working copy");
+
+            ItemStack removed = container.removeItem(0, 1);
+            helper.assertTrue(removed.is(Items.DIAMOND_PICKAXE),
+                "removeItem returns what it took, got " + removed.getItem());
+            helper.assertTrue(ToolSlots.get(player, 0).isEmpty(), "the removal reached the attachment");
+
+            container.setItem(1, new ItemStack(Items.IRON_AXE));
+            ItemStack taken = container.removeItemNoUpdate(1);
+            helper.assertTrue(taken.is(Items.IRON_AXE), "removeItemNoUpdate returns the stack");
+
+            container.setItem(2, new ItemStack(Items.SHEARS));
+            container.clearContent();
+            helper.assertTrue(container.isEmpty(), "clearContent empties it");
+            helper.assertTrue(ToolSlots.of(player).isEmpty(), "and that reaches the attachment too");
+            helper.succeed();
+        });
+
+        // stillValid is what stops a menu surviving into somebody else's hands.
+        FTGameTests.test("the_container_belongs_to_one_player", 20, helper -> {
+            ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+            ServerPlayer other = helper.makeMockServerPlayerInLevel();
+            ToolSlotsContainer container = new ToolSlotsContainer(owner);
+            helper.assertTrue(container.stillValid(owner), "the owner may use it");
+            helper.assertFalse(container.stillValid(other), "nobody else may");
             helper.succeed();
         });
 

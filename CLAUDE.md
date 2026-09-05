@@ -73,6 +73,13 @@ merged line rate at the 80 percent floor.
 
 So run it as one invocation: `./gradlew test runGameTestServer -PgameTestCoverage coverageReport`.
 
+**The report and the gate measure different sets on purpose.** `client/**` never loads on the server
+the tests run on, so no GameTest and no JUnit test can reach a line of it. The report counts it
+anyway, because hiding it would make the headline look better while removing the evidence that those
+lines have no automated coverage at all. `coverageVerification` excludes it, because a floor that
+fails for reasons nobody can act on is a floor people learn to bypass. The gap between the two
+figures is exactly the client surface, and the only thing that closes it is looking at the screen.
+
 ### Checking an API against the real 26.1 source
 
 After any build, the decompiled game sources sit at
