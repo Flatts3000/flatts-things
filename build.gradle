@@ -4,6 +4,11 @@ plugins {
     // need the agent attached by hand - see the gameTestServer run block and `coverageReport`.
     id 'jacoco'
     id 'net.neoforged.moddev' version '2.0.141'
+    // CurseForgeGradle wraps the upload API so `./gradlew publishCurseForge` pushes a new file to
+    // the project page. The token comes from .env (gitignored), an env var, or a gradle property,
+    // never from a tracked file. 1.2.30 matches the 26.1 / Java 25 line; spawn-detective pins
+    // 1.1.26 on its 1.21.1 branch because 1.2.x needs a Java 25 Gradle daemon.
+    id 'net.darkhax.curseforgegradle' version '1.2.30'
 }
 
 base {
@@ -349,6 +354,97 @@ tasks.register('coverageVerification', JacocoCoverageVerification) {
                 value = 'COVEREDRATIO'
                 minimum = 0.80
             }
+        }
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+// CurseForge publishing. Manual: `./gradlew publishCurseForge` after a good build.
+// NEVER run by CI - a release is a decision, not a push event.
+// ---------------------------------------------------------------------------
+
+def readDotEnv(File envFile) {
+    def map = [:]
+    if (!envFile.exists()) return map
+    envFile.eachLine { line ->
+        def trim = line.trim()
+        if (!trim || trim.startsWith('#')) return
+        def eq = trim.indexOf('=')
+        if (eq <= 0) return
+        def k = trim.substring(0, eq).trim()
+        def v = trim.substring(eq + 1).trim().replaceAll(/^["']|["']$/, '')
+        map[k] = v
+    }
+    return map
+}
+
+/** First hit wins: a gitignored .env at the repo root, then the environment, then a gradle property. */
+def resolveCfApiToken() {
+    def envMap = readDotEnv(file("${rootDir}/.env"))
+    return envMap['CURSEFORGE_API_KEY'] ?: System.getenv('CURSEFORGE_API_KEY') ?: findProperty('cfApiToken')
+}
+
+/**
+ * The section of CHANGELOG.md for this version, used as the file's changelog on the listing.
+ *
+ * <p>THE HEADING FORMAT IS LOAD-BEARING. This matches `## v<version>` literally and stops at the
+ * next `## v`, so renaming a heading silently ships "Release x.y.z" as the whole changelog. The pack
+ * repos extract theirs by regex for the same reason and say the same thing about it.
+ */
+def extractChangelogSection(File changelogFile, String version) {
+    if (!changelogFile.exists()) return "Release ${version}"
+    def text = changelogFile.text
+    def startMarker = "## v${version}"
+    def startIdx = text.indexOf(startMarker)
+    if (startIdx < 0) return "Release ${version}"
+    def endIdx = text.indexOf("\n## v", startIdx + startMarker.length())
+    if (endIdx < 0) endIdx = text.length()
+    return text.substring(startIdx, endIdx).trim()
+}
+
+// CONDITIONAL, AND THAT IS LOAD-BEARING RATHER THAN TIDY. CurseForgeGradle resolves the project id
+// while CONFIGURING the task, so registering it unconditionally breaks every Gradle invocation -
+// `build` included - on any clone where the id is unset. Register the real task when it is there,
+// and one that explains itself when it is not.
+if (findProperty('curseForgeProjectId')) {
+    tasks.register('publishCurseForge', net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+        group = 'publishing'
+        description = 'Upload the built jar to CurseForge.'
+        dependsOn tasks.named('build')
+
+        apiToken = resolveCfApiToken()
+
+        def primary = upload(findProperty('curseForgeProjectId'), tasks.jar.archiveFile)
+        // Alpha for the 0.x line.
+        primary.releaseType = 'alpha'
+        primary.addGameVersion(minecraft_version)
+        primary.addModLoader('NeoForge')
+        primary.addJavaVersion('Java 25')
+        // Both sides. The sensitivity is decided on the server and the block is drawn on the
+        // client, so a client-only tag would have people installing it where it cannot work.
+        primary.addEnvironment('Client', 'Server')
+        primary.changelog = extractChangelogSection(file("${rootDir}/CHANGELOG.md"), mod_version)
+        primary.changelogType = 'markdown'
+        primary.displayName = "${mod_name} ${mod_version}"
+
+        doFirst {
+            if (!apiToken) {
+                throw new GradleException("CURSEFORGE_API_KEY not set. Put it in .env at the repo "
+                    + "root (gitignored, see .env.example), export it, or add cfApiToken to "
+                    + "~/.gradle/gradle.properties.")
+            }
+        }
+    }
+} else {
+    tasks.register('publishCurseForge') {
+        group = 'publishing'
+        description = 'Upload the built jar to CurseForge (needs curseForgeProjectId first).'
+        doFirst {
+            throw new GradleException('curseForgeProjectId is not set. To publish: '
+                + '(1) create the CurseForge project and copy its numeric id, '
+                + '(2) add curseForgeProjectId=<id> to gradle.properties, '
+                + '(3) put CURSEFORGE_API_KEY=<token> in .env at the repo root.')
         }
     }
 }

@@ -1,7 +1,8 @@
 # CurseForge project page
 
-**Status:** drafted 2026-09-05, not published. There is no CurseForge project yet (#11); this is the
-source of truth for the listing when there is one. Edit here, then paste.
+**Status:** drafted 2026-09-05, not published. The project exists (**1683375**, slug
+`flatts-things`) and `./gradlew publishCurseForge` is wired, but no file has been uploaded. This is
+the source of truth for the listing copy: edit here, then paste.
 
 **Voice: what it is like to play, not what it contains.** Short, image-led, written from inside the
 game. No selling, no marketing verbs, nothing personified. Every line has to be true of the current

@@ -265,6 +265,33 @@ is legitimate pass `strict=False`; the scene is wiped to air first so everything
 **`gamerule doDaylightCycle` does not parse in 26.1**, under that name or `minecraft:do_daylight_cycle`.
 Not chased, because `tick freeze` stops time, weather and every other tick anyway.
 
+## Releasing
+
+CurseForge project **1683375**, slug `flatts-things`. Nothing has been published yet.
+
+```bash
+JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew publishCurseForge
+```
+
+**Manual, never CI.** A release is a decision, not a push event.
+
+Before running it:
+
+1. Bump `mod_version` in `gradle.properties`.
+2. Rename `## Unreleased` in `CHANGELOG.md` to `## v<version> - <date> - "<Nickname>"`. **That heading
+   format is load-bearing**: the task matches `## v<version>` literally and stops at the next
+   `## v`, so a renamed heading silently ships "Release x.y.z" as the entire changelog.
+3. Put `CURSEFORGE_API_KEY=<token>` in `.env` at the repo root. It is gitignored; see `.env.example`.
+   The task also accepts the env var or a `cfApiToken` gradle property. Without any of them it throws
+   before uploading anything.
+4. Refresh the gallery if the visuals changed: `python tools/shoot_gallery.py --promote`, and paste
+   `docs/curseforge_page.md` to the listing.
+
+**The publish task is registered conditionally and that is load-bearing rather than tidy.**
+CurseForgeGradle resolves the project id while *configuring* the task, so registering it
+unconditionally breaks every Gradle invocation, `build` included, on any clone where the id is unset.
+The `else` branch registers a task that explains what to set.
+
 ## 26.1 API notes worth keeping
 
 - **Registries use the factory form.** `registerBlock(name, factory, propsSupplier)`, because 26.1
@@ -291,9 +318,6 @@ Not chased, because `tick freeze` stops time, weather and every other tick anywa
 
 ## Deliberate deviations from the sibling repos
 
-- **No CurseForge publish task yet.** There is no CurseForge project for this mod. Add the
-  `net.darkhax.curseforgegradle` task at first release, following `spawn-detective`'s conditional
-  form (register a stub unless a project id is configured) rather than recompile's unconditional one.
 - **No JEI or Jade compat, and no `texgen.toml`.** Nothing here needs them yet. Textures come from
   `tools/generate_plates.py`; move to `mc-pack-toolkit`'s texgen if the art gets ambitious.
 - **No devbridge port claimed.** The sibling mods each claim one in `~/.claude/port_registry.yaml`.
