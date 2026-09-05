@@ -55,6 +55,7 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
 | Regenerate plate resources (textures, models, recipes, tags, lang) | `python tools/generate_plates.py` |
 | Build the dev world (once) | `python tools/make_dev_world.py` |
+| Check for banned dashes | `python tools/check_dashes.py` |
 | Screenshot every plate beside its vanilla counterpart | `./gradlew runClient`, then `python tools/shoot_plates.py` |
 
 **Never pipe gradle to `tail` or `head` and trust the exit code.** The pipe reports the pager's

@@ -180,6 +180,20 @@ two real defects that a green suite hid.
   is not a test.** It now resolves the expected block from the material name through the registry.
 - The generator's determinism was documented before it was true (see above).
 
+## House style, enforced
+
+**ASCII punctuation only: no em-dashes, no en-dashes.** `tools/check_dashes.py` walks every authored
+file (markdown, Java, Python, lang JSON, workflows, gradle) and the `tools` CI job runs it. This is
+the house rule from the pack repos, where it is likewise lint-checked rather than trusted.
+
+It is not only style. An em-dash in a `.ps1` breaks Windows PowerShell 5.1, because BOM-less UTF-8
+gets parsed as ANSI.
+
+The toolkit's `quest-voice` linter was considered and not adopted: it treats em-dashes as hard errors
+already, but its soft tells (tricolons, forced enthusiasm, uniform sentence length) fire noisily on
+javadoc and build files, and narrowing it means changing a shared repo that has no CI and no tests.
+Revisit if this mod ever ships player-facing prose beyond item names.
+
 ## Visual verification
 
 **A GameTest is a server-state oracle and never a UI oracle.** Tint, texture path, UV, render type,
