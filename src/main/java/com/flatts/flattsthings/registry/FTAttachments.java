@@ -2,6 +2,7 @@ package com.flatts.flattsthings.registry;
 
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.content.ToolSlots;
+import com.flatts.flattsthings.content.ToolSwap;
 import java.util.function.Supplier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -27,6 +28,21 @@ public final class FTAttachments {
         ATTACHMENTS.register("tool_slots",
             () -> AttachmentType.builder(ToolSlots::new)
                 .serialize(ToolSlots.CODEC.fieldOf("tool_slots"))
+                .copyOnDeath()
+                .build());
+
+    /**
+     * The swap in progress, if any.
+     *
+     * <p>Serialised for safety rather than for saving: it holds the item the player was carrying
+     * when the swap began, so losing it on a crash means losing their stack. {@code copyOnDeath} for
+     * the same reason - a death mid-swing must not eat the displaced item on top of everything else
+     * the player just dropped.
+     */
+    public static final Supplier<AttachmentType<ToolSwap>> TOOL_SWAP =
+        ATTACHMENTS.register("tool_swap",
+            () -> AttachmentType.builder(() -> ToolSwap.NONE)
+                .serialize(ToolSwap.CODEC.fieldOf("tool_swap"))
                 .copyOnDeath()
                 .build());
 

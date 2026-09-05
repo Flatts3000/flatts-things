@@ -7,6 +7,7 @@ import java.util.List;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * A player's dedicated tool slots: storage that is not part of inventory space.
@@ -79,6 +80,34 @@ public final class ToolSlots {
      */
     static void writeAll(Player player, List<ItemStack> stacks) {
         player.setData(FTAttachments.TOOL_SLOTS, fromList(stacks));
+    }
+
+    /**
+     * The slot holding the best tool for this block, or -1 if none of them beats what is in hand.
+     *
+     * <p><b>Vanilla's own arithmetic decides.</b> {@code ItemStack.getDestroySpeed} is what the game
+     * uses to time a swing, so a modded pickaxe sorts against a vanilla one correctly with no
+     * special case here and no list of tool types to keep current.
+     *
+     * <p>Ties go to the hand. Swapping to something exactly as good would be a visible change with
+     * no benefit, which reads as the mod fidgeting.
+     */
+    public static int bestSlotFor(Player player, BlockState state) {
+        float best = player.getMainHandItem().getDestroySpeed(state);
+        int bestSlot = -1;
+        ToolSlots slots = of(player);
+        for (int index = 0; index < SIZE; index++) {
+            ItemStack candidate = slots.get(index);
+            if (candidate.isEmpty()) {
+                continue;
+            }
+            float speed = candidate.getDestroySpeed(state);
+            if (speed > best) {
+                best = speed;
+                bestSlot = index;
+            }
+        }
+        return bestSlot;
     }
 
     // ---------------- player-facing access ----------------
