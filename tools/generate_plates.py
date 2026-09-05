@@ -13,6 +13,7 @@ input, and reviewing a texture change means reading a palette line rather than t
 
 from __future__ import annotations
 
+import argparse
 import json
 import random
 import sys
@@ -25,10 +26,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from plate_variants import VARIANTS, Variant, block_id, family, vanilla_plate  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+NS = "flattsthings"
+
+# Rebound by _set_roots so the generator can write somewhere other than the repo. That exists for
+# tools/test_generate_plates.py, which has to run this twice and compare, and must not do that by
+# writing over the committed tree.
 ASSETS = ROOT / "src/main/resources/assets/flattsthings"
 DATA = ROOT / "src/main/resources/data/flattsthings"
 VANILLA_DATA = ROOT / "src/main/resources/data/minecraft"
-NS = "flattsthings"
+
+
+def _set_roots(base: Path) -> None:
+    """Point every output path at `base` instead of the repo root."""
+    global ASSETS, DATA, VANILLA_DATA
+    ASSETS = base / "src/main/resources/assets/flattsthings"
+    DATA = base / "src/main/resources/data/flattsthings"
+    VANILLA_DATA = base / "src/main/resources/data/minecraft"
 
 # A head-and-shoulders mark: the clearest "this one is about people" read available in 16 pixels.
 FIGURE = [
@@ -194,6 +207,13 @@ def write_tags() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--out", type=Path, default=ROOT,
+        help="repo root to write under (default: this repo). Used by the determinism test.")
+    args = parser.parse_args()
+    _set_roots(args.out)
+
     for v in VARIANTS:
         generate(v)
     write_lang()

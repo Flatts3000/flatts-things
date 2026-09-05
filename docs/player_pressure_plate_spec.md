@@ -124,8 +124,9 @@ texture change is a palette line you can read rather than a binary you have to t
 That determinism was claimed before it was true. The seed came from `hash(material)`, and Python
 salts string hashing per interpreter run, so every invocation redrew all fourteen textures
 differently and produced a fourteen-file diff with nothing actually changed. It now seeds from
-`zlib.crc32`. The only way this surfaces is running the generator twice and diffing, which is now
-part of the release check.
+`zlib.crc32`, and the check is now automated rather than remembered: `tools/test_generate_plates.py`
+generates twice in separate processes under different `PYTHONHASHSEED` values and compares bytes,
+which is what makes reverting the seed fail rather than merely look wrong.
 
 Adding a plate is one row on each side and one command.
 

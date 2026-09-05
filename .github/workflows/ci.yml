@@ -126,3 +126,31 @@ jobs:
           path: build/reports/jacoco/coverageReport
           if-no-files-found: warn
           retention-days: 14
+
+  # The Python tooling that generates every per-variant resource. Its own job rather than a step in
+  # `build`, so a generator regression reports as a generator regression instead of a Gradle failure.
+  tools:
+    name: tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: pip install pillow
+
+      # Includes the check that the committed tree still matches a fresh generation. That
+      # comparison is deliberately NOT `git diff` - see the case's docstring for why byte equality
+      # is the wrong question for a PNG across machines.
+      - name: Test the resource generator
+        run: python tools/test_generate_plates.py
