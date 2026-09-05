@@ -118,14 +118,20 @@ would mean one side carrying fields it has no use for.
 
 `python tools/generate_plates.py` writes every per-variant resource from its half: texture,
 blockstate, both block models, the client item definition, the loot table, the recipe, and the lang
-file. It is seeded and deterministic, so re-running produces byte-identical output and an empty diff, and a
+file. It is seeded and deterministic, so re-running on one machine produces byte-identical output, and a
 texture change is a palette line you can read rather than a binary you have to trust.
+
+Across machines it is a different story: Pillow and zlib emit different compressed bytes for the same
+pixels, so a regenerated PNG can differ byte-wise while being the identical image. `git diff` is
+therefore not a reliable signal after regenerating - `tools/test_generate_plates.py` compares PNGs by
+pixel and is.
 
 That determinism was claimed before it was true. The seed came from `hash(material)`, and Python
 salts string hashing per interpreter run, so every invocation redrew all fourteen textures
 differently and produced a fourteen-file diff with nothing actually changed. It now seeds from
-`zlib.crc32`. The only way this surfaces is running the generator twice and diffing, which is now
-part of the release check.
+`zlib.crc32`, and the check is now automated rather than remembered: `tools/test_generate_plates.py`
+generates twice in separate processes under different `PYTHONHASHSEED` values and compares bytes,
+which is what makes reverting the seed fail rather than merely look wrong.
 
 Adding a plate is one row on each side and one command.
 
