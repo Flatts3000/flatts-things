@@ -44,6 +44,9 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Compile only (fast feedback) | `./gradlew compileJava` |
 | Full build + jar | `./gradlew build` |
 | In-world GameTests (the real test layer) | `./gradlew runGameTestServer` |
+| One test, or a wildcard group | `./gradlew runGameTestServer -Ptests=flattsthings:a_player_presses_the_player_plate` |
+| Unit tests | `./gradlew test` |
+| Merged coverage, both layers | `./gradlew test runGameTestServer -PgameTestCoverage coverageReport` |
 | Dev client | `./gradlew runClient` |
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
 | Regenerate plate resources (textures, models, recipes, lang) | `python tools/generate_plates.py` |

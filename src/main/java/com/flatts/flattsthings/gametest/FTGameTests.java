@@ -56,6 +56,7 @@ public final class FTGameTests {
     /** Wire up from the {@link FlattsThings} constructor. */
     public static void register(IEventBus modEventBus) {
         PlayerPressurePlateTests.register();
+        PlateDataTests.register();
         RegistryCompletenessTests.register();
 
         FUNCTIONS.register(modEventBus);

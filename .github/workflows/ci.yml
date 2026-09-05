@@ -81,3 +81,48 @@ jobs:
 
       - name: Run GameTest server
         run: ./gradlew runGameTestServer --stacktrace
+
+  # The merged coverage number, gated at the 80 percent floor.
+  #
+  # Its own job because the merge is the whole point: `build` runs JUnit and `gameTest` runs the
+  # in-world suite, and neither alone is the truth. Without this the figures quoted in a PR body are
+  # a one-time local measurement that no later change can visibly regress.
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      # One invocation on purpose. Splitting these would trip verifyCoverageInputs, which fails when
+      # an exec file is present but its producing task did not run in the same build.
+      - name: Merged coverage
+        run: ./gradlew test runGameTestServer -PgameTestCoverage coverageReport coverageVerification --stacktrace
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ github.sha }}
+          path: build/reports/jacoco/coverageReport
+          if-no-files-found: warn
+          retention-days: 14

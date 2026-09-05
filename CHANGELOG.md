@@ -5,6 +5,23 @@ All notable changes to this project are documented here. Format follows
 
 ## Unreleased
 
+### Added
+
+- **Coverage instrumentation, and the merged report that makes it mean anything.** GameTests run in
+  their own server JVM, so a plain JaCoCo setup sees none of them and would report the plate block at
+  0% while every branch in it has an in-world test. The agent is attached to the GameTest run behind
+  `-PgameTestCoverage` and `coverageReport` merges both layers. Merged coverage went 96% to 98% line
+  and 91% to 100% branch over the pass.
+- **The recipes and loot tables are now tested for working, not for existing.** Twenty-eight
+  generated files were only ever checked for presence. `every_variant_has_a_recipe_that_actually_crafts`
+  resolves each through the real crafting lookup, and `every_variant_drops_itself_when_broken` runs
+  the real loot table. A recipe naming an item that does not exist is dropped silently during load,
+  which is exactly what the old existence check could not catch.
+- **The first JUnit tests**, for `FTBlocks.plate()`'s throw branch and the invariants of the variant
+  table. Pure logic, so a GameTest was the wrong instrument.
+- **`-Ptests=<selector>`** on `runGameTestServer`, so a single test or a wildcard group can be run
+  instead of the whole suite.
+
 ## v0.1.0 - 2026-09-05 - "Only You"
 
 First build. The repo, and the family of blocks it was opened for.
