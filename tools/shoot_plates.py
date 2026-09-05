@@ -41,12 +41,19 @@ THEIRS_Z = 9
 FIRST_X = -7
 
 
-def run(*args: str) -> str:
+def run(*args: str, check: bool = True) -> str | None:
+    """Drive gamebridge. With check=False a failing command returns None instead of exiting.
+
+    The lenient form exists so a caller can ASK the game a question - `execute if block ...` reports
+    failure when the condition is false, which is an answer rather than an error.
+    """
     result = subprocess.run(
         [str(GAMEBRIDGE), "--devbridge", PORT, "--host", "localhost", *args],
         capture_output=True, text=True,
     )
     if result.returncode != 0:
+        if not check:
+            return None
         raise SystemExit(f"gamebridge {' '.join(args)} failed:\n{result.stdout}{result.stderr}")
     return result.stdout
 

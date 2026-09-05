@@ -59,6 +59,8 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Build the dev world (once) | `python tools/make_dev_world.py` |
 | Check for banned dashes | `python tools/check_dashes.py` |
 | Check docs carry a dated status banner | `python tools/check_docs.py` |
+| Redraw the logo | `python branding/compose_logo.py` |
+| Capture the CurseForge gallery | `./gradlew runClient`, then `python tools/shoot_gallery.py --promote` |
 | Screenshot every plate beside its vanilla counterpart | `./gradlew runClient`, then `python tools/shoot_plates.py` |
 
 **Never pipe gradle to `tail` or `head` and trust the exit code.** The pipe reports the pager's
