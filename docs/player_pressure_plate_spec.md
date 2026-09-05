@@ -196,6 +196,17 @@ Every test here was driven red before being trusted, and it was not ceremony.
 That last one is the reason this section exists. An expectation taken from the thing under test is
 not a test, and it looks exactly like a passing one.
 
+## Verified in-world
+
+![Every player pressure plate beside its vanilla counterpart](img/plates_comparison.png)
+
+Front to back: the pressed state, the player plates, and the vanilla plates they are crafted from.
+Rebuild it with `python tools/shoot_plates.py` against a running `./gradlew runClient`.
+
+This is the only evidence that the textures are right. No GameTest can see a texture, and until this
+shot existed the fourteen were verified as PNG files and by the game loading them, which is a claim
+about the file rather than about the block.
+
 ## Known limits
 
 - **Fake players count as players.** Any other mod's fake player entity standing in the box presses

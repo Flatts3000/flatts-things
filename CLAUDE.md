@@ -180,6 +180,49 @@ two real defects that a green suite hid.
   is not a test.** It now resolves the expected block from the material name through the registry.
 - The generator's determinism was documented before it was true (see above).
 
+## Visual verification
+
+**A GameTest is a server-state oracle and never a UI oracle.** Tint, texture path, UV, render type,
+model resolution and GUI layout are all invisible to it. Productive Frogs shipped a slime that
+rendered opaque grey with every GameTest passing, and this mod had the same blind spot: fourteen
+textures verified as a contact sheet and by the game loading them, never once looked at on a block.
+
+devbridge closes it. It is a dev-only mod plus the `gamebridge` CLI, talking JSON over a loopback
+socket, and it exists because a singleplayer integrated server has no RCON socket and a dedicated
+server has no framebuffer.
+
+```bash
+python tools/make_dev_world.py     # once; builds run/saves/devworld headlessly via runServer
+./gradlew runClient                # in one terminal
+python tools/shoot_plates.py       # in another; builds the scene and captures
+```
+
+**Port 8610 is claimed for this repo** in `~/.claude/port_registry.yaml`. There is deliberately no
+default port on either side: a shared one once had Trashlands' verifier connect to Recompile's dev
+client and report a clean pass about the wrong world. The registry cannot detect a clash here,
+because the ports helper enumerates IPv4 and devbridge binds `getLoopbackAddress()`, which is `::1`
+on this machine - so **dial `localhost`, never the `127.0.0.1` literal**, and trust `gamebridge ping`
+over the registry.
+
+**The jar is never a dependency.** It lives in `run/mods/`, which is gitignored, so it cannot ship.
+Rebuild it from `F:\devbridge` with `./gradlew build`.
+
+### What this cost to learn
+
+**The first screenshot this pipeline produced was a death screen.** Every command reported success,
+the script exited 0, the PNG existed, and it read "You Died! Dev was slain by Slime" - a superflat
+spawns slimes in quantity and nothing in the pipeline had an opinion about whether the player was
+alive. That is the same shape as the bug the tool exists to catch. `make_safe()` now clears the death
+screen, goes peaceful, drops to spectator and sweeps entities.
+
+**Minecraft reports "already in the desired state" as failure.** `difficulty peaceful` when already
+peaceful, `fill` when the blocks already match, `forceload add` when the chunks already are - all
+report failure, so `--strict` made the script die on its own previous success. Commands whose no-op
+is legitimate pass `strict=False`; the scene is wiped to air first so everything else stays strict.
+
+**`gamerule doDaylightCycle` does not parse in 26.1**, under that name or `minecraft:do_daylight_cycle`.
+Not chased, because `tick freeze` stops time, weather and every other tick anyway.
+
 ## 26.1 API notes worth keeping
 
 - **Registries use the factory form.** `registerBlock(name, factory, propsSupplier)`, because 26.1

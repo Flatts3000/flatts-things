@@ -41,6 +41,39 @@ neoForge {
     runs {
         client {
             client()
+            // devbridge (its own repo, F:\devbridge): lets tooling drive this client from outside -
+            // run commands in a singleplayer world and take screenshots. Inert without this
+            // property, and the jar lives in run/mods rather than being a dependency, so it can
+            // never ship.
+            //
+            // 8610 is CLAIMED for this repo in ~/.claude/port_registry.yaml, deliberately not
+            // devbridge's own default. There is no default port on either side precisely because a
+            // shared one once had Trashlands' verifier connect to Recompile's dev client and report
+            // a clean pass about the wrong world. Note the registry cannot detect a clash here: the
+            // ports helper enumerates IPv4 only and devbridge binds getLoopbackAddress(), which is
+            // ::1 on this machine, so the registry reports the port free while a game holds it.
+            // Anything that must be sure asks what answered, via `gamebridge ping`.
+            systemProperty 'devbridge.port', '8610'
+            // Never grab the mouse, so alt-tabbing during an unattended shoot cannot spin the
+            // camera mid-capture.
+            systemProperty 'devbridge.lockInput', 'true'
+            // Boot straight into a world instead of stopping at the title screen. Vanilla's own
+            // launch argument, not a mod feature. `--args` on the Gradle task does NOT do this: a
+            // moddev run reads it as a main class and the launch dies before Minecraft starts.
+            //
+            // THE WORLD MUST ALREADY EXIST AND ITS NAME MUST NOT CONTAIN A SPACE. Quick play does
+            // not create a missing world - it shows a "could not find world" SCREEN, which logs
+            // nothing, so the symptom is a client sitting at a menu and a socket that never opens.
+            // And moddev quotes any argument containing a space into
+            // build/moddev/clientRunProgramArgs.txt, so 'New World' would reach the game as
+            // '"New World"', quotes included, matching no directory on disk.
+            //
+            // `python tools/make_dev_world.py` builds it.
+            programArguments.addAll '--quickPlaySingleplayer', 'devworld'
+            // Force the window size, because a screenshot IS the framebuffer: devbridge captures at
+            // whatever the window happens to be, and the default 854x480 is unusable for comparing
+            // fourteen textures. Fixed dimensions also mean every shot crops identically.
+            programArguments.addAll '--width', '1920', '--height', '1080'
         }
         server {
             server()
