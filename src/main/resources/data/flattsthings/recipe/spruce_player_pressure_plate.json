@@ -3,7 +3,7 @@
   "category": "redstone",
   "ingredients": [
     "minecraft:spruce_pressure_plate",
-    "minecraft:ender_pearl"
+    "minecraft:redstone"
   ],
   "result": {
     "id": "flattsthings:spruce_player_pressure_plate",

@@ -3,7 +3,7 @@
   "category": "redstone",
   "ingredients": [
     "minecraft:jungle_pressure_plate",
-    "minecraft:ender_pearl"
+    "minecraft:redstone"
   ],
   "result": {
     "id": "flattsthings:jungle_player_pressure_plate",

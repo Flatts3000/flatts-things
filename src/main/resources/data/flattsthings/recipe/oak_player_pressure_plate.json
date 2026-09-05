@@ -3,7 +3,7 @@
   "category": "redstone",
   "ingredients": [
     "minecraft:oak_pressure_plate",
-    "minecraft:ender_pearl"
+    "minecraft:redstone"
   ],
   "result": {
     "id": "flattsthings:oak_player_pressure_plate",

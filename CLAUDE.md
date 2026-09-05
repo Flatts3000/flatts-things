@@ -11,10 +11,12 @@ id / package: `flattsthings` / `com.flatts.flattsthings`.
 counterpart to each of the fourteen vanilla `PressurePlateBlock`s
 (`docs/player_pressure_plate_spec.md`), verified in-world. Last reviewed 2026-09-05.
 
-**Open questions awaiting a ruling:** the recipe gate (#6), whether fake players press the plate
-(#7), furnace-fuel parity on the wooden variants (#8), and whether to adopt texgen (#9). Everything
-those four touch is an assumption in this repo, not a decision, and is marked as such where it
-appears.
+**All open questions were ruled on 2026-09-05**, delegated by the owner rather than answered
+individually, and recorded with their reasoning in `docs/player_pressure_plate_spec.md` under
+Decisions. In short: the recipe is redstone rather than an ender pearl (#6), fake players do not
+press the plate and the block does nothing to arrange that (#7), fuel parity is kept (#8), and the
+local texture generator is kept over texgen (#9). A delegated ruling is still a ruling; overturn one
+by writing the reversal down beside it, not by deleting the reasoning.
 
 ## Build and test
 
@@ -322,6 +324,17 @@ The `else` branch registers a task that explains what to set.
   will not find it.
 - **A block's tags** come from `BuiltInRegistries.BLOCK.wrapAsHolder(block).tags()`; there is no
   `getTags()` on `BlockBehaviour`.
+
+## The commit trailers, and why the first four lack them
+
+Every commit from `f084abb` onward carries `Co-Authored-By` and `Claude-Session`. The first four do
+not, and **they will not be rewritten** (ruling 2026-09-05, issue #5).
+
+This reverses the recommendation in that issue, which argued for rewriting on the grounds that it
+would never be cheaper than while the repo was hours old. The facts moved: the repo is public, a
+CurseForge file now points at it, and four merged PRs and their CI runs reference those SHAs. That
+turns a tidy-up into a force-push of a public history for cosmetic uniformity, which is not a trade
+worth making. The convention is established going forward, which is what it was for.
 
 ## Deliberate deviations from the sibling repos
 

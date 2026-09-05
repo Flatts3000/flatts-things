@@ -103,13 +103,12 @@ behaves, and it is why none of these files may ever carry a `"replace"` key.
 
 ## Recipe
 
-Shapeless, per variant: the matching vanilla plate plus one `minecraft:ender_pearl`.
+Shapeless, per variant: the matching vanilla plate plus one `minecraft:redstone`.
 
-The pearl is doing design work rather than just adding cost. It is the vanilla item most associated
-with a player specifically rather than with mobs or machinery, and it puts the plate after the first
-trip out into the world rather than in the first ten minutes, which is about where the problem it
-solves starts to matter. There is deliberately **no recipe back**, so the pearl is spent rather than
-borrowed. Cheap to change if playtesting says otherwise.
+There is deliberately **no recipe back** to the vanilla plate.
+
+This replaced an ender pearl on 2026-09-05; the reasoning for both the original choice and the
+reversal is under Decisions.
 
 ## Where the content comes from
 
@@ -209,26 +208,78 @@ This is the only evidence that the textures are right. No GameTest can see a tex
 shot existed the fourteen were verified as PNG files and by the game loading them, which is a claim
 about the file rather than about the block.
 
-## Open questions
+## Decisions
 
-**These are assumptions I made while building, not rulings.** They are written flatly elsewhere in
-this document because a spec has to say something; this section is the correction to that.
+All four open questions were ruled on 2026-09-05. The owner delegated them rather than answering
+each, so these are recorded as delegated rulings and are open to being overturned; the reasoning is
+kept so that overturning one does not start from scratch.
 
-| Question | Currently | Issue |
+| Question | Ruling | Issue |
 | --- | --- | --- |
-| The recipe gate | vanilla plate plus one ender pearl, not reversible | #6 |
-| Do fake players press it? | yes, because a fake player is a `Player` | #7 |
-| Fuel parity on the wooden variants | inherited from the item tag, never chosen | #8 |
-| texgen vs the local generator | local generator | #9 |
+| The recipe gate | **redstone**, replacing the ender pearl | #6 |
+| Do fake players press it? | **no**, and the block does nothing to arrange that | #7 |
+| Fuel parity on the wooden variants | **kept** | #8 |
+| texgen vs the local generator | **local generator kept** | #9 |
+
+### The recipe gate is redstone, not an ender pearl
+
+The pearl read well and gated badly. The problem this block solves - a cow opening your door, an
+arrow tripping your plate - is one players hit in their first hours, and a pearl puts the fix behind
+finding endermen, so the annoyance outlives the solution by a long way. A convenience should not be
+gated behind mob RNG and a biome hunt.
+
+Redstone is what a player already has in hand the first time they wire a door, and it says what the
+block is: an ordinary redstone component with one property tuned differently.
+
+Cheapness is not the risk it looks like. A vanilla plate is not made obsolete by this one, because a
+mob farm still wants a plate that fires for mobs. They do different jobs.
+
+### Fake players do not press it, and that is a consequence rather than a rule
+
+The issue was filed asserting the opposite, and the reasoning was sound: a fake player is a `Player`
+and passes both of `getEntityCount`'s filters. The conclusion was still wrong.
+
+**A NeoForge `FakePlayer` is never added to the level.** It is a detached `ServerPlayer` carrying
+identity and permissions, so `getEntitiesOfClass(Player.class, ...)` cannot find it however precisely
+it is positioned. The plate asks the world what is standing on it, and a fake player is not standing
+anywhere.
+
+That was established by writing the test, which failed against the ruling first drafted from the
+issue's premise. It is pinned by `a_fake_player_does_not_press_the_player_plate`, with a control
+proving a real player in the same position does press it.
+
+**It is not a guarantee.** A mod that genuinely spawns a `Player` entity into the world would press
+this plate, and nothing here prevents it. Pinning the observed behaviour is worth more than claiming
+a rule the block does not enforce.
+
+### Fuel parity is kept
+
+The objection was that burning a plate destroys an ender pearl for the fuel value of a plank. **The
+recipe ruling removes that objection**: a player plate now costs a vanilla plate and one redstone, so
+burning one is an ordinary Minecraft mistake of the kind vanilla already lets you make with a
+bookshelf.
+
+The item tag is also not fuel-specific. Dropping it to solve fuel would have changed anything else
+keyed to `#minecraft:wooden_pressure_plates`, which is a wider blast radius than the problem.
+
+### The local generator is kept
+
+`texgen`'s procedural backend ships two generic styles and no plank, and an unrecognised style raises
+rather than falling back. Adopting it means contributing a style upstream to a shared repo with no
+remote, no CI and no tests, to gain a candidate-review workflow that fourteen flat plate textures do
+not need.
+
+The local generator has seven tests, is provably deterministic across processes, and is enforced in
+CI. Revisit if this mod grows a texture that wants AI art or seam review; that is the case texgen is
+good at and this is not.
+
 
 ## Known limits
 
-- **Fake players count as players.** Any other mod's fake player entity standing in the box presses
-  the plate. No decision has been made about whether that is wrong; it is recorded here so the first
-  person to hit it knows it was not an oversight.
+- **A mod that spawns a real `Player` entity would press it.** NeoForge's own fake players cannot
+  (see Decisions), but nothing here enforces that, and a mod taking a different approach could.
 - **There is no owner or team filter.** Any player presses it, not a specific one. A plate keyed to
   one player is a different block and probably a different design.
-- **Fuel parity is inherited, not chosen.** The twelve wooden variants join
-  `#minecraft:wooden_pressure_plates` on the item side too, so anything vanilla does with that tag,
-  burning them as furnace fuel included, applies to these. That is parity working as intended, but it
-  is worth knowing that it was not decided separately.
+- **The twelve wooden variants are furnace fuel**, because they join
+  `#minecraft:wooden_pressure_plates` on the item side. That is now a decision rather than an
+  inheritance (see Decisions).

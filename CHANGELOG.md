@@ -9,6 +9,30 @@ All notable changes to this project are documented here. Format follows
 
 ## Unreleased
 
+### Changed
+
+- **The recipe is a redstone dust, not an ender pearl.** The pearl read well and gated badly: the
+  problem these plates solve, a cow opening your door or an arrow tripping your plate, is one you hit
+  in your first hours, and a pearl put the fix behind finding endermen. Redstone is what you already
+  have in hand the first time you wire a door. A vanilla plate is not made obsolete by the cheaper
+  price, because a mob farm still wants a plate that fires for mobs.
+
+### Notes
+
+- **Fake players do not press these plates**, and the block does nothing to arrange it. This was
+  filed as the opposite, on sound reasoning: a fake player is a `Player` and passes both of the
+  filters vanilla applies. The conclusion was still wrong, because a NeoForge fake player is never
+  added to the level, so the plate's query cannot find it however it is positioned. Established by
+  writing the test, which failed against the ruling drafted from the issue. A mod that spawns a real
+  player entity would still press it.
+- **Furnace-fuel parity on the wooden variants is kept.** The objection was that burning one destroys
+  an ender pearl; the recipe change above removes it.
+- **The local texture generator is kept over the shared `texgen`.** Adopting it would mean
+  contributing a plank style upstream to a repo with no remote, no CI and no tests, for a
+  candidate-review workflow that fourteen flat textures do not need.
+- **The first four commits will not be rewritten** to add the missing trailers. Every commit since
+  carries them.
+
 ## v0.1.0 - 2026-09-05 - "Only You"
 
 First build. The repo, and the family of blocks it was opened for.

@@ -3,7 +3,7 @@
   "category": "redstone",
   "ingredients": [
     "minecraft:bamboo_pressure_plate",
-    "minecraft:ender_pearl"
+    "minecraft:redstone"
   ],
   "result": {
     "id": "flattsthings:bamboo_player_pressure_plate",

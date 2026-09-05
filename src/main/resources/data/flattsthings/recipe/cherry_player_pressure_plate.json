@@ -3,7 +3,7 @@
   "category": "redstone",
   "ingredients": [
     "minecraft:cherry_pressure_plate",
-    "minecraft:ender_pearl"
+    "minecraft:redstone"
   ],
   "result": {
     "id": "flattsthings:cherry_player_pressure_plate",
