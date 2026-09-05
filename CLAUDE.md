@@ -325,6 +325,26 @@ The `else` branch registers a task that explains what to set.
 - **A block's tags** come from `BuiltInRegistries.BLOCK.wrapAsHolder(block).tags()`; there is no
   `getTags()` on `BlockBehaviour`.
 
+### The client and networking layer moved a long way in 26.1
+
+Anything written against an older version will not compile, and the renames are not guessable. All of
+these were found by reading the 26.1 sources after the obvious version failed.
+
+| Older API | 26.1 |
+| --- | --- |
+| `GuiGraphics` | `GuiGraphicsExtractor`. The whole render path is an "extract" model now |
+| `Screen.renderBg(...)` | `Screen.extractBackground(GuiGraphicsExtractor, int, int, float)` |
+| `this.imageWidth = 176` in the body | **final**; pass through `super(menu, inventory, title, width, height)` |
+| `new KeyMapping(name, type, key, "key.categories.inventory")` | takes a `KeyMapping.Category`, e.g. `KeyMapping.Category.INVENTORY` |
+| `@EventBusSubscriber(bus = Bus.MOD)` | no `bus` argument at all; routing is by event type |
+| `PacketDistributor.sendToServer(...)` | `ClientPacketDistributor.sendToServer(...)`; `PacketDistributor` is server-to-client only |
+| `IMenuTypeExtension.create(Menu::new)` | the factory is `IContainerFactory`, three arguments including a `RegistryFriendlyByteBuf` |
+
+**Screens here are painted, not textured.** `graphics.fill(...)` for the panel in vanilla's palette,
+and `graphics.blitSprite(RenderPipelines.GUI_TEXTURED, Identifier.withDefaultNamespace("container/slot"), ...)`
+for the slots. That inherits the vanilla look exactly and ships no art asset that a resource pack
+could leave stranded.
+
 ## The commit trailers, and why the first four lack them
 
 Every commit from `f084abb` onward carries `Co-Authored-By` and `Claude-Session`. The first four do

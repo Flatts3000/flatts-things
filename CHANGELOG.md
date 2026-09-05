@@ -11,6 +11,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Tool slots, screen** (#24, second of three slices). Press **V**, or run `/toolslots`, and put
+  your pickaxe, axe, shovel and sword somewhere that is not your hotbar. Shift-click moves tools in
+  and out. The screen is painted in vanilla's own palette and uses vanilla's slot sprite, so it ships
+  no texture and matches the game it is in.
 - **Tool slots, storage layer** (#24, first of three slices). Dedicated per-player slots that are not
   part of inventory space, so a pickaxe, axe, shovel and sword stop eating four of your nine hotbar
   slots. What fits is the `#flattsthings:tool_slot_valid` tag, which defaults to the vanilla tool

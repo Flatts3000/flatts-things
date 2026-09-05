@@ -40,7 +40,7 @@ public final class ToolSlots {
     public ToolSlots() {
     }
 
-    private static ToolSlots fromList(List<ItemStack> saved) {
+    static ToolSlots fromList(List<ItemStack> saved) {
         ToolSlots slots = new ToolSlots();
         for (int index = 0; index < Math.min(SIZE, saved.size()); index++) {
             slots.items.set(index, saved.get(index).copy());
@@ -67,6 +67,18 @@ public final class ToolSlots {
 
     public ToolSlots copy() {
         return fromList(this.asList());
+    }
+
+    /**
+     * Replace every slot at once, skipping the per-slot validity check.
+     *
+     * <p>For {@link ToolSlotsContainer} only. A menu enforces what may be placed through
+     * {@code Slot.mayPlace}, which runs before the stack ever reaches the container, so re-checking
+     * here would reject legitimate vanilla shuffling (a swap mid-drag briefly holds odd contents)
+     * while adding nothing.
+     */
+    static void writeAll(Player player, List<ItemStack> stacks) {
+        player.setData(FTAttachments.TOOL_SLOTS, fromList(stacks));
     }
 
     // ---------------- player-facing access ----------------
