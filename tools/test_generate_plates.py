@@ -17,6 +17,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from PIL import Image
+
 ROOT = Path(__file__).resolve().parent.parent
 GENERATOR = ROOT / "tools" / "generate_plates.py"
 
@@ -88,9 +90,48 @@ def case_generator_writes_something() -> list[str]:
     return problems
 
 
+def case_committed_output_matches_a_fresh_generation() -> list[str]:
+    """The committed tree is what ships, so it must still be what the generator produces.
+
+    <b>This compares PIXELS for PNGs, not bytes, and that distinction was found the hard way.</b>
+    The first version of this ran `git diff --exit-code` after regenerating, and it failed on CI
+    while passing locally: all fourteen textures differed between a Windows machine and a Linux
+    runner. The pixels were identical. Pillow and zlib produce different compressed bytes for the
+    same image across versions and platforms, so PNG byte equality is a claim about the encoder, not
+    about the texture.
+
+    The seed determinism proven above is per-machine and real. Cross-machine PNG byte equality is
+    not achievable and is not worth chasing; what matters is that the image is unchanged.
+
+    Practical consequence worth knowing: after running the generator, `git status` may show every
+    texture as modified with no actual change. That is the encoder, not a regression. This test is
+    the signal, not the diff.
+    """
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        fresh = Path(tmp) / "fresh"
+        _generate_into(fresh, "1")
+
+        for name in sorted(_files_under(fresh)):
+            committed = ROOT / name
+            if not committed.exists():
+                problems.append(f"{name} is generated but not committed")
+                continue
+            if name.endswith(".png"):
+                with Image.open(committed) as a, Image.open(fresh / name) as b:
+                    if a.size != b.size or a.mode != b.mode:
+                        problems.append(f"{name} changed shape ({a.size}{a.mode} -> {b.size}{b.mode})")
+                    elif list(a.getdata()) != list(b.getdata()):
+                        problems.append(f"{name} pixels differ from the committed texture")
+            elif committed.read_bytes() != (fresh / name).read_bytes():
+                problems.append(f"{name} differs from the committed file")
+    return problems
+
+
 CASES = [
     ("output is byte-identical across processes", case_output_is_byte_identical_across_processes),
     ("the generator actually writes its output", case_generator_writes_something),
+    ("committed output matches a fresh generation", case_committed_output_matches_a_fresh_generation),
 ]
 
 
