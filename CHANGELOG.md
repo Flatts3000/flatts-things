@@ -9,6 +9,14 @@ All notable changes to this project are documented here. Format follows
 
 ## Unreleased
 
+### Added
+
+- **Tool slots, storage layer** (#24, first of three slices). Dedicated per-player slots that are not
+  part of inventory space, so a pickaxe, axe, shovel and sword stop eating four of your nine hotbar
+  slots. What fits is the `#flattsthings:tool_slot_valid` tag, which defaults to the vanilla tool
+  families and shears, so another mod's pickaxe fits with no compat patch and a pack can widen it in
+  a datapack. Nothing is visible in game yet: the screen and the auto-swap are the next two slices.
+
 ### Changed
 
 - **The recipe is a redstone dust, not an ender pearl.** The pearl read well and gated badly: the
