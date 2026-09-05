@@ -11,6 +11,7 @@ Run from the repo root:
 from __future__ import annotations
 
 import filecmp
+import json
 import os
 import subprocess
 import sys
@@ -18,6 +19,9 @@ import tempfile
 from pathlib import Path
 
 from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from plate_variants import VARIANTS, block_id, family  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERATOR = ROOT / "tools" / "generate_plates.py"
@@ -128,10 +132,129 @@ def case_committed_output_matches_a_fresh_generation() -> list[str]:
     return problems
 
 
+def case_every_variant_is_in_exactly_one_tag_family() -> list[str]:
+    """Tag membership is mining behaviour, and a variant in neither family loses its tool.
+
+    A wooden plate is axe-mineable only because #minecraft:wooden_pressure_plates sits inside
+    #minecraft:mineable/axe. A variant that fell out of both lists would still be breakable, just at
+    the wrong speed with the wrong tool - and the in-game tag sweep catches it only after a full
+    server boot, which is a slow way to learn about a one-line typo here.
+    """
+    problems: list[str] = []
+    wood = {v.material for v in VARIANTS if family(v) == "wood"}
+    stone = {v.material for v in VARIANTS if family(v) == "stone"}
+
+    for overlap in sorted(wood & stone):
+        problems.append(f"{overlap} is in both families")
+    missing = {v.material for v in VARIANTS} - (wood | stone)
+    for name in sorted(missing):
+        problems.append(f"{name} is in neither family")
+    if not stone:
+        problems.append("the stone family is empty, so the pickaxe tag would ship with no entries")
+    return problems
+
+
+def case_no_generated_file_replaces_a_vanilla_tag() -> list[str]:
+    """One key would turn a contribution into a replacement and delete vanilla's own entries.
+
+    Tags MERGE across data packs, which is what makes writing under data/minecraft/ legitimate at
+    all. A `"replace": true` in any of those four files silently discards every vanilla plate from
+    the tag it joins, and the mod would still load.
+    """
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "out"
+        _generate_into(out, "1")
+        vanilla = out / "src/main/resources/data/minecraft"
+        files = sorted(vanilla.rglob("*.json")) if vanilla.is_dir() else []
+        if not files:
+            problems.append("no vanilla tag contributions were written at all")
+        for path in files:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if "replace" in payload:
+                problems.append(f"{path.name} carries a 'replace' key")
+            if not payload.get("values"):
+                problems.append(f"{path.name} has no values")
+    return problems
+
+
+def case_every_block_has_the_26_1_asset_set() -> list[str]:
+    """26.1 splits the client item definition out of the model, and missing it is invisible.
+
+    Without assets/<ns>/items/<name>.json the placed block looks perfect and the held item is the
+    missing texture. The in-game sweep checks the same thing, but this one fails in a second rather
+    than after a server boot, and it also pins the paths themselves.
+    """
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "out"
+        _generate_into(out, "1")
+        root = out / "src/main/resources"
+        for v in VARIANTS:
+            bid = block_id(v)
+            required = [
+                f"assets/flattsthings/blockstates/{bid}.json",
+                f"assets/flattsthings/models/block/{bid}.json",
+                f"assets/flattsthings/models/block/{bid}_down.json",
+                f"assets/flattsthings/items/{bid}.json",
+                f"assets/flattsthings/textures/block/{bid}.png",
+                f"data/flattsthings/loot_table/blocks/{bid}.json",
+                f"data/flattsthings/recipe/{bid}.json",
+            ]
+            for relative in required:
+                if not (root / relative).is_file():
+                    problems.append(f"{bid}: missing {relative}")
+    return problems
+
+
+def case_textures_are_shaped_and_legible() -> list[str]:
+    """16x16, fully opaque, and the glyph actually contrasts with the plate it sits on.
+
+    The glyph colour is derived by pushing away from the base luminance rather than being set per
+    variant, so pale_oak and dark_oak are the boundary cases: a wrong sign in that branch produces a
+    texture where the figure is invisible, which no other check would notice and which is the whole
+    reason the texture exists.
+    """
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "out"
+        _generate_into(out, "1")
+        blocks = out / "src/main/resources/assets/flattsthings/textures/block"
+        for v in VARIANTS:
+            path = blocks / f"{block_id(v)}.png"
+            with Image.open(path) as img:
+                if img.size != (16, 16):
+                    problems.append(f"{v.material}: {img.size}, expected (16, 16)")
+                    continue
+                if img.mode != "RGBA":
+                    problems.append(f"{v.material}: mode {img.mode}, expected RGBA")
+                    continue
+                px = img.load()
+                if any(px[x, y][3] != 255 for x in range(16) for y in range(16)):
+                    problems.append(f"{v.material}: has transparent pixels")
+
+                def luma(c):
+                    return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+
+                # Row 5 crosses the head, row 2 is plate only. Both come from FIGURE in the
+                # generator; if that mark moves, this moves with it.
+                glyph = sum(luma(px[x, 5]) for x in range(6, 10)) / 4
+                plate = sum(luma(px[x, 2]) for x in range(6, 10)) / 4
+                if abs(glyph - plate) < 25:
+                    problems.append(
+                        f"{v.material}: glyph and plate differ by only {abs(glyph - plate):.0f} "
+                        "luma, the figure will not read")
+    return problems
+
+
 CASES = [
     ("output is byte-identical across processes", case_output_is_byte_identical_across_processes),
     ("the generator actually writes its output", case_generator_writes_something),
     ("committed output matches a fresh generation", case_committed_output_matches_a_fresh_generation),
+    ("every variant is in exactly one tag family", case_every_variant_is_in_exactly_one_tag_family),
+    ("no generated file replaces a vanilla tag", case_no_generated_file_replaces_a_vanilla_tag),
+    ("every block has the 26.1 asset set", case_every_block_has_the_26_1_asset_set),
+    ("textures are shaped and legible", case_textures_are_shaped_and_legible),
 ]
 
 
