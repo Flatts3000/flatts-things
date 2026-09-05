@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.PressurePlateBlock;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 
 /**
  * The player pressure plates: what presses them, and what must not.
@@ -265,6 +266,45 @@ final class PlayerPressurePlateTests {
                 }
             }
             report(helper, problems, "variants that drifted from their vanilla counterpart");
+        });
+
+        // A FAKE PLAYER DOES NOT PRESS IT, AND THE BLOCK DOES NOTHING TO ARRANGE THAT (ruling
+        // 2026-09-05, issue #7).
+        //
+        // The issue was filed asserting the opposite, on the reasoning that a fake player IS a
+        // Player and passes both of getEntityCount's filters. That reasoning is sound and the
+        // conclusion is still wrong, which is why this test exists rather than a paragraph.
+        //
+        // A NeoForge FakePlayer is never added to the level. It is a detached ServerPlayer used to
+        // carry identity and permissions, so `level.getEntitiesOfClass(Player.class, ...)` cannot
+        // find it however precisely it is positioned. The plate asks the world what is standing on
+        // it, and a fake player is not standing anywhere.
+        //
+        // So this is a CONSEQUENCE, not a guarantee. A mod that genuinely spawns a Player entity
+        // into the world would press this plate, and nothing here prevents that. Pinning the
+        // observed behaviour is worth more than pretending to a rule the block does not enforce.
+        FTGameTests.test("a_fake_player_does_not_press_the_player_plate", 20, helper -> {
+            placePlate(helper, stonePlate());
+            ServerPlayer fake = FakePlayerFactory.get(
+                helper.getLevel(),
+                new com.mojang.authlib.GameProfile(
+                    java.util.UUID.nameUUIDFromBytes("flattsthings-test".getBytes()),
+                    "flattsthings-test"));
+            stepOn(helper, fake);
+            helper.assertFalse(isPowered(helper),
+                "a NeoForge fake player is not a world entity, so the plate cannot see it");
+            helper.succeed();
+        });
+
+        // CONTROL for the test above: a REAL player in the same position does press it, so the
+        // negative cannot pass merely because stepOn did nothing.
+        FTGameTests.test("control_a_real_player_in_that_position_does_press_it", 20, helper -> {
+            placePlate(helper, stonePlate());
+            stepOn(helper, survivalPlayer(helper));
+            helper.assertTrue(isPowered(helper),
+                "control: a real player at the same spot presses it, so the fake-player negative "
+                    + "is about the entity and not about the positioning");
+            helper.succeed();
         });
 
         // TAG PARITY, and it is mining behaviour rather than bookkeeping. A wooden plate is

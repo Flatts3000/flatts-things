@@ -54,14 +54,14 @@ final class PlateDataTests {
             for (PlateVariant variant : FTBlocks.VARIANTS) {
                 CraftingInput input = CraftingInput.of(2, 1, List.of(
                     new ItemStack(variant.vanilla().asItem()),
-                    new ItemStack(Items.ENDER_PEARL)));
+                    new ItemStack(Items.REDSTONE)));
 
                 Optional<RecipeHolder<CraftingRecipe>> found = helper.getLevel().getServer()
                     .getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel());
 
                 if (found.isEmpty()) {
-                    problems.add(variant.blockId() + " (vanilla plate + ender pearl crafts nothing)");
+                    problems.add(variant.blockId() + " (vanilla plate + redstone crafts nothing)");
                     continue;
                 }
                 ItemStack result = found.get().value().assemble(input);

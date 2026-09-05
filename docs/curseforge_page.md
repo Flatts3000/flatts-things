@@ -33,7 +33,7 @@ Everything else about it is the plate you already know: the same hold, the same 
 redstone out of it, the same profile underfoot. It mines with the same tool, burns in the same
 furnace, and takes the same piston shove. Only the sensitivity changed.
 
-Craft one from the plate you have and an ender pearl.
+Craft one from the plate you have and a redstone dust.
 
 ### Not in yet
 

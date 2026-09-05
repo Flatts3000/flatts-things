@@ -166,12 +166,21 @@ def generate(v: Variant) -> None:
             "conditions": [{"condition": "minecraft:survives_explosion"}],
         }],
     })
-    # Shapeless, and deliberately NOT reversible: there is no recipe back to the vanilla plate, so
-    # the ender pearl is spent rather than borrowed.
+    # Shapeless, and deliberately NOT reversible: there is no recipe back to the vanilla plate.
+    #
+    # REDSTONE, NOT AN ENDER PEARL (ruling 2026-09-05, issue #6). The pearl read well and gated
+    # badly. The problem this block solves - a cow opening your door, an arrow tripping your plate -
+    # is one players hit in their first hours, and a pearl puts the fix behind finding endermen, so
+    # the annoyance outlived the solution by a long way. Redstone is what a player already has in
+    # hand the first time they wire a door, and it says what the block is: an ordinary redstone
+    # component with one property tuned differently.
+    #
+    # Cheapness is not a risk here. A vanilla plate is not made obsolete by this one; they do
+    # different jobs, and a mob farm still wants a plate that fires for mobs.
     write_json(DATA / f"recipe/{bid}.json", {
         "type": "minecraft:crafting_shapeless",
         "category": "redstone",
-        "ingredients": [vanilla_plate(v), "minecraft:ender_pearl"],
+        "ingredients": [vanilla_plate(v), "minecraft:redstone"],
         "result": {"id": f"{NS}:{bid}", "count": 1},
     })
 

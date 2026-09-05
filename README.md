@@ -15,7 +15,7 @@ entry.
 ### Player Pressure Plates
 
 A player-only counterpart to every vanilla pressure plate. Fourteen of them, one per vanilla plate,
-each crafted shapelessly from that plate plus an ender pearl.
+each crafted shapelessly from that plate plus a redstone dust.
 
 Vanilla ships two sensitivities and neither is this one. A wooden plate fires for any entity, so an
 arrow you shot at it opens your door. A stone plate fires for any living entity, so a wandering cow
