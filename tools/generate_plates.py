@@ -199,10 +199,6 @@ def generate(v: Variant) -> None:
 # this repo is built to prevent. New non-plate strings go here.
 STATIC_LANG = {
     "itemGroup.flattsthings": "Flatts's Things",
-    "container.flattsthings.tool_slots": "Tool Slots",
-    "key.flattsthings.tool_slots": "Open Tool Slots",
-    "commands.flattsthings.tool_slots.disabled":
-        "Tool slots are turned off in this pack's Flatts's Things config",
 }
 
 

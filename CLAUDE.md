@@ -409,10 +409,69 @@ these were found by reading the 26.1 sources after the obvious version failed.
 | `PacketDistributor.sendToServer(...)` | `ClientPacketDistributor.sendToServer(...)`; `PacketDistributor` is server-to-client only |
 | `IMenuTypeExtension.create(Menu::new)` | the factory is `IContainerFactory`, three arguments including a `RegistryFriendlyByteBuf` |
 
+The renames above were all found while building a standalone tool-slot screen. **That screen is
+gone** - the slots live in vanilla's inventory now - but the table stays, because every row is a
+26.1 rename that any client code will hit.
+
 **Screens here are painted, not textured.** `graphics.fill(...)` for the panel in vanilla's palette,
 and `graphics.blitSprite(RenderPipelines.GUI_TEXTURED, Identifier.withDefaultNamespace("container/slot"), ...)`
 for the slots. That inherits the vanilla look exactly and ships no art asset that a resource pack
 could leave stranded.
+
+## The tool slots are in vanilla's inventory, and that needs a mixin
+
+**This is the only mixin in the repo, and none of the four sibling mods has one.** Do not add a
+second without the same kind of reason.
+
+**The feature was built the wrong way first.** The ask was tools that live in the inventory without
+taking inventory space. Version one put them on a screen of their own behind a **V** key, which
+delivered the second half and quietly dropped the first, and it was chosen precisely to avoid the
+problem below. The owner found it by opening their inventory and seeing nothing. A trade that avoids
+the hard part by dropping the named feature is not a trade, and the reasoning written in the code at
+the time read as sound while being exactly wrong.
+
+**NeoForge exposes no hook for adding slots to `InventoryMenu`.** There is no event; the events
+directory has nothing between `PlayerContainerEvent` and `ContainerScreenEvent` that touches slots.
+The two ways in are a mixin on the constructor or an access transformer plus adding the slots after
+the fact. **The mixin wins because the menu is not built once**: it is rebuilt on join, on respawn
+and on a dimension change, on both the client and the server. An access transformer needs a hook for
+each of those, and missing one leaves the two sides disagreeing about how many slots exist.
+`InventoryMenu` is synchronised by slot INDEX, so a disagreement moves items into the wrong slots
+rather than merely looking wrong. A constructor runs for every rebuild on both sides and cannot be
+missed.
+
+**Appended at the end, indices 46 to 50.** Vanilla's `quickMoveStack` decides what a shift-click does
+from hardcoded index ranges up to 45. Inserting anywhere earlier shifts the armour, inventory and
+offhand out from under those ranges and breaks shift-clicking across the whole screen. Appending
+leaves every range intact, and the method's final `else` already moves an unrecognised index into the
+inventory, so shift-clicking a tool OUT works with nothing patched. Shift-clicking one IN does not,
+and is the mixin's second injection.
+
+**The config switch acts on `Slot.isActive()`, never on whether the slots exist.** The obvious
+implementation - add them only when the feature is on - is the desync above with a config file
+attached. The count must be identical on both sides whatever the config says; `isActive` then decides
+whether a slot can be seen or touched, and vanilla honours it in the three places that matter
+(rendering, the empty-slot icon, and `findSlot`, which is what a click looks through). A mismatched
+config then costs nothing worse than one side refusing a click.
+`switching_the_slots_off_hides_them_without_removing_them` pins the count.
+
+**Only the background is ours to draw.** The slots are real slots, so the game draws the items,
+highlights the hovered one, shows tooltips and handles clicks unasked. What is missing is what a
+texture would provide, because vanilla's inventory texture stops at the bottom of its own panel.
+`ToolSlotStrip` paints it on `ScreenEvent.Render.Background` - **not**
+`ContainerScreenEvent.Render.Foreground`, which is the obvious hook and is wrong: 26.1 fires it after
+the slots are drawn, so the panel would cover the items sitting in it. There is no
+`ContainerScreenEvent.Render.Background` in 26.1; its own javadoc points at the screen event instead.
+That hook is not translated by `leftPos`/`topPos`, unlike the foreground one.
+
+**Below the panel rather than inside it, and not on the right.** Vanilla's inventory is 176 wide and
+the free space inside fits three slots at most, so five cannot go in without moving vanilla's own
+widgets - which is how an inventory screen ends up broken for everyone who added anything else. The
+right-hand edge is where JEI puts its item list, and this mod ships no JEI integration on purpose.
+
+**Known gap: the creative inventory.** `CreativeModeInventoryScreen` has its own menu rather than
+`InventoryMenu`, so the strip does not appear there and a creative player cannot reach their tools
+from the inventory tab. Stored tools are untouched and come back in survival.
 
 ## Events that only fire on one side
 

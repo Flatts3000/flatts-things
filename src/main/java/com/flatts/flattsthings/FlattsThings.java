@@ -7,7 +7,6 @@ import com.flatts.flattsthings.registry.FTBlocks;
 import com.flatts.flattsthings.registry.FTConditions;
 import com.flatts.flattsthings.registry.FTCreativeTabs;
 import com.flatts.flattsthings.registry.FTItems;
-import com.flatts.flattsthings.registry.FTMenus;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -41,9 +40,9 @@ public final class FlattsThings {
         FTCreativeTabs.register(modEventBus);
 
         // Per-player storage. Independent of the block registries above, so its position here is
-        // convention rather than a constraint.
+        // convention rather than a constraint. The tool slots themselves are added to vanilla's own
+        // InventoryMenu by a mixin, so there is no menu type of ours to register.
         FTAttachments.register(modEventBus);
-        FTMenus.register(modEventBus);
 
         // In-world GameTests (the CI gameTest job runs these).
         FTGameTests.register(modEventBus);

@@ -133,9 +133,23 @@ neoForge {
             // ::1 on this machine, so the registry reports the port free while a game holds it.
             // Anything that must be sure asks what answered, via `gamebridge ping`.
             systemProperty 'devbridge.port', '8610'
-            // Never grab the mouse, so alt-tabbing during an unattended shoot cannot spin the
-            // camera mid-capture.
-            systemProperty 'devbridge.lockInput', 'true'
+            // OPT IN, because the default cost a session. This releases the mouse for the whole
+            // run: devbridge's lock is an ungrabbed mouse, and MouseHandler.turnPlayer only runs
+            // while the mouse is grabbed, so with it on the camera cannot be turned BY HAND either.
+            // That is right for an unattended shoot, where a stray alt-tab would spin the camera
+            // between the command that framed a shot and the shot itself. It is wrong for every
+            // other reason to launch this client: somebody who opened the game to look at a block
+            // finds a camera that will not move and reads it as a broken game rather than a
+            // setting, which is exactly what happened.
+            //
+            //   ./gradlew runClient -PlockInput      <- unattended shoots (shoot_plates, gallery)
+            //   ./gradlew runClient                  <- looking at the game yourself
+            //
+            // `gamebridge input on` / `input off` flips it on a running client. Note the sense:
+            // `enabled` is what the MOUSE does, so `input off` takes the camera away.
+            if (project.hasProperty('lockInput')) {
+                systemProperty 'devbridge.lockInput', 'true'
+            }
             // Boot straight into a world instead of stopping at the title screen. Vanilla's own
             // launch argument, not a mod feature. `--args` on the Gradle task does NOT do this: a
             // moddev run reads it as a main class and the launch dies before Minecraft starts.
@@ -249,6 +263,11 @@ dependencies {
 
 tasks.named('test', Test) {
     useJUnitPlatform()
+    // A moddev JUnit run works out of build/minecraft-junit, not the project root, so a test that
+    // needs a file from the repo cannot use a relative path. ToolSlotSpriteTest reads the patched
+    // game jar to check that the empty-slot outlines name sprites that exist - the only way to see
+    // client assets, which are on neither test layer's classpath.
+    systemProperty 'flattsthings.projectDir', projectDir.absolutePath
     testLogging {
         events 'passed', 'skipped', 'failed'
         exceptionFormat 'full'

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "com.flatts.flattsthings.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "InventoryMenuMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

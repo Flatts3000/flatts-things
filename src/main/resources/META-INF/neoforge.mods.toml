@@ -15,6 +15,12 @@ logoBlur = false
 authors = "${mod_authors}"
 description = '''${mod_description}'''
 
+# The tool slots are added to vanilla's own InventoryMenu, which NeoForge exposes no hook for. See
+# the mixin's own javadoc for why a mixin rather than an access transformer: the menu is rebuilt on
+# join, on respawn and on a dimension change, on both sides, and a constructor runs for all of them.
+[[mixins]]
+config = "flattsthings.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId = "neoforge"
 type = "required"

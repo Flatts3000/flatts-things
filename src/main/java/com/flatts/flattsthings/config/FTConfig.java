@@ -38,7 +38,7 @@ public final class FTConfig {
      */
     public static final String PLAYER_PRESSURE_PLATES = "player_pressure_plates";
 
-    /** The dedicated tool slots. Off means the screen will not open; stored tools stay stored. */
+    /** The dedicated tool slots. Off hides them on the screen; stored tools stay stored. */
     public static final String TOOL_SLOTS = "tool_slots";
 
     /** Swapping the right tool into the hand when you start breaking a block. */
@@ -66,9 +66,9 @@ public final class FTConfig {
             "placed in a world keep sensing players.");
 
         define(builder, TOOL_SLOTS,
-            "Five dedicated tool slots that do not take up inventory space. Off means the screen",
-            "will not open, by key or by /toolslots. Tools already stored stay stored and come back",
-            "when this is turned on again.");
+            "Five dedicated tool slots on the inventory screen that do not take up inventory",
+            "space. Off hides them and refuses clicks; tools already stored stay stored and come",
+            "back when this is turned on again.");
 
         define(builder, TOOL_AUTO_SWAP,
             "Swap the best tool for the job into your hand while you break a block, and put your own",

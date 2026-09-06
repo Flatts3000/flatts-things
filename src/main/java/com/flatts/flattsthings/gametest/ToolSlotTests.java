@@ -2,11 +2,17 @@ package com.flatts.flattsthings.gametest;
 
 import com.flatts.flattsthings.content.ToolSlots;
 import com.flatts.flattsthings.content.ToolSlotsContainer;
-import com.flatts.flattsthings.content.menu.ToolSlotsMenu;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -17,6 +23,29 @@ import net.minecraft.world.item.Items;
  * and it is the layer where a mistake is invisible until somebody loses their gear.
  */
 final class ToolSlotTests {
+
+    /**
+     * Vanilla's own count: a crafting result, four crafting, four armour, twenty-seven inventory,
+     * nine hotbar and the offhand. Ours are appended after it, so this is also the index of the
+     * first one.
+     */
+    private static final int VANILLA_INVENTORY_SLOTS = 46;
+
+    /** Count one item across every place it could be, which is how a duplication bug shows up. */
+    private static int countEverywhere(ServerPlayer player, Item item) {
+        int total = 0;
+        for (int index = 0; index < ToolSlots.SIZE; index++) {
+            if (ToolSlots.get(player, index).is(item)) {
+                total++;
+            }
+        }
+        for (int index = 0; index < player.getInventory().getContainerSize(); index++) {
+            if (player.getInventory().getItem(index).is(item)) {
+                total++;
+            }
+        }
+        return total;
+    }
 
     private ToolSlotTests() {
     }
@@ -111,44 +140,36 @@ final class ToolSlotTests {
 
         // ---------------- the menu (slice two) ----------------
 
-        FTGameTests.test("the_menu_exposes_the_slots_plus_the_player_inventory", 20, helper -> {
-            ServerPlayer player = helper.makeMockServerPlayerInLevel();
-            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
-            int expected = ToolSlots.SIZE + 36;
-            helper.assertTrue(menu.slots.size() == expected,
-                "expected " + expected + " slots, got " + menu.slots.size());
-            helper.succeed();
-        });
-
         // mayPlace is what actually guards a tool slot during play. The container deliberately does
         // not re-check, so if this were wrong nothing else would stop cobblestone going in.
         FTGameTests.test("a_tool_slot_refuses_a_non_tool_through_the_menu", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
-            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
-            helper.assertTrue(menu.slots.get(0).mayPlace(new ItemStack(Items.DIAMOND_PICKAXE)),
+            AbstractContainerMenu menu = player.inventoryMenu;
+            helper.assertTrue(menu.getSlot(VANILLA_INVENTORY_SLOTS).mayPlace(new ItemStack(Items.DIAMOND_PICKAXE)),
                 "a pickaxe must be allowed in a tool slot");
-            helper.assertFalse(menu.slots.get(0).mayPlace(new ItemStack(Items.COBBLESTONE)),
+            helper.assertFalse(menu.getSlot(VANILLA_INVENTORY_SLOTS).mayPlace(new ItemStack(Items.COBBLESTONE)),
                 "cobblestone must be refused by the slot itself");
             helper.succeed();
         });
 
         FTGameTests.test("a_tool_slot_holds_only_one", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
-            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
-            helper.assertTrue(menu.slots.get(0).getMaxStackSize() == 1,
-                "a tool slot holds one, got " + menu.slots.get(0).getMaxStackSize());
+            AbstractContainerMenu menu = player.inventoryMenu;
+            helper.assertTrue(menu.getSlot(VANILLA_INVENTORY_SLOTS).getMaxStackSize() == 1,
+                "a tool slot holds one, got " + menu.getSlot(VANILLA_INVENTORY_SLOTS).getMaxStackSize());
             helper.succeed();
         });
 
-        // Shift-clicking a tool out of the inventory should land it in a tool slot, and the change
-        // must reach the attachment rather than only the menu's working copy.
+        // Shift-clicking a tool in the inventory should land it in a tool slot. Vanilla's own
+        // quickMoveStack does not know these slots exist and would move the axe to the hotbar, so
+        // this is the mixin's second injection rather than anything inherited.
         FTGameTests.test("shift_clicking_a_tool_moves_it_into_a_slot", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
             player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));
-            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
+            AbstractContainerMenu menu = player.inventoryMenu;
 
-            int hotbarSlot = ToolSlots.SIZE + 27;
-            menu.quickMoveStack(player, hotbarSlot);
+            // Inventory slot 0 is the first hotbar slot, which is menu index 36 in vanilla numbering.
+            menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
 
             helper.assertTrue(ToolSlots.get(player, 0).is(Items.DIAMOND_AXE),
                 "the axe should now be in tool slot 0, found " + ToolSlots.get(player, 0).getItem());
@@ -157,12 +178,32 @@ final class ToolSlotTests {
             helper.succeed();
         });
 
+        // THE ACCOUNTING CHECK ON THAT PATH. quickMoveStack's return value drives a loop in doClick,
+        // and getting it wrong duplicates the item rather than merely misbehaving - which is exactly
+        // the failure a "did it arrive" assertion cannot see, because the axe did arrive.
+        FTGameTests.test("shift_clicking_a_tool_into_a_slot_does_not_duplicate_it", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));
+            AbstractContainerMenu menu = player.inventoryMenu;
+
+            menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
+            // Again, the way doClick would: a second call must find nothing left to move.
+            menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
+
+            helper.assertTrue(countEverywhere(player, Items.DIAMOND_AXE) == 1,
+                "exactly one axe should exist, found " + countEverywhere(player, Items.DIAMOND_AXE));
+            helper.succeed();
+        });
+
         FTGameTests.test("shift_clicking_a_tool_out_returns_it_to_the_inventory", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
             ToolSlots.set(player, 0, new ItemStack(Items.IRON_HOE));
-            ToolSlotsMenu menu = new ToolSlotsMenu(1, player.getInventory());
+            AbstractContainerMenu menu = player.inventoryMenu;
 
-            menu.quickMoveStack(player, 0);
+            // Index 0 in the vanilla menu is the crafting RESULT slot; the tool slots start at 46.
+            // Shift-clicking OUT needs no patch: vanilla's final else already moves an index it does
+            // not recognise into the inventory.
+            menu.quickMoveStack(player, VANILLA_INVENTORY_SLOTS);
 
             helper.assertTrue(ToolSlots.get(player, 0).isEmpty(),
                 "the hoe should have left the tool slot");
@@ -221,5 +262,78 @@ final class ToolSlotTests {
             helper.assertTrue(ToolSlots.of(player).isEmpty(), "the slot is empty afterwards");
             helper.succeed();
         });
+
+        // THE SLOTS ARE IN VANILLA'S OWN INVENTORY MENU, which is the whole point of the feature and
+        // the thing the first version got wrong by opening a screen of its own instead.
+        //
+        // This is also the only check that the mixin applied at all. Without it the count is 46 and
+        // every assertion below fails, which is the failure anyone should see first if mixin
+        // infrastructure ever breaks - rather than a silently missing strip in the corner of a
+        // screen nobody is looking at during a headless run.
+        FTGameTests.test("the_tool_slots_are_in_the_vanilla_inventory_menu", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            AbstractContainerMenu menu = player.inventoryMenu;
+            int firstToolSlot = VANILLA_INVENTORY_SLOTS;
+
+            helper.assertTrue(menu.slots.size() == VANILLA_INVENTORY_SLOTS + ToolSlots.SIZE,
+                "expected " + (VANILLA_INVENTORY_SLOTS + ToolSlots.SIZE) + " slots, found "
+                    + menu.slots.size() + " - if this is " + VANILLA_INVENTORY_SLOTS
+                    + " the mixin did not apply");
+
+            // APPENDED, not inserted. Vanilla's quickMoveStack reads hardcoded index ranges up to
+            // 45, so anything inserted earlier would move the armour, inventory and offhand out
+            // from under them and break shift-clicking across the whole screen.
+            helper.assertTrue(menu.getSlot(InventoryMenu.SHIELD_SLOT).container instanceof Inventory,
+                "the offhand slot must still be the offhand slot");
+
+            // Reads through to the attachment rather than a copy of it.
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            helper.assertTrue(menu.getSlot(firstToolSlot).getItem().is(Items.NETHERITE_PICKAXE),
+                "the slot should show what the attachment holds, found "
+                    + menu.getSlot(firstToolSlot).getItem().getItem());
+
+            // And writes through it.
+            menu.getSlot(firstToolSlot + 1).set(new ItemStack(Items.DIAMOND_AXE));
+            helper.assertTrue(ToolSlots.get(player, 1).is(Items.DIAMOND_AXE),
+                "placing into the slot should reach the attachment, found "
+                    + ToolSlots.get(player, 1).getItem());
+
+            helper.assertFalse(menu.getSlot(firstToolSlot).mayPlace(new ItemStack(Items.COBBLESTONE)),
+                "a tool slot must not accept a block");
+            helper.assertTrue(menu.getSlot(firstToolSlot).mayPlace(new ItemStack(Items.DIAMOND_HOE)),
+                "and must accept a tool");
+            helper.succeed();
+        });
+
+
+        // EVERY EMPTY SLOT SAYS WHAT IT IS FOR. Five identical grey squares under the inventory tell
+        // a player nothing, so each empty slot draws a vanilla tool outline the way the armour slots
+        // opposite them do.
+        //
+        // A typo in a sprite name renders as a missing texture and is invisible to every other test
+        // here, because nothing else in a headless run ever looks at a screen - the same blind spot
+        // the registry completeness sweep exists for. The file check is in ToolSlotSpriteTest.
+        FTGameTests.test("every_empty_tool_slot_shows_what_goes_in_it", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            AbstractContainerMenu menu = player.inventoryMenu;
+            Set<Identifier> seen = new HashSet<>();
+
+            for (int index = 0; index < ToolSlots.SIZE; index++) {
+                Identifier icon = menu.getSlot(VANILLA_INVENTORY_SLOTS + index).getNoItemIcon();
+                helper.assertTrue(icon != null, "tool slot " + index + " has no outline");
+                helper.assertTrue(seen.add(icon),
+                    "tool slot " + index + " repeats an outline (" + icon + "); five slots showing "
+                        + "the same picture is the problem this is meant to solve");
+                // The sprite FILE cannot be checked from here: a GameTest server runs against a
+                // server-filtered jar with no client assets on the classpath, so every path would
+                // look missing. ToolSlotSpriteTest does that check in the unit layer, which has the
+                // client jar.
+                helper.assertTrue(icon.getNamespace().equals("minecraft")
+                        && icon.getPath().startsWith("container/slot/"),
+                    "outlines should be vanilla's own container sprites, found " + icon);
+            }
+            helper.succeed();
+        });
+
     }
 }

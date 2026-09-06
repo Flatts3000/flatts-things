@@ -13,6 +13,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -182,6 +184,46 @@ final class ConfigGateTests {
                 "and hold every plate again once restored, or every later test is running on a lie");
             helper.succeed();
         });
+
+
+        // THE INVARIANT THE WHOLE DESIGN RESTS ON. InventoryMenu is synchronised by slot INDEX, so
+        // adding the slots only when the feature is on would let a server with it off and a client
+        // with it on disagree about how many slots exist - and every slot after the disagreement
+        // would be a different slot on each side, moving items into the wrong places rather than
+        // merely looking wrong. So the count must not move, and only isActive may.
+        FTGameTests.test("switching_the_slots_off_hides_them_without_removing_them", 20,
+            FTGameTests.aloneIn("switching_the_slots_off_hides_them_without_removing_them"),
+            helper -> {
+                // A BARE player, not digger(): that one stocks tool slot 0, and this test's whole
+                // question is whether a shift-click can still REACH a switched-off slot. Asserting
+                // "slot 0 is empty" against a slot the setup filled asks nothing.
+                ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                AbstractContainerMenu menu = player.inventoryMenu;
+                int count = menu.slots.size();
+                int firstToolSlot = count - ToolSlots.SIZE;
+                helper.assertTrue(menu.getSlot(firstToolSlot).isActive(),
+                    "premise: the slot should be active while the feature is on");
+
+                try {
+                    FTConfig.switchFor(FTConfig.TOOL_SLOTS).set(false);
+
+                    helper.assertTrue(menu.slots.size() == count,
+                        "the slot COUNT must not change with the feature off, or client and server "
+                            + "desync; was " + count + ", now " + menu.slots.size());
+                    helper.assertFalse(menu.getSlot(firstToolSlot).isActive(),
+                        "but the slot should be inactive, which is what hides it and refuses clicks");
+
+                    // And the shift-click route is off with it, rather than quietly still working.
+                    player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));
+                    menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
+                    helper.assertTrue(ToolSlots.get(player, 0).isEmpty(),
+                        "shift-click should not reach a switched-off tool slot, found "
+                            + ToolSlots.get(player, 0).getItem());
+                } finally {
+                    FTConfig.switchFor(FTConfig.TOOL_SLOTS).set(true);
+                }
+                helper.succeed();
+            });
 
     }
 }
