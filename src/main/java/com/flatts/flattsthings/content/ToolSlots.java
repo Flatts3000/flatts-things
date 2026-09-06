@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * A player's dedicated tool slots: storage that is not part of inventory space.
  *
- * <p>The hotbar is nine slots, and a pickaxe, axe, shovel, sword and shears is five of them before
+ * <p>The hotbar is nine slots, and a pickaxe, axe, shovel, hoe and shears is five of them before
  * you have picked up a single block. These slots hold the tools so the hotbar can hold the game.
  *
  * <p>This class is the storage half only. Putting things in through a screen, and reaching for the
@@ -23,9 +23,13 @@ public final class ToolSlots {
     /**
      * Five, which is a design decision rather than a round number.
      *
-     * <p>It covers a pickaxe, an axe, a shovel and a sword with one left over, so a player still
-     * chooses between a hoe and shears rather than being handed the whole set. Freeing the hotbar
-     * is the point; removing every decision about what to carry is not.
+     * <p>It covers a pickaxe, an axe, a shovel and a hoe with one left over, so a player still
+     * chooses what the last one is rather than being handed the whole set. Freeing the hotbar is the
+     * point; removing every decision about what to carry is not.
+     *
+     * <p><b>Weapons are not in the tag and this is not about slot count.</b> These slots feed the
+     * auto-swap, so a sword in one would be a mod that puts a weapon in your hand while you are
+     * mining and takes it away again. Tools go here; fighting stays the player's business.
      *
      * <p><b>REDUCING THIS NUMBER DELETES ITEMS FROM EXISTING SAVES.</b> {@link #fromList} truncates
      * anything past the end, because the alternative is refusing to load a world. Raising it is

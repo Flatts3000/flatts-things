@@ -1,5 +1,6 @@
 package com.flatts.flattsthings.content;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,14 +44,21 @@ class ToolSlotSpriteTest {
         Path jar = clientJar();
         try (ZipFile zip = new ZipFile(jar.toFile())) {
             SimpleContainer container = new SimpleContainer(ToolSlots.SIZE);
+            int outlined = 0;
             for (int index = 0; index < ToolSlots.SIZE; index++) {
                 Identifier icon = new ToolSlot(container, index).getNoItemIcon();
-                assertNotNull(icon, "tool slot " + index + " has no outline");
+                if (icon == null) {
+                    // The fifth slot is the free one and is blank on purpose. See ToolSlot.ICONS.
+                    continue;
+                }
+                outlined++;
                 String entry = "assets/" + icon.getNamespace() + "/textures/gui/sprites/"
                     + icon.getPath() + ".png";
                 assertNotNull(zip.getEntry(entry),
                     "no such sprite: " + icon + " (looked for " + entry + " in " + jar + ")");
             }
+            // Counted, so deleting every icon cannot pass this by having nothing left to check.
+            assertEquals(4, outlined, "expected the four tool families to be named");
         }
     }
 

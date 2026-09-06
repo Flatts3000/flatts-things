@@ -115,12 +115,31 @@ final class ToolSlotTests {
         FTGameTests.test("the_tool_slot_tag_accepts_every_vanilla_tool_family", 20, helper -> {
             List<String> rejected = new ArrayList<>();
             for (var item : List.of(Items.WOODEN_PICKAXE, Items.NETHERITE_PICKAXE, Items.DIAMOND_AXE,
-                    Items.STONE_SHOVEL, Items.GOLDEN_HOE, Items.IRON_SWORD, Items.SHEARS)) {
+                    Items.STONE_SHOVEL, Items.GOLDEN_HOE, Items.SHEARS)) {
                 if (!ToolSlots.isValid(new ItemStack(item))) {
                     rejected.add(item.toString());
                 }
             }
             report(helper, rejected, "vanilla tools the slots refuse");
+        });
+
+        // WEAPONS ARE NOT TOOLS, and this is the assertion that keeps it that way. Swords were in
+        // the tag at first, which read as harmless - they are held in the hand and have a durability
+        // bar like everything else here. They are not: these slots feed the auto-swap, so a sword in
+        // one is a mod that puts a weapon in your hand while you are mining, and takes it away
+        // again. Tools go here; fighting is the player's business.
+        //
+        // The tag is a pack-editable file, so this is a test of the shipped default rather than of
+        // anything a pack cannot change.
+        FTGameTests.test("a_weapon_does_not_belong_in_a_tool_slot", 20, helper -> {
+            List<String> accepted = new ArrayList<>();
+            for (var item : List.of(Items.WOODEN_SWORD, Items.IRON_SWORD, Items.NETHERITE_SWORD,
+                    Items.TRIDENT, Items.BOW, Items.CROSSBOW, Items.MACE)) {
+                if (ToolSlots.isValid(new ItemStack(item))) {
+                    accepted.add(item.toString());
+                }
+            }
+            report(helper, accepted, "weapons the tool slots wrongly accept");
         });
 
         FTGameTests.test("a_slot_refuses_something_that_is_not_a_tool", 20, helper -> {
@@ -318,9 +337,14 @@ final class ToolSlotTests {
             AbstractContainerMenu menu = player.inventoryMenu;
             Set<Identifier> seen = new HashSet<>();
 
+            int outlined = 0;
             for (int index = 0; index < ToolSlots.SIZE; index++) {
                 Identifier icon = menu.getSlot(VANILLA_INVENTORY_SLOTS + index).getNoItemIcon();
-                helper.assertTrue(icon != null, "tool slot " + index + " has no outline");
+                if (icon == null) {
+                    // The free slot. Blank on purpose - see ToolSlot.ICONS.
+                    continue;
+                }
+                outlined++;
                 helper.assertTrue(seen.add(icon),
                     "tool slot " + index + " repeats an outline (" + icon + "); five slots showing "
                         + "the same picture is the problem this is meant to solve");
@@ -331,7 +355,11 @@ final class ToolSlotTests {
                 helper.assertTrue(icon.getNamespace().equals("minecraft")
                         && icon.getPath().startsWith("container/slot/"),
                     "outlines should be vanilla's own container sprites, found " + icon);
+                helper.assertFalse(icon.getPath().endsWith("/sword"),
+                    "no slot should offer a weapon outline; a sword cannot be stored here at all");
             }
+            helper.assertTrue(outlined == 4,
+                "expected the four tool families to be named, found " + outlined + " outline(s)");
             helper.succeed();
         });
 

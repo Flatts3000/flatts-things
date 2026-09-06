@@ -25,17 +25,23 @@ All notable changes to this project are documented here. Format follows
   own destroy-speed arithmetic, so a modded pickaxe sorts against a vanilla one correctly. Ties go to
   what you are already holding.
 - **Tool slots, in the inventory screen** (#24, second of three slices). Open your inventory and
-  there is a strip of five slots under it: put your pickaxe, axe, shovel and sword somewhere that is
+  there is a strip of five slots under it: put your pickaxe, axe, shovel and hoe somewhere that is
   not your hotbar. Shift-click moves tools in and out. Painted in vanilla's own palette using
   vanilla's slot sprite, so it ships no texture and matches the game it is in.
 - **Tool slots, storage layer** (#24, first of three slices). Dedicated per-player slots that are not
-  part of inventory space, so a pickaxe, axe, shovel and sword stop eating four of your nine hotbar
+  part of inventory space, so a pickaxe, axe, shovel and hoe stop eating four of your nine hotbar
   slots. What fits is the `#flattsthings:tool_slot_valid` tag, which defaults to the vanilla tool
   families and shears, so another mod's pickaxe fits with no compat patch and a pack can widen it in
   a datapack. Nothing is visible in game yet: the screen and the auto-swap are the next two slices.
 
 ### Changed
 
+- **Weapons are not tools and no longer fit in a tool slot.** Swords were in
+  `#flattsthings:tool_slot_valid` and should not have been: these slots feed the auto-swap, so a
+  sword in one is a mod that puts a weapon in your hand while you are mining and takes it away
+  again. Pickaxes, axes, shovels, hoes and shears still fit, and a pack can still widen the tag. A
+  sword already stored keeps working and moves to your inventory the next time it leaves the slot;
+  nothing is deleted.
 - **The tool slots moved into the inventory screen, and the separate screen is gone.** They were
   behind a **V** keybind on a screen of their own, which delivered "tools that do not take up
   inventory space" while quietly dropping "in the inventory" - the half that was actually asked for.

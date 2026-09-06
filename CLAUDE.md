@@ -469,6 +469,14 @@ the free space inside fits three slots at most, so five cannot go in without mov
 widgets - which is how an inventory screen ends up broken for everyone who added anything else. The
 right-hand edge is where JEI puts its item list, and this mod ships no JEI integration on purpose.
 
+**Weapons are deliberately not in `#flattsthings:tool_slot_valid`.** Swords were, at first, and it
+read as harmless - a sword is held in the hand and has a durability bar like everything else in the
+tag. It is not harmless: these slots feed the auto-swap, so a storable sword means a mod that puts a
+weapon in your hand while you are mining and takes it away again. Tools go here; fighting is the
+player's business. `a_weapon_does_not_belong_in_a_tool_slot` pins the shipped default, and there is
+no sword outline for the same reason - an outline promising one would be an invitation the slot then
+refuses. The fifth slot has no outline at all, because it is the free one.
+
 **Known gap: the creative inventory.** `CreativeModeInventoryScreen` has its own menu rather than
 `InventoryMenu`, so the strip does not appear there and a creative player cannot reach their tools
 from the inventory tab. Stored tools are untouched and come back in survival.

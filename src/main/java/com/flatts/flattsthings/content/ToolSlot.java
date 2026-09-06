@@ -20,21 +20,29 @@ public final class ToolSlot extends Slot {
     /**
      * The ghost outline each empty slot shows, in the intended loadout order.
      *
-     * <p><b>A hint, not a rule.</b> Any item in {@code #flattsthings:tool_slot_valid} fits any slot -
-     * putting a second pickaxe where the sword outline is works fine. The icons exist because five
-     * identical empty squares under the inventory tell a player nothing about what they are for, and
-     * "a tool goes here" is the thing that needs saying. That they also spell out the loadout the
-     * five slots were sized for is the reason this order and not another: a pickaxe, an axe, a
-     * shovel and a sword, with the last one left over for whatever you would rather carry.
+     * <p><b>There are four of them for five slots, on purpose.</b> The first four name the tool
+     * families these slots are for; the fifth is left blank because it is the free one - shears, a
+     * second pickaxe, whatever you would rather carry - and vanilla ships no sprite for shears to
+     * name it with anyway. A blank square next to four named ones reads as "anything", which is what
+     * it is.
      *
-     * <p>All five are vanilla's own sprites, so they match the armour outlines opposite them and
+     * <p><b>No sword.</b> These slots are for breaking blocks, not for fighting: a weapon is not
+     * storable here at all (see {@code #flattsthings:tool_slot_valid}), so an outline promising one
+     * would be an invitation the slot then refuses. It also matters for the auto-swap, which would
+     * otherwise put a sword in your hand mid-swing.
+     *
+     * <p><b>A hint, not a rule.</b> Any item in {@code #flattsthings:tool_slot_valid} fits any slot -
+     * putting a second pickaxe where the shovel outline is works fine. The icons exist because five
+     * identical empty squares under the inventory tell a player nothing about what they are for, and
+     * "a tool goes here" is the thing that needs saying.
+     *
+     * <p>All of them are vanilla's own sprites, so they match the armour outlines opposite them and
      * ship no art asset.
      */
     private static final Identifier[] ICONS = {
         Identifier.withDefaultNamespace("container/slot/pickaxe"),
         Identifier.withDefaultNamespace("container/slot/axe"),
         Identifier.withDefaultNamespace("container/slot/shovel"),
-        Identifier.withDefaultNamespace("container/slot/sword"),
         Identifier.withDefaultNamespace("container/slot/hoe"),
     };
 
@@ -84,8 +92,9 @@ public final class ToolSlot extends Slot {
      * any empty active slot, which is the same path the helmet and boots outlines take. Nothing in
      * this mod's own rendering is involved.
      *
-     * <p>Guarded against the array and {@link ToolSlots#SIZE} drifting apart: raising SIZE without
-     * adding an icon should leave a plain square rather than throw while a screen is drawing.
+     * <p>Returns null past the end of the array, which is both the fifth slot's blank square and the
+     * guard against SIZE growing without new icons - a plain square rather than a throw while a
+     * screen is drawing.
      */
     @Override
     public Identifier getNoItemIcon() {
