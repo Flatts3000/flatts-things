@@ -1,6 +1,7 @@
 package com.flatts.flattsthings.network;
 
 import com.flatts.flattsthings.FlattsThings;
+import com.flatts.flattsthings.config.FTConfig;
 import com.flatts.flattsthings.content.menu.ToolSlotsMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.SimpleMenuProvider;
@@ -34,6 +35,12 @@ public final class FTPayloads {
      * container is built from {@code context.player()} and nothing in the message names anybody.
      */
     private static void onOpenToolSlots(OpenToolSlotsPayload payload, IPayloadContext context) {
+        // THE SERVER DECIDES. The config is per-instance rather than synced, so a client that has
+        // the feature on can be talking to a server that has it off, and the client's copy is not
+        // the one that matters.
+        if (!FTConfig.toolSlots()) {
+            return;
+        }
         context.enqueueWork(() -> context.player().openMenu(new SimpleMenuProvider(
             (containerId, inventory, player) -> new ToolSlotsMenu(containerId, inventory),
             Component.translatable("container.flattsthings.tool_slots"))));

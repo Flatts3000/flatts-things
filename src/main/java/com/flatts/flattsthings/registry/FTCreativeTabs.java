@@ -1,6 +1,7 @@
 package com.flatts.flattsthings.registry;
 
 import com.flatts.flattsthings.FlattsThings;
+import com.flatts.flattsthings.config.FTConfig;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -29,7 +30,10 @@ public final class FTCreativeTabs {
                 .icon(() -> FTItems.PLATES.get("stone").get().getDefaultInstance())
                 .displayItems((parameters, output) -> {
                     // --- Redstone: the player pressure plates, in vanilla's material order ---
-                    FTItems.PLATES.values().forEach(plate -> output.accept(plate.get()));
+                    // Contents are rebuilt when the config changes, so this is not a one-shot read.
+                    if (FTConfig.playerPressurePlates()) {
+                        FTItems.PLATES.values().forEach(plate -> output.accept(plate.get()));
+                    }
                 })
                 .build());
 

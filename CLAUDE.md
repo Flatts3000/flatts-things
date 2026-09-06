@@ -38,6 +38,7 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Dev client | `./gradlew runClient` |
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
 | Regenerate plate resources (textures, models, recipes, tags, lang) | `python tools/generate_plates.py` |
+| Fetch JEI + Jade into `run/mods` (dev client only) | `./gradlew fetchDevMods` |
 
 `-Ptests` takes vanilla's own namespaced-id selector and accepts wildcards
 (`-Ptests=flattsthings:every_*`). It is wired through `programArguments` in `build.gradle` because
@@ -158,6 +159,64 @@ everything else by byte. That is the check; the diff is noise.
 
 The `tools` CI job runs it.
 
+## Every feature is switchable, and what that costs
+
+`FTConfig` defines one boolean per feature in `config/flattsthings-common.toml`. Adding a feature
+without adding a switch is not finishing it.
+
+**COMMON rather than SERVER, deliberately.** These are content switches: they decide whether a recipe
+loads and whether an item is in the creative tab. The creative tab builds its contents on the client
+at startup, outside any world, where a SERVER config is not loaded - reading one there throws. Nothing
+here needs a per-world or synced value.
+
+**"Off" means no NEW ones, and never deletion.** A disabled feature loses its recipe and its creative
+tab entry and stops running. Placed blocks keep working and stored tools stay stored. A switch that
+ate somebody's build would not be reversible by flipping it back.
+
+**A recipe can only be turned off in data.** There is no runtime call that removes a loaded recipe, so
+hiding the item would leave it craftable, in the recipe book and in JEI. `tools/generate_plates.py`
+writes a `flattsthings:feature_enabled` condition into all fourteen recipes and NeoForge drops the
+recipe while reading it. The condition's registered name is part of that data format: renaming it in
+`FTConditions` silently drops every recipe naming the old one, because an unknown condition type
+cannot be reported without refusing to load the world.
+
+**Gating a live swap has to unwind it.** While a swap is in progress the player's own item exists only
+in the attachment, so a gate that merely stopped new swaps would strand it the instant somebody edited
+the config. `ToolSwapper.onPlayerTick` unwinds when the switch goes off.
+
+### The config is global, and GameTests run concurrently
+
+**Tests in one environment run at the same time; environments run one after another.** Almost
+everything here is per-player or per-plot and does not care. A config switch is one global value, so a
+test that turns one off turns it off for every test running beside it - including tests that never
+mention the config.
+
+That surfaced twice. First as `switching_the_swap_off_mid_swing_returns_the_item` failing on its own
+premise, with the switch pulled out from under it by a sibling. Then, after the config tests were
+moved into one shared "isolated" environment, as the same failure again: **a shared environment for
+the isolated tests is not isolation.** Each config test now gets an environment of its own via
+`FTGameTests.aloneIn(name)`, and environments are registered from what the specs ask for rather than
+from a list kept in step by hand.
+
+The near-miss worth remembering is `every_mod_item_is_in_the_creative_tab`, which reads the same
+global creative tab a config test empties. It would have failed for a reason nobody could reproduce.
+
+### A switch nobody flips is a switch nobody has checked
+
+Every other test runs with everything on, which is exactly the state in which a gate reading the wrong
+switch, or sitting on a path that never runs, passes. `ConfigGateTests` turns one off and asserts the
+behaviour stops; `FTConfig.switchFor` exists for that and gameplay code must not call it.
+
+All four were driven red. That found a real defect in one of them: the mid-swing test originally
+called `ToolSwapper.swapIn` directly, which leaves no dig on record, so the tick handler unwound
+through its "a live swap with no dig on record is stranded" branch and **the test passed with the
+config gate deleted**. It now swaps in through `player.getDestroySpeed`, the call vanilla itself makes
+while a block is being broken.
+
+**The unit layer cannot answer any of this.** No config is loaded there, so `FTConfig` returns the
+shipped default whatever a switch says. `FTConfigTest` covers the feature ids, the argument checking
+and the recipe condition's parsing, and deliberately asserts nothing about a feature being on.
+
 ## Testing conventions that are not optional here
 
 **Growth is by accretion, so the completeness sweep is load-bearing.**
@@ -248,7 +307,10 @@ python tools/make_dev_world.py     # once; builds run/saves/devworld headlessly 
 python tools/shoot_plates.py       # in another; builds the scene and captures
 ```
 
-**Port 8610 is claimed for this repo** in `~/.claude/port_registry.yaml`. There is deliberately no
+**Port 8610 is claimed for this repo** in `~/.claude/port_registry.yaml`. (An earlier version of
+this file also said, further down, that no port was claimed. It was wrong from the day devbridge was
+wired up; the claim above is the true one. Kept as a note rather than deleted, because this file has
+now been wrong four times and the pattern - a list that reads as complete - is worth seeing.) There is deliberately no
 default port on either side: a shared one once had Trashlands' verifier connect to Recompile's dev
 client and report a clean pass about the wrong world. The registry cannot detect a clash here,
 because the ports helper enumerates IPv4 and devbridge binds `getLoopbackAddress()`, which is `::1`
@@ -380,7 +442,11 @@ worth making. The convention is established going forward, which is what it was 
 
 ## Deliberate deviations from the sibling repos
 
-- **No JEI or Jade compat, and no `texgen.toml`.** Nothing here needs them yet. Textures come from
-  `tools/generate_plates.py`; move to `mc-pack-toolkit`'s texgen if the art gets ambitious.
-- **No devbridge port claimed.** The sibling mods each claim one in `~/.claude/port_registry.yaml`.
-  Claim one here before wiring devbridge, rather than taking its 25580 default.
+- **No JEI or Jade compat CODE, but both are in the dev client.** There is no integration source in
+  this repo and nothing compiles against either. `./gradlew fetchDevMods` downloads them into
+  `run/mods` (gitignored, the same route devbridge takes) and the client run depends on that task.
+  They are there so a human can see what a player in a pack sees - above all whether the plate
+  recipes actually LOADED, which is what the config's recipe condition changes and the one thing no
+  headless test can look at.
+- **No `texgen.toml`.** Textures come from `tools/generate_plates.py`; move to `mc-pack-toolkit`'s
+  texgen if the art gets ambitious.

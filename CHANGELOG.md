@@ -11,6 +11,15 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Every feature has an on/off switch** (`config/flattsthings-common.toml`). A grab bag has to be a
+  menu rather than a package deal, so a pack that wants the tool slots and not the pressure plates
+  can have exactly that. Off means no recipe and nothing in the creative tab, and the behaviour stops
+  running - it never deletes anything, so blocks already placed keep working, tools already in a slot
+  stay there, and a switch is always safe to flip back. Turning the auto-swap off mid-swing hands you
+  your own item back rather than stranding it. Recipes are gated by a real data-pack condition
+  (`flattsthings:feature_enabled`), which is the only version of "off" that is also true in the recipe
+  book and in JEI.
+
 - **Tool slots, auto-swap** (#24, third of three slices). Hit a block and the right tool comes out of
   your slots into your hand; stop, and whatever you were carrying comes back. Selection uses vanilla's
   own destroy-speed arithmetic, so a modded pickaxe sorts against a vanilla one correctly. Ties go to
@@ -24,6 +33,15 @@ All notable changes to this project are documented here. Format follows
   slots. What fits is the `#flattsthings:tool_slot_valid` tag, which defaults to the vanilla tool
   families and shears, so another mod's pickaxe fits with no compat patch and a pack can widen it in
   a datapack. Nothing is visible in game yet: the screen and the auto-swap are the next two slices.
+
+### Fixed
+
+- **The auto-swap stopped working on any block you had already dug.** One dig that did not swap - and
+  digging with the right tool already in hand is exactly that - left the block's position recorded
+  permanently, and every later dig on it silently refused to swap. A dig is now told from the next one
+  by position and time rather than position alone. Found in a real client with devbridge's new `mine`
+  verb, not by a test: the whole suite dug freshly placed blocks, so `previous` was always empty and
+  the second dig was never exercised.
 
 ### Changed
 

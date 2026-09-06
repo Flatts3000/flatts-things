@@ -177,7 +177,16 @@ def generate(v: Variant) -> None:
     #
     # Cheapness is not a risk here. A vanilla plate is not made obsolete by this one; they do
     # different jobs, and a mob farm still wants a plate that fires for mobs.
+    #
+    # THE CONDITION IS WHAT MAKES THE CONFIG SWITCH REAL. There is no runtime call that removes a
+    # loaded recipe, so a switch that only hid the item would leave it craftable, in the recipe book
+    # and in JEI. NeoForge evaluates conditions while reading the file, so a recipe whose feature is
+    # off is never loaded at all. The type name is registered by FTConditions and is part of this
+    # data format: renaming it there silently drops all fourteen recipes.
     write_json(DATA / f"recipe/{bid}.json", {
+        "neoforge:conditions": [
+            {"type": f"{NS}:feature_enabled", "feature": "player_pressure_plates"},
+        ],
         "type": "minecraft:crafting_shapeless",
         "category": "redstone",
         "ingredients": [vanilla_plate(v), "minecraft:redstone"],
@@ -192,6 +201,8 @@ STATIC_LANG = {
     "itemGroup.flattsthings": "Flatts's Things",
     "container.flattsthings.tool_slots": "Tool Slots",
     "key.flattsthings.tool_slots": "Open Tool Slots",
+    "commands.flattsthings.tool_slots.disabled":
+        "Tool slots are turned off in this pack's Flatts's Things config",
 }
 
 

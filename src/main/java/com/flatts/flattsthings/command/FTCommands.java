@@ -1,6 +1,7 @@
 package com.flatts.flattsthings.command;
 
 import com.flatts.flattsthings.FlattsThings;
+import com.flatts.flattsthings.config.FTConfig;
 import com.flatts.flattsthings.content.menu.ToolSlotsMenu;
 import com.mojang.brigadier.Command;
 import net.minecraft.commands.Commands;
@@ -34,6 +35,13 @@ public final class FTCommands {
             .executes(context -> {
                 ServerPlayer player = context.getSource().getPlayer();
                 if (player == null) {
+                    return 0;
+                }
+                // Says so rather than doing nothing. A command that returns silently reads as a
+                // broken mod; naming the setting tells whoever ran it what to change.
+                if (!FTConfig.toolSlots()) {
+                    context.getSource().sendFailure(
+                        Component.translatable("commands.flattsthings.tool_slots.disabled"));
                     return 0;
                 }
                 player.openMenu(new SimpleMenuProvider(

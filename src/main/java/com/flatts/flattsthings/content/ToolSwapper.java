@@ -1,6 +1,7 @@
 package com.flatts.flattsthings.content;
 
 import com.flatts.flattsthings.FlattsThings;
+import com.flatts.flattsthings.config.FTConfig;
 import com.flatts.flattsthings.registry.FTAttachments;
 import java.util.Map;
 import java.util.Optional;
@@ -95,7 +96,7 @@ public final class ToolSwapper {
     @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
         Player player = event.getEntity();
-        if (player.level().isClientSide()) {
+        if (player.level().isClientSide() || !FTConfig.toolAutoSwap()) {
             return;
         }
         Optional<BlockPos> position = event.getPosition();
@@ -137,6 +138,13 @@ public final class ToolSwapper {
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         if (player.level().isClientSide() || !player.getData(FTAttachments.TOOL_SWAP).active()) {
+            return;
+        }
+        // TURNED OFF MID-SWING STILL GIVES THE ITEM BACK. The displaced stack lives only in the
+        // attachment while a swap is live, so a gate that merely stopped new swaps would strand
+        // whatever the player was holding the moment somebody edited the config.
+        if (!FTConfig.toolAutoSwap()) {
+            swapOut(player);
             return;
         }
         Dig dig = DIGGING.get(player.getUUID());

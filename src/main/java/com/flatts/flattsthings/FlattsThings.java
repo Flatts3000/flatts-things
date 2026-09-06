@@ -1,14 +1,17 @@
 package com.flatts.flattsthings;
 
+import com.flatts.flattsthings.config.FTConfig;
 import com.flatts.flattsthings.gametest.FTGameTests;
 import com.flatts.flattsthings.registry.FTAttachments;
 import com.flatts.flattsthings.registry.FTBlocks;
+import com.flatts.flattsthings.registry.FTConditions;
 import com.flatts.flattsthings.registry.FTCreativeTabs;
 import com.flatts.flattsthings.registry.FTItems;
 import com.flatts.flattsthings.registry.FTMenus;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +29,12 @@ public final class FlattsThings {
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     public FlattsThings(IEventBus modEventBus, ModContainer modContainer) {
+        // FIRST, because the creative tab below reads it while building its contents and a recipe
+        // condition reads it during data pack load. Registering a spec does not load the file; it
+        // tells FML to, early enough that nothing here has run yet.
+        modContainer.registerConfig(ModConfig.Type.COMMON, FTConfig.SPEC);
+        FTConditions.register(modEventBus);
+
         // Blocks before Items (block-items reference their block); creative tab after items.
         FTBlocks.register(modEventBus);
         FTItems.register(modEventBus);
