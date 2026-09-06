@@ -185,5 +185,61 @@ final class ToolSwapTests {
             });
         });
 
+        // A DIG THAT DID NOT SWAP MUST NOT POISON THAT BLOCK FOR THE REST OF THE SESSION.
+        //
+        // Found in a real client, not here. The first version remembered the last block position
+        // per player and swapped only when it changed, and cleared that memory in swapOut - which
+        // returns early when no swap is active. So any dig that did not swap left the position
+        // latched forever, and every later dig on it silently refused to swap. Mining a block with
+        // the right tool already in hand is exactly that case, and it is the common one.
+        //
+        // The scenario is the one that failed: dig with a tie in hand (no swap), stop, then dig the
+        // same block again with something useless. The second dig must swap.
+        FTGameTests.test("a_dig_that_did_not_swap_does_not_latch_the_position", 80, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            BlockPos target = helper.absolutePos(TARGET);
+            player.setGameMode(GameType.SURVIVAL);
+            player.snapTo(target.getX() + 0.5, target.getY() + 1.0, target.getZ() + 2.5, 0F, 0F);
+
+            // A TIE: the same pickaxe in hand as in the slot, so bestSlotFor returns -1 and no swap
+            // happens. The point of the test is that this still records the position.
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.NETHERITE_PICKAXE));
+            player.gameMode.handleBlockBreakAction(target,
+                ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, Direction.UP,
+                player.level().getMaxY(), 0);
+
+            helper.runAfterDelay(5, () -> {
+                player.gameMode.handleBlockBreakAction(target,
+                    ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, Direction.UP,
+                    player.level().getMaxY(), 1);
+                helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                    "a tie should not have swapped anything in");
+
+                // Second dig, same block, nothing useful in hand. Delayed past the gap that tells
+                // one dig from the next.
+                helper.runAfterDelay(15, () -> {
+                    player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                        new ItemStack(Items.COBBLESTONE, 1));
+                    player.gameMode.handleBlockBreakAction(target,
+                        ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, Direction.UP,
+                        player.level().getMaxY(), 2);
+
+                    helper.runAfterDelay(20, () -> {
+                        helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                            "digging the same block again after stopping should swap");
+                        helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                            "and the pickaxe should be in hand, found "
+                                + player.getMainHandItem().getItem());
+                        ToolSwapper.swapOut(player);
+                        helper.succeed();
+                    });
+                });
+            });
+        });
+
     }
 }

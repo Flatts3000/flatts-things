@@ -3,6 +3,7 @@ package com.flatts.flattsthings.content;
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.registry.FTAttachments;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
@@ -18,8 +19,8 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * The auto-swap: hit a block, the right tool appears in your hand, and your own item comes back when
  * you stop.
  *
- * <p><b>The hook is {@code PlayerEvent.BreakSpeed}, fired once per block, and getting there took
- * two wrong answers.</b>
+ * <p><b>The hook is {@code PlayerEvent.BreakSpeed}, acted on once per dig, and getting there took
+ * three wrong answers.</b>
  *
  * <p>The first was {@code LeftClickBlock.START}, which reads as exactly right: it names the moment
  * digging begins. It is fired only from {@code MultiPlayerGameMode}, on the CLIENT. Nothing posts it
@@ -31,9 +32,12 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * {@code ServerPlayerGameMode} tracks destroy progress against the held item, so changing it every
  * tick is a reset every tick and the block never breaks.
  *
+ * <p>The third was telling one dig from the next by position alone, which is what shipped in #27
+ * and did not work in a real client at all. See {@link #DIGGING}.
+ *
  * <p>So: {@code BreakSpeed}, which fires server-side each tick of a dig and carries the block being
- * hit, but acted on ONLY the first time a given position is seen. One swap per block, at the start,
- * where there is no progress yet to lose.
+ * hit, acted on only on a dig's first tick. One swap per dig, at the start, where there is no
+ * progress yet to lose.
  *
  * <p><b>Server side only.</b> Every path here reads or writes an attachment, and the client's copy
  * is not the truth. The visible swap follows from the server changing the held item, the same way
@@ -51,11 +55,33 @@ public final class ToolSwapper {
      */
     private static final int STRANDED_AFTER_TICKS = 40;
 
-    /** Last tick each player showed signs of digging. Transient: a restart unwinds via login. */
-    private static final Map<UUID, Integer> LAST_ACTIVITY = new ConcurrentHashMap<>();
+    /**
+     * How long a gap in {@code BreakSpeed} ends a dig, in ticks.
+     *
+     * <p>The event fires every server tick for as long as a block is being broken, so any gap at
+     * all means the player let go. Five ticks is a quarter of a second: long enough that a stutter
+     * is not read as a new dig, short enough that a player who releases and clicks the same block
+     * again gets their tool.
+     */
+    private static final int DIG_GAP_TICKS = 5;
 
-    /** The block each player was last seen digging, so a new one can be told from a continuing one. */
-    private static final Map<UUID, BlockPos> LAST_TARGET = new ConcurrentHashMap<>();
+    /** Where a player was digging and when they were last seen at it. */
+    private record Dig(int tick, BlockPos pos) {
+    }
+
+    /**
+     * The dig each player is in the middle of.
+     *
+     * <p><b>Both halves are needed and the first version had only the position.</b> It compared the
+     * block against the last one seen and swapped when it changed, which is wrong the moment a dig
+     * ends without a swap: the position stayed recorded, and every later dig on that same block
+     * refused to swap for the rest of the session. Digging with the right tool already in hand is
+     * exactly that case, so the feature quietly stopped working on any block a player had touched.
+     * The tick is what tells one dig from the next, rather than the position alone.
+     *
+     * <p>Transient: a restart unwinds via login.
+     */
+    private static final Map<UUID, Dig> DIGGING = new ConcurrentHashMap<>();
 
     private ToolSwapper() {
     }
@@ -72,13 +98,34 @@ public final class ToolSwapper {
         if (player.level().isClientSide()) {
             return;
         }
-        LAST_ACTIVITY.put(player.getUUID(), player.tickCount);
-        event.getPosition().ifPresent(pos -> {
-            BlockPos previous = LAST_TARGET.put(player.getUUID(), pos.immutable());
-            if (!pos.equals(previous)) {
-                swapIn(player, event.getState());
-            }
-        });
+        Optional<BlockPos> position = event.getPosition();
+        if (position.isEmpty()) {
+            // No block to key on, but the player is plainly still swinging, so keep the stranded
+            // backstop from unwinding a live swap underneath them.
+            DIGGING.computeIfPresent(player.getUUID(),
+                (uuid, dig) -> new Dig(player.tickCount, dig.pos()));
+            return;
+        }
+        BlockPos pos = position.get().immutable();
+        Dig previous = DIGGING.put(player.getUUID(), new Dig(player.tickCount, pos));
+        if (startsANewDig(player, previous, pos)) {
+            swapIn(player, event.getState());
+        }
+    }
+
+    /**
+     * Whether this is the first tick of a dig rather than the continuation of one.
+     *
+     * <p>A different block is obviously new. So is the same block after a gap, which is what makes
+     * releasing and clicking again work. A negative gap means the player respawned and their tick
+     * count restarted, which is also a new dig by any reading.
+     */
+    private static boolean startsANewDig(Player player, Dig previous, BlockPos pos) {
+        if (previous == null || !pos.equals(previous.pos())) {
+            return true;
+        }
+        int elapsed = player.tickCount - previous.tick();
+        return elapsed < 0 || elapsed > DIG_GAP_TICKS;
     }
 
     @SubscribeEvent
@@ -92,8 +139,15 @@ public final class ToolSwapper {
         if (player.level().isClientSide() || !player.getData(FTAttachments.TOOL_SWAP).active()) {
             return;
         }
-        int last = LAST_ACTIVITY.getOrDefault(player.getUUID(), player.tickCount);
-        if (player.tickCount - last > STRANDED_AFTER_TICKS) {
+        Dig dig = DIGGING.get(player.getUUID());
+        if (dig == null) {
+            // A live swap always has a dig recorded, because swapIn only runs from the hook that
+            // writes one. Missing means the record was dropped, which is itself stranded.
+            swapOut(player);
+            return;
+        }
+        int elapsed = player.tickCount - dig.tick();
+        if (elapsed < 0 || elapsed > STRANDED_AFTER_TICKS) {
             swapOut(player);
         }
     }
@@ -107,6 +161,19 @@ public final class ToolSwapper {
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         swapOut(event.getEntity());
+    }
+
+    /**
+     * Unwind on the way out, and drop the dig record with it.
+     *
+     * <p>Login already covers a crash. This covers an ordinary quit, so a player is not saved
+     * mid-swap, and it is what keeps {@link #DIGGING} from growing one entry per player who has
+     * ever mined on a long-running server.
+     */
+    @SubscribeEvent
+    public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        swapOut(event.getEntity());
+        DIGGING.remove(event.getEntity().getUUID());
     }
 
     public static void swapIn(Player player, net.minecraft.world.level.block.state.BlockState state) {
@@ -139,13 +206,16 @@ public final class ToolSwapper {
         if (player == null || player.level().isClientSide()) {
             return;
         }
+        // UNCONDITIONALLY, BEFORE THE EARLY RETURN. The dig record outliving the dig is the bug
+        // this method used to cause: clearing it only when a swap was active left every
+        // swap-less dig recorded forever.
+        DIGGING.remove(player.getUUID());
+
         ToolSwap swap = player.getData(FTAttachments.TOOL_SWAP);
         if (!swap.active()) {
             return;
         }
         player.setData(FTAttachments.TOOL_SWAP, ToolSwap.NONE);
-        LAST_ACTIVITY.remove(player.getUUID());
-        LAST_TARGET.remove(player.getUUID());
 
         ItemStack inHand = player.getInventory().getItem(swap.hotbarSlot()).copy();
         player.getInventory().setItem(swap.hotbarSlot(), swap.displaced());
