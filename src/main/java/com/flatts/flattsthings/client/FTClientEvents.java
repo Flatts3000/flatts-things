@@ -1,7 +1,7 @@
 package com.flatts.flattsthings.client;
 
 import com.flatts.flattsthings.FlattsThings;
-import com.flatts.flattsthings.network.OpenToolSlotsPayload;
+import com.flatts.flattsthings.network.ToggleAutoSwapPayload;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -17,13 +17,13 @@ public final class FTClientEvents {
 
     /**
      * {@code while} rather than {@code if}: consumeClick drains a queue, so a key pressed twice
-     * between ticks would otherwise open the screen once and leave the second press pending until
-     * the next press, which reads as the key being unreliable.
+     * between ticks would otherwise flip the setting once and leave the second press pending until
+     * the next one, which reads as the key being unreliable.
      */
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        while (FTClientSetup.OPEN_TOOL_SLOTS.consumeClick()) {
-            ClientPacketDistributor.sendToServer(new OpenToolSlotsPayload());
+        while (FTClientSetup.TOGGLE_AUTO_SWAP.consumeClick()) {
+            ClientPacketDistributor.sendToServer(new ToggleAutoSwapPayload());
         }
     }
 }

@@ -11,27 +11,66 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A key to turn the auto-swap off and on, bound to Z by default, under its own Flatts's Things
+  category in Key Binds.** The config switch is the pack
+  author's and applies to everybody; this is yours, and the moment you want it is while standing in
+  front of the block that just swapped a tool you did not want. It says which way it went above your
+  hotbar, survives death and logout, and cannot re-enable a swap a pack has switched off - it says
+  so instead. Pressing it mid-swing gives your own item back rather than stranding it.
+- **Every feature has an on/off switch** (`config/flattsthings-common.toml`). A grab bag has to be a
+  menu rather than a package deal, so a pack that wants the tool slots and not the pressure plates
+  can have exactly that. Off means no recipe and nothing in the creative tab, and the behaviour stops
+  running - it never deletes anything, so blocks already placed keep working, tools already in a slot
+  stay there, and a switch is always safe to flip back. Turning the auto-swap off mid-swing hands you
+  your own item back rather than stranding it. Recipes are gated by a real data-pack condition
+  (`flattsthings:feature_enabled`), which is the only version of "off" that is also true in the recipe
+  book and in JEI.
+
 - **Tool slots, auto-swap** (#24, third of three slices). Hit a block and the right tool comes out of
   your slots into your hand; stop, and whatever you were carrying comes back. Selection uses vanilla's
   own destroy-speed arithmetic, so a modded pickaxe sorts against a vanilla one correctly. Ties go to
   what you are already holding.
-- **Tool slots, screen** (#24, second of three slices). Press **V**, or run `/toolslots`, and put
-  your pickaxe, axe, shovel and sword somewhere that is not your hotbar. Shift-click moves tools in
-  and out. The screen is painted in vanilla's own palette and uses vanilla's slot sprite, so it ships
-  no texture and matches the game it is in.
+- **Tool slots, in the inventory screen** (#24, second of three slices). Open your inventory and
+  there is a strip of five slots under it: put your pickaxe, axe, shovel and hoe somewhere that is
+  not your hotbar. Shift-click moves tools in and out. Painted in vanilla's own palette using
+  vanilla's slot sprite, so it ships no texture and matches the game it is in.
 - **Tool slots, storage layer** (#24, first of three slices). Dedicated per-player slots that are not
-  part of inventory space, so a pickaxe, axe, shovel and sword stop eating four of your nine hotbar
+  part of inventory space, so a pickaxe, axe, shovel and hoe stop eating four of your nine hotbar
   slots. What fits is the `#flattsthings:tool_slot_valid` tag, which defaults to the vanilla tool
   families and shears, so another mod's pickaxe fits with no compat patch and a pack can widen it in
   a datapack. Nothing is visible in game yet: the screen and the auto-swap are the next two slices.
 
 ### Changed
 
+- **Weapons are not tools and no longer fit in a tool slot.** Swords were in
+  `#flattsthings:tool_slot_valid` and should not have been: these slots feed the auto-swap, so a
+  sword in one is a mod that puts a weapon in your hand while you are mining and takes it away
+  again. Pickaxes, axes, shovels, hoes and shears still fit, and a pack can still widen the tag. A
+  sword already stored keeps working and moves to your inventory the next time it leaves the slot;
+  nothing is deleted.
+- **The tool slots moved into the inventory screen, and the separate screen is gone.** They were
+  behind a **V** keybind on a screen of their own, which delivered "tools that do not take up
+  inventory space" while quietly dropping "in the inventory" - the half that was actually asked for.
+  They are now five real slots in vanilla's own inventory menu, drawn as a strip under the panel, so
+  clicking, dragging, stack splitting and tooltips are vanilla's own and behave exactly as they do
+  everywhere else. Shift-clicking a tool in your inventory sends it to a tool slot. The **V** keybind
+  and the `/toolslots` command are removed; nothing else opens.
+
+
 - **The recipe is a redstone dust, not an ender pearl.** The pearl read well and gated badly: the
   problem these plates solve, a cow opening your door or an arrow tripping your plate, is one you hit
   in your first hours, and a pearl put the fix behind finding endermen. Redstone is what you already
   have in hand the first time you wire a door. A vanilla plate is not made obsolete by the cheaper
   price, because a mob farm still wants a plate that fires for mobs.
+
+### Fixed
+
+- **The auto-swap stopped working on any block you had already dug.** One dig that did not swap - and
+  digging with the right tool already in hand is exactly that - left the block's position recorded
+  permanently, and every later dig on it silently refused to swap. A dig is now told from the next one
+  by position and time rather than position alone. Found in a real client with devbridge's new `mine`
+  verb, not by a test: the whole suite dug freshly placed blocks, so `previous` was always empty and
+  the second dig was never exercised.
 
 ### Notes
 
@@ -48,6 +87,7 @@ All notable changes to this project are documented here. Format follows
   candidate-review workflow that fourteen flat textures do not need.
 - **The first four commits will not be rewritten** to add the missing trailers. Every commit since
   carries them.
+
 
 ## v0.1.0 - 2026-09-05 - "Only You"
 

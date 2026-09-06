@@ -3,6 +3,7 @@ package com.flatts.flattsthings.registry;
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.content.ToolSlots;
 import com.flatts.flattsthings.content.ToolSwap;
+import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -43,6 +44,25 @@ public final class FTAttachments {
         ATTACHMENTS.register("tool_swap",
             () -> AttachmentType.builder(() -> ToolSwap.NONE)
                 .serialize(ToolSwap.CODEC.fieldOf("tool_swap"))
+                .copyOnDeath()
+                .build());
+
+    /**
+     * Whether this player wants the auto-swap, which is not the same question as whether the pack
+     * allows it.
+     *
+     * <p>{@code FTConfig.toolAutoSwap()} is the pack author's switch and applies to everyone; this
+     * is the player's own, toggled with a key. Both must say yes. Keeping them separate is what
+     * stops a player's preference being silently overwritten by a config reload, and stops a player
+     * turning on something a pack deliberately turned off.
+     *
+     * <p>Serialised and {@code copyOnDeath}, because a preference that resets when you die or log
+     * out is not a preference. Default on, so the feature works without anybody finding the key.
+     */
+    public static final Supplier<AttachmentType<Boolean>> AUTO_SWAP_WANTED =
+        ATTACHMENTS.register("auto_swap_wanted",
+            () -> AttachmentType.builder(() -> Boolean.TRUE)
+                .serialize(Codec.BOOL.fieldOf("auto_swap_wanted"))
                 .copyOnDeath()
                 .build());
 

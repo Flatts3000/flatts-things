@@ -1,6 +1,7 @@
 package com.flatts.flattsthings.content;
 
 import com.flatts.flattsthings.FlattsThings;
+import com.flatts.flattsthings.config.FTConfig;
 import com.flatts.flattsthings.registry.FTAttachments;
 import java.util.Map;
 import java.util.Optional;
@@ -49,11 +50,19 @@ public final class ToolSwapper {
     /**
      * How long after the last sign of digging a stranded swap is unwound, in ticks.
      *
-     * <p>STOP and ABORT cover an ordinary release. This covers everything else: a teleport, a death,
-     * a block that vanished from under the cursor, a client that stopped sending. Without it a
-     * player can be left holding a tool they never chose with their own item nowhere in sight.
+     * <p><b>This is the ONLY unwind for letting go of the mouse, and the comment here used to claim
+     * otherwise.</b> It said STOP and ABORT covered an ordinary release; nothing in this file
+     * handles either, and it cannot - the client-side events are not posted server-side in 26.1. So
+     * every release waits for this, which is why it is five ticks and not forty. At forty a player
+     * who tapped a block and then went to place a torch spent two seconds swinging a pickaxe they
+     * never chose.
+     *
+     * <p>Five is the same gap {@link #DIG_GAP_TICKS} uses, and for the same reason: {@code
+     * BreakSpeed} fires every tick of a dig, so any gap at all means the player let go. A lag spike
+     * longer than that unwinds and the next tick swaps straight back in, which costs a frame of the
+     * wrong item in hand rather than an item.
      */
-    private static final int STRANDED_AFTER_TICKS = 40;
+    private static final int STRANDED_AFTER_TICKS = 5;
 
     /**
      * How long a gap in {@code BreakSpeed} ends a dig, in ticks.
@@ -95,7 +104,7 @@ public final class ToolSwapper {
     @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
         Player player = event.getEntity();
-        if (player.level().isClientSide()) {
+        if (player.level().isClientSide() || !swapping(player)) {
             return;
         }
         Optional<BlockPos> position = event.getPosition();
@@ -107,10 +116,15 @@ public final class ToolSwapper {
             return;
         }
         BlockPos pos = position.get().immutable();
-        Dig previous = DIGGING.put(player.getUUID(), new Dig(player.tickCount, pos));
+        Dig previous = DIGGING.get(player.getUUID());
         if (startsANewDig(player, previous, pos)) {
             swapIn(player, event.getState());
         }
+        // RECORDED AFTER the swap, not before. swapIn may unwind a previous swap on its way in, and
+        // unwinding clears this record - so writing it first meant the record vanished exactly when
+        // the player moved from one block to another, and forty ticks later the stranded backstop
+        // fired and took their tool away mid-dig.
+        DIGGING.put(player.getUUID(), new Dig(player.tickCount, pos));
     }
 
     /**
@@ -137,6 +151,13 @@ public final class ToolSwapper {
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         if (player.level().isClientSide() || !player.getData(FTAttachments.TOOL_SWAP).active()) {
+            return;
+        }
+        // TURNED OFF MID-SWING STILL GIVES THE ITEM BACK. The displaced stack lives only in the
+        // attachment while a swap is live, so a gate that merely stopped new swaps would strand
+        // whatever the player was holding the moment somebody edited the config.
+        if (!swapping(player)) {
+            swapOut(player);
             return;
         }
         Dig dig = DIGGING.get(player.getUUID());
@@ -176,13 +197,57 @@ public final class ToolSwapper {
         DIGGING.remove(event.getEntity().getUUID());
     }
 
-    public static void swapIn(Player player, net.minecraft.world.level.block.state.BlockState state) {
-        if (player.getData(FTAttachments.TOOL_SWAP).active()) {
-            return;
+    /**
+     * Whether this player is currently having tools swapped for them.
+     *
+     * <p><b>Two answers, both of which must be yes, and they are different questions.</b> The config
+     * is the pack author's and applies to everyone; the attachment is the player's own and is flipped
+     * with a key. Reading them together here rather than at each call site is what stops one being
+     * checked and the other forgotten - the bug that would look like a key that works everywhere
+     * except the one path nobody tested.
+     */
+    public static boolean swapping(Player player) {
+        return FTConfig.toolAutoSwap() && player.getData(FTAttachments.AUTO_SWAP_WANTED);
+    }
+
+    /**
+     * Flip this player's own preference, and say what it became.
+     *
+     * <p>Unwinds a live swap on the way out, for the same reason the config gate does: while a swap
+     * is in progress the player's own item exists only in the attachment, so switching off without
+     * unwinding strands it.
+     */
+    public static boolean toggleWanted(Player player) {
+        boolean wanted = !player.getData(FTAttachments.AUTO_SWAP_WANTED);
+        player.setData(FTAttachments.AUTO_SWAP_WANTED, wanted);
+        if (!wanted) {
+            swapOut(player);
         }
+        return wanted;
+    }
+
+    public static void swapIn(Player player, net.minecraft.world.level.block.state.BlockState state) {
         int slot = ToolSlots.bestSlotFor(player, state);
         if (slot < 0) {
+            // Nothing beats what is in hand. If that is because a swap already put the right tool
+            // there, leaving it alone is the answer - re-swapping the same tool every block would be
+            // visible fidgeting for no gain.
             return;
+        }
+        // A DIFFERENT BLOCK CAN WANT A DIFFERENT TOOL, and the first version could not say so. It
+        // refused outright whenever a swap was live, so starting on a log and sweeping onto dirt
+        // kept the axe - or, once the stranded backstop fired, left the player digging bare-handed
+        // with their own item put back. Found by doing exactly that: break a log, move to dirt.
+        //
+        // Unwinding first is what keeps the accounting honest. The displaced item goes back to the
+        // hand and the old tool to its slot before anything new is taken, so at no point are two
+        // tools out of their slots or one item recorded as displaced twice.
+        if (player.getData(FTAttachments.TOOL_SWAP).active()) {
+            swapOut(player);
+            slot = ToolSlots.bestSlotFor(player, state);
+            if (slot < 0) {
+                return;
+            }
         }
         int hotbarSlot = player.getInventory().getSelectedSlot();
         ItemStack tool = ToolSlots.get(player, slot).copy();

@@ -241,5 +241,150 @@ final class ToolSwapTests {
             });
         });
 
+
+        // THE PLAYER'S OWN SWITCH, which is a different question from the pack's. Bound to a key
+        // because the moment you want it is while standing in front of the block that just swapped a
+        // tool you did not want - a setting that needs a file edit will not get changed.
+        FTGameTests.test("the_key_turns_the_swap_off_and_on_for_this_player", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+            BlockPos target = helper.absolutePos(TARGET);
+            player.snapTo(target.getX() + 0.5, target.getY() + 1.0, target.getZ() + 2.5, 0F, 0F);
+
+            helper.assertTrue(ToolSwapper.swapping(player), "premise: on by default");
+            helper.assertFalse(ToolSwapper.toggleWanted(player), "one press should turn it off");
+            helper.assertFalse(ToolSwapper.swapping(player), "and it should read as off");
+
+            // Off means the real break path does nothing, not merely that a flag changed.
+            player.gameMode.handleBlockBreakAction(target,
+                ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, Direction.UP,
+                player.level().getMaxY(), 0);
+            helper.runAfterDelay(20, () -> {
+                helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                    "nothing should have swapped in with the player's own switch off");
+                helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                    "and they should still hold their own item, found "
+                        + player.getMainHandItem().getItem());
+
+                helper.assertTrue(ToolSwapper.toggleWanted(player), "a second press turns it back on");
+                helper.assertTrue(ToolSwapper.swapping(player), "and it should read as on again");
+                helper.succeed();
+            });
+        });
+
+        // TURNING IT OFF MID-SWING RETURNS THE ITEM, the same invariant the config gate has and for
+        // the same reason: while a swap is live the player's own stack exists only in the attachment.
+        FTGameTests.test("pressing_the_key_mid_swing_returns_the_item", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            ToolSwapper.swapIn(player, Blocks.STONE.defaultBlockState());
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                "premise: the swap should be live before the key is pressed");
+
+            ToolSwapper.toggleWanted(player);
+
+            helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "the live swap should have been unwound");
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "and the player's own item should be back, found "
+                    + player.getMainHandItem().getItem());
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_PICKAXE) == 1,
+                "with exactly one pickaxe still in existence, found "
+                    + countEverywhere(player, Items.NETHERITE_PICKAXE));
+            // Leave the switch as it was found; this class shares an environment with its siblings.
+            ToolSwapper.toggleWanted(player);
+            helper.succeed();
+        });
+
+
+        // MOVING FROM ONE BLOCK TO ANOTHER MID-HOLD MUST RE-PICK THE TOOL. Reported from real play:
+        // start breaking a log, then swing onto dirt. The first version refused to swap while a swap
+        // was live, so the axe stayed for the dirt - and worse, the dig record was written before the
+        // swap rather than after, so an unwind cleared it and the stranded backstop took the tool
+        // away forty ticks later, leaving the player digging bare-handed.
+        FTGameTests.test("sweeping_onto_a_different_block_picks_the_right_tool", 60, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.OAK_LOG);
+            BlockPos log = helper.absolutePos(TARGET);
+            BlockPos dirt = helper.absolutePos(TARGET.above());
+            helper.setBlock(TARGET.above(), Blocks.DIRT);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_AXE));
+            ToolSlots.set(player, 1, new ItemStack(Items.NETHERITE_SHOVEL));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+            player.snapTo(log.getX() + 0.5, log.getY() + 1.0, log.getZ() + 2.5, 0F, 0F);
+
+            // Drive the real hook rather than swapIn, so the dig record is written the way play
+            // writes it - that ordering is half the bug.
+            player.getDestroySpeed(Blocks.OAK_LOG.defaultBlockState(), log);
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_AXE),
+                "the axe should come out for a log, found " + player.getMainHandItem().getItem());
+
+            // Now the crosshair moves to dirt, still holding.
+            player.getDestroySpeed(Blocks.DIRT.defaultBlockState(), dirt);
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_SHOVEL),
+                "the shovel should come out for dirt, found " + player.getMainHandItem().getItem());
+
+            // AND NOTHING WAS DUPLICATED OR LOST ON THE WAY. The axe went back to a slot, the
+            // cobblestone is still recorded as the displaced item, and each exists exactly once.
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_AXE) == 1,
+                "exactly one axe, found " + countEverywhere(player, Items.NETHERITE_AXE));
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_SHOVEL) == 1,
+                "exactly one shovel, found " + countEverywhere(player, Items.NETHERITE_SHOVEL));
+
+            ToolSwapper.swapOut(player);
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "and the player's own item comes back at the end, found "
+                    + player.getMainHandItem().getItem());
+            helper.assertTrue(countEverywhere(player, Items.COBBLESTONE) == 1,
+                "exactly one cobblestone, found " + countEverywhere(player, Items.COBBLESTONE));
+            helper.succeed();
+        });
+
+        // THE DIG RECORD MUST SURVIVE A RE-SWAP, which is the half that made this a lost tool rather
+        // than merely the wrong one. Asserted through the backstop itself: after moving blocks, a
+        // player who is plainly still digging must not be unwound.
+        FTGameTests.test("moving_between_blocks_does_not_strand_the_swap", 60, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.OAK_LOG);
+            BlockPos log = helper.absolutePos(TARGET);
+            BlockPos dirt = helper.absolutePos(TARGET.above());
+            helper.setBlock(TARGET.above(), Blocks.DIRT);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_AXE));
+            ToolSlots.set(player, 1, new ItemStack(Items.NETHERITE_SHOVEL));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            player.getDestroySpeed(Blocks.OAK_LOG.defaultBlockState(), log);
+            player.getDestroySpeed(Blocks.DIRT.defaultBlockState(), dirt);
+
+            // One tick of the backstop. With the record cleared it unwinds here; with it written
+            // after the swap it does not.
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player));
+
+            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "a player still digging must not be unwound by the stranded backstop");
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_SHOVEL),
+                "and should still hold the shovel, found " + player.getMainHandItem().getItem());
+            ToolSwapper.swapOut(player);
+            helper.succeed();
+        });
+
     }
 }

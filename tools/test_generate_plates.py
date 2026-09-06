@@ -247,6 +247,47 @@ def case_textures_are_shaped_and_legible() -> list[str]:
     return problems
 
 
+def case_every_recipe_is_gated_on_the_feature_switch():
+    """Every plate recipe carries the config condition, and names the right feature.
+
+    A config switch that hides an item but leaves its recipe loaded is not a switch: the block is
+    still craftable, still in the recipe book and still in JEI. There is no runtime call that
+    removes a loaded recipe, so the condition in the file IS the off switch, and a recipe generated
+    without one is silently always-on.
+
+    The feature name is checked against the Java side rather than against a literal here, because a
+    condition naming a feature that does not exist fails at data pack load with no way to see it
+    coming from this side.
+    """
+    problems: list[str] = []
+    java = (ROOT / "src/main/java/com/flatts/flattsthings/config/FTConfig.java").read_text(
+        encoding="utf-8")
+    expected = "player_pressure_plates"
+    if f'PLAYER_PRESSURE_PLATES = "{expected}"' not in java:
+        problems.append(
+            f"FTConfig no longer defines the feature id '{expected}'; every generated recipe "
+            "names it and would stop loading")
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "out"
+        _generate_into(out, "1")
+        recipes = out / "src/main/resources/data/flattsthings/recipe"
+        for v in VARIANTS:
+            path = recipes / f"{block_id(v)}.json"
+            recipe = json.loads(path.read_text(encoding="utf-8"))
+            conditions = recipe.get("neoforge:conditions")
+            if not conditions:
+                problems.append(
+                    f"{path.name}: no neoforge:conditions, so the switch cannot turn it off")
+                continue
+            named = [c.get("feature") for c in conditions
+                     if c.get("type") == "flattsthings:feature_enabled"]
+            if expected not in named:
+                problems.append(
+                    f"{path.name}: expected a flattsthings:feature_enabled condition on "
+                    f"'{expected}', found {conditions}")
+    return problems
+
+
 CASES = [
     ("output is byte-identical across processes", case_output_is_byte_identical_across_processes),
     ("the generator actually writes its output", case_generator_writes_something),
@@ -255,6 +296,7 @@ CASES = [
     ("no generated file replaces a vanilla tag", case_no_generated_file_replaces_a_vanilla_tag),
     ("every block has the 26.1 asset set", case_every_block_has_the_26_1_asset_set),
     ("textures are shaped and legible", case_textures_are_shaped_and_legible),
+    ("every recipe is gated on the feature switch", case_every_recipe_is_gated_on_the_feature_switch),
 ]
 
 

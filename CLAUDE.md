@@ -38,6 +38,7 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Dev client | `./gradlew runClient` |
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
 | Regenerate plate resources (textures, models, recipes, tags, lang) | `python tools/generate_plates.py` |
+| Fetch JEI + Jade into `run/mods` (dev client only) | `./gradlew fetchDevMods` |
 
 `-Ptests` takes vanilla's own namespaced-id selector and accepts wildcards
 (`-Ptests=flattsthings:every_*`). It is wired through `programArguments` in `build.gradle` because
@@ -158,6 +159,100 @@ everything else by byte. That is the check; the diff is noise.
 
 The `tools` CI job runs it.
 
+## Every feature is switchable, and what that costs
+
+`FTConfig` defines one boolean per feature in `config/flattsthings-common.toml`. Adding a feature
+without adding a switch is not finishing it.
+
+**COMMON rather than SERVER, deliberately.** These are content switches: they decide whether a recipe
+loads and whether an item is in the creative tab. The creative tab builds its contents on the client
+at startup, outside any world, where a SERVER config is not loaded - reading one there throws. Nothing
+here needs a per-world or synced value.
+
+**"Off" means no NEW ones, and never deletion.** A disabled feature loses its recipe and its creative
+tab entry and stops running. Placed blocks keep working and stored tools stay stored. A switch that
+ate somebody's build would not be reversible by flipping it back.
+
+**A recipe can only be turned off in data.** There is no runtime call that removes a loaded recipe, so
+hiding the item would leave it craftable, in the recipe book and in JEI. `tools/generate_plates.py`
+writes a `flattsthings:feature_enabled` condition into all fourteen recipes and NeoForge drops the
+recipe while reading it. The condition's registered name is part of that data format: renaming it in
+`FTConditions` silently drops every recipe naming the old one, because an unknown condition type
+cannot be reported without refusing to load the world.
+
+**Gating a live swap has to unwind it.** While a swap is in progress the player's own item exists only
+in the attachment, so a gate that merely stopped new swaps would strand it the instant somebody edited
+the config. `ToolSwapper.onPlayerTick` unwinds when the switch goes off.
+
+### Two switches for the auto-swap, and both must say yes
+
+`FTConfig.toolAutoSwap()` is the pack author's and applies to everyone. `AUTO_SWAP_WANTED` is the
+player's own attachment, flipped by a key (Z), serialised and `copyOnDeath` because a preference that
+resets when you die is not a preference. `ToolSwapper.swapping(player)` reads both, in one place, so
+that a caller cannot check one and forget the other - which would look like a key that works
+everywhere except the one path nobody tested.
+
+**The pack's off always wins**, pinned by `the_key_cannot_re_enable_a_swap_the_pack_switched_off`.
+Separate switches are only safe if that holds; otherwise a key quietly restores a feature a pack
+deliberately removed. When the pack has it off the key says so rather than pretending to toggle,
+because a player flipping a setting that will not take effect has no other way to find out why.
+
+**The payload carries nothing, not even the new value.** Sending the state the client thinks it wants
+means trusting a client about its own setting, and two presses arriving out of order leave the sides
+disagreeing. A bare "flip it" cannot disagree: the server owns the value and reports what it became.
+
+**The key press is testable, and testing it found a bug immediately.** devbridge's `key` verb drives
+`KeyMapping.set` + `KeyMapping.click` the way vanilla's own `KeyboardHandler` does, and reports what
+the key is bound to. The binding was V, on the belief that vanilla does not use V; the first press
+reported `bound to key.debug.dumpVersion, key.flattsthings.toggle_auto_swap`. Vanilla's F3 chords are
+ordinary key mappings and collide for real.
+
+**The binding sits in this mod's own category**, not vanilla's Gameplay, so a player can find it
+without knowing its name. `KeyMapping.Category` is constructed and passed to
+`RegisterKeyMappingsEvent.registerCategory` - `KeyMapping.Category.register` is deprecated in 26.1.
+The label is `id.toLanguageKey("key.category")`, so the identifier and the lang key are one fact
+stated twice; `FlattsThings.KEY_CATEGORY` is the single source and `KeyCategoryTest` checks the lang
+file against it. Get that wrong and the screen renders the raw key, which no other test here would
+see.
+
+**Probe before choosing a default binding**, with `gamebridge key <k> --check`, which reports the
+owners and presses nothing. In a client with JEI and Jade: G, H, N, B, C, X, T and V are vanilla's,
+R, U and F are JEI's. Z is free and the only unbound key within reach of WASD. Do not reason about
+which keys are free - the answer depends on what else is loaded.
+
+### The config is global, and GameTests run concurrently
+
+**Tests in one environment run at the same time; environments run one after another.** Almost
+everything here is per-player or per-plot and does not care. A config switch is one global value, so a
+test that turns one off turns it off for every test running beside it - including tests that never
+mention the config.
+
+That surfaced twice. First as `switching_the_swap_off_mid_swing_returns_the_item` failing on its own
+premise, with the switch pulled out from under it by a sibling. Then, after the config tests were
+moved into one shared "isolated" environment, as the same failure again: **a shared environment for
+the isolated tests is not isolation.** Each config test now gets an environment of its own via
+`FTGameTests.aloneIn(name)`, and environments are registered from what the specs ask for rather than
+from a list kept in step by hand.
+
+The near-miss worth remembering is `every_mod_item_is_in_the_creative_tab`, which reads the same
+global creative tab a config test empties. It would have failed for a reason nobody could reproduce.
+
+### A switch nobody flips is a switch nobody has checked
+
+Every other test runs with everything on, which is exactly the state in which a gate reading the wrong
+switch, or sitting on a path that never runs, passes. `ConfigGateTests` turns one off and asserts the
+behaviour stops; `FTConfig.switchFor` exists for that and gameplay code must not call it.
+
+All four were driven red. That found a real defect in one of them: the mid-swing test originally
+called `ToolSwapper.swapIn` directly, which leaves no dig on record, so the tick handler unwound
+through its "a live swap with no dig on record is stranded" branch and **the test passed with the
+config gate deleted**. It now swaps in through `player.getDestroySpeed`, the call vanilla itself makes
+while a block is being broken.
+
+**The unit layer cannot answer any of this.** No config is loaded there, so `FTConfig` returns the
+shipped default whatever a switch says. `FTConfigTest` covers the feature ids, the argument checking
+and the recipe condition's parsing, and deliberately asserts nothing about a feature being on.
+
 ## Testing conventions that are not optional here
 
 **Growth is by accretion, so the completeness sweep is load-bearing.**
@@ -248,7 +343,10 @@ python tools/make_dev_world.py     # once; builds run/saves/devworld headlessly 
 python tools/shoot_plates.py       # in another; builds the scene and captures
 ```
 
-**Port 8610 is claimed for this repo** in `~/.claude/port_registry.yaml`. There is deliberately no
+**Port 8610 is claimed for this repo** in `~/.claude/port_registry.yaml`. (An earlier version of
+this file also said, further down, that no port was claimed. It was wrong from the day devbridge was
+wired up; the claim above is the true one. Kept as a note rather than deleted, because this file has
+now been wrong four times and the pattern - a list that reads as complete - is worth seeing.) There is deliberately no
 default port on either side: a shared one once had Trashlands' verifier connect to Recompile's dev
 client and report a clean pass about the wrong world. The registry cannot detect a clash here,
 because the ports helper enumerates IPv4 and devbridge binds `getLoopbackAddress()`, which is `::1`
@@ -346,11 +444,79 @@ these were found by reading the 26.1 sources after the obvious version failed.
 | `@EventBusSubscriber(bus = Bus.MOD)` | no `bus` argument at all; routing is by event type |
 | `PacketDistributor.sendToServer(...)` | `ClientPacketDistributor.sendToServer(...)`; `PacketDistributor` is server-to-client only |
 | `IMenuTypeExtension.create(Menu::new)` | the factory is `IContainerFactory`, three arguments including a `RegistryFriendlyByteBuf` |
+| `player.displayClientMessage(text, true)` | `player.sendOverlayMessage(text)` for the action bar; `sendSystemMessage(text)` for chat |
+
+The renames above were all found while building a standalone tool-slot screen. **That screen is
+gone** - the slots live in vanilla's inventory now - but the table stays, because every row is a
+26.1 rename that any client code will hit.
 
 **Screens here are painted, not textured.** `graphics.fill(...)` for the panel in vanilla's palette,
 and `graphics.blitSprite(RenderPipelines.GUI_TEXTURED, Identifier.withDefaultNamespace("container/slot"), ...)`
 for the slots. That inherits the vanilla look exactly and ships no art asset that a resource pack
 could leave stranded.
+
+## The tool slots are in vanilla's inventory, and that needs a mixin
+
+**This is the only mixin in the repo, and none of the four sibling mods has one.** Do not add a
+second without the same kind of reason.
+
+**The feature was built the wrong way first.** The ask was tools that live in the inventory without
+taking inventory space. Version one put them on a screen of their own behind a **V** key, which
+delivered the second half and quietly dropped the first, and it was chosen precisely to avoid the
+problem below. The owner found it by opening their inventory and seeing nothing. A trade that avoids
+the hard part by dropping the named feature is not a trade, and the reasoning written in the code at
+the time read as sound while being exactly wrong.
+
+**NeoForge exposes no hook for adding slots to `InventoryMenu`.** There is no event; the events
+directory has nothing between `PlayerContainerEvent` and `ContainerScreenEvent` that touches slots.
+The two ways in are a mixin on the constructor or an access transformer plus adding the slots after
+the fact. **The mixin wins because the menu is not built once**: it is rebuilt on join, on respawn
+and on a dimension change, on both the client and the server. An access transformer needs a hook for
+each of those, and missing one leaves the two sides disagreeing about how many slots exist.
+`InventoryMenu` is synchronised by slot INDEX, so a disagreement moves items into the wrong slots
+rather than merely looking wrong. A constructor runs for every rebuild on both sides and cannot be
+missed.
+
+**Appended at the end, indices 46 to 50.** Vanilla's `quickMoveStack` decides what a shift-click does
+from hardcoded index ranges up to 45. Inserting anywhere earlier shifts the armour, inventory and
+offhand out from under those ranges and breaks shift-clicking across the whole screen. Appending
+leaves every range intact, and the method's final `else` already moves an unrecognised index into the
+inventory, so shift-clicking a tool OUT works with nothing patched. Shift-clicking one IN does not,
+and is the mixin's second injection.
+
+**The config switch acts on `Slot.isActive()`, never on whether the slots exist.** The obvious
+implementation - add them only when the feature is on - is the desync above with a config file
+attached. The count must be identical on both sides whatever the config says; `isActive` then decides
+whether a slot can be seen or touched, and vanilla honours it in the three places that matter
+(rendering, the empty-slot icon, and `findSlot`, which is what a click looks through). A mismatched
+config then costs nothing worse than one side refusing a click.
+`switching_the_slots_off_hides_them_without_removing_them` pins the count.
+
+**Only the background is ours to draw.** The slots are real slots, so the game draws the items,
+highlights the hovered one, shows tooltips and handles clicks unasked. What is missing is what a
+texture would provide, because vanilla's inventory texture stops at the bottom of its own panel.
+`ToolSlotStrip` paints it on `ScreenEvent.Render.Background` - **not**
+`ContainerScreenEvent.Render.Foreground`, which is the obvious hook and is wrong: 26.1 fires it after
+the slots are drawn, so the panel would cover the items sitting in it. There is no
+`ContainerScreenEvent.Render.Background` in 26.1; its own javadoc points at the screen event instead.
+That hook is not translated by `leftPos`/`topPos`, unlike the foreground one.
+
+**Below the panel rather than inside it, and not on the right.** Vanilla's inventory is 176 wide and
+the free space inside fits three slots at most, so five cannot go in without moving vanilla's own
+widgets - which is how an inventory screen ends up broken for everyone who added anything else. The
+right-hand edge is where JEI puts its item list, and this mod ships no JEI integration on purpose.
+
+**Weapons are deliberately not in `#flattsthings:tool_slot_valid`.** Swords were, at first, and it
+read as harmless - a sword is held in the hand and has a durability bar like everything else in the
+tag. It is not harmless: these slots feed the auto-swap, so a storable sword means a mod that puts a
+weapon in your hand while you are mining and takes it away again. Tools go here; fighting is the
+player's business. `a_weapon_does_not_belong_in_a_tool_slot` pins the shipped default, and there is
+no sword outline for the same reason - an outline promising one would be an invitation the slot then
+refuses. The fifth slot has no outline at all, because it is the free one.
+
+**Known gap: the creative inventory.** `CreativeModeInventoryScreen` has its own menu rather than
+`InventoryMenu`, so the strip does not appear there and a creative player cannot reach their tools
+from the inventory tab. Stored tools are untouched and come back in survival.
 
 ## Events that only fire on one side
 
@@ -380,7 +546,11 @@ worth making. The convention is established going forward, which is what it was 
 
 ## Deliberate deviations from the sibling repos
 
-- **No JEI or Jade compat, and no `texgen.toml`.** Nothing here needs them yet. Textures come from
-  `tools/generate_plates.py`; move to `mc-pack-toolkit`'s texgen if the art gets ambitious.
-- **No devbridge port claimed.** The sibling mods each claim one in `~/.claude/port_registry.yaml`.
-  Claim one here before wiring devbridge, rather than taking its 25580 default.
+- **No JEI or Jade compat CODE, but both are in the dev client.** There is no integration source in
+  this repo and nothing compiles against either. `./gradlew fetchDevMods` downloads them into
+  `run/mods` (gitignored, the same route devbridge takes) and the client run depends on that task.
+  They are there so a human can see what a player in a pack sees - above all whether the plate
+  recipes actually LOADED, which is what the config's recipe condition changes and the one thing no
+  headless test can look at.
+- **No `texgen.toml`.** Textures come from `tools/generate_plates.py`; move to `mc-pack-toolkit`'s
+  texgen if the art gets ambitious.

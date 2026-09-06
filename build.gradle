@@ -58,6 +58,62 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
 
+/**
+ * JEI and Jade, downloaded into run/mods for the dev client to pick up.
+ *
+ * <p>NOT a dependency, and the distinction is the whole design. moddev 2.0.141 removed the per-run
+ * additional classpath - it fails with "there is no additional classpath anymore for Minecraft
+ * 26.1.2" and points at runtimeOnly, which would put two client mods on the runtime classpath of
+ * every run and of `test`, and make both CI jobs resolve them over the network for nothing.
+ *
+ * <p>run/mods is gitignored and is already how devbridge gets in, so this follows a pattern the
+ * repo has rather than inventing a second one. It cannot leak into the published jar, the GameTest
+ * server does not pay for it, and CI never runs this task because CI never runs the client.
+ *
+ * <p>This mod compiles against NEITHER and has no integration code for either. They are here so a
+ * human at the keyboard can see what a player in a pack sees - JEI shows whether the plate recipes
+ * actually loaded, which is exactly what the config's recipe condition changes and the one thing no
+ * headless test can look at, and Jade names the block under the crosshair.
+ *
+ * <p>Skips anything already downloaded, so the client does not wait on the network to start and
+ * works offline once primed. Delete run/mods/*.jar to force a refetch after a version bump.
+ */
+def fetchDevMods = tasks.register('fetchDevMods') {
+    group = 'flattsthings'
+    description = 'Download JEI and Jade into run/mods for the dev client (not a dependency).'
+
+    def targets = [
+        "jei-${minecraft_version}-neoforge-${jei_version}.jar":
+            "https://maven.blamejared.com/mezz/jei/jei-${minecraft_version}-neoforge/${jei_version}/jei-${minecraft_version}-neoforge-${jei_version}.jar",
+        "jade-${jade_version}.jar":
+            "https://api.modrinth.com/maven/maven/modrinth/jade/${URLEncoder.encode(jade_version.toString(), 'UTF-8')}/jade-${URLEncoder.encode(jade_version.toString(), 'UTF-8')}.jar",
+    ]
+    def modsDir = layout.projectDirectory.dir('run/mods').asFile
+    outputs.upToDateWhen { targets.keySet().every { new File(modsDir, it).exists() } }
+
+    doLast {
+        modsDir.mkdirs()
+        targets.each { name, url ->
+            def target = new File(modsDir, name)
+            if (target.exists()) {
+                logger.lifecycle("dev mod already present: ${name}")
+                return
+            }
+            // Downloads to a temp file and renames, so an interrupted fetch cannot leave a
+            // truncated jar in the mods folder - which FML reports as a corrupt mod rather than as
+            // a failed download.
+            def partial = new File(modsDir, name + '.part')
+            logger.lifecycle("fetching dev mod: ${name}")
+            new URI(url).toURL().withInputStream { input ->
+                partial.withOutputStream { output -> output << input }
+            }
+            if (!partial.renameTo(target)) {
+                throw new GradleException("could not move ${partial} into place")
+            }
+        }
+    }
+}
+
 neoForge {
     version = neoforge_version
 
@@ -77,9 +133,23 @@ neoForge {
             // ::1 on this machine, so the registry reports the port free while a game holds it.
             // Anything that must be sure asks what answered, via `gamebridge ping`.
             systemProperty 'devbridge.port', '8610'
-            // Never grab the mouse, so alt-tabbing during an unattended shoot cannot spin the
-            // camera mid-capture.
-            systemProperty 'devbridge.lockInput', 'true'
+            // OPT IN, because the default cost a session. This releases the mouse for the whole
+            // run: devbridge's lock is an ungrabbed mouse, and MouseHandler.turnPlayer only runs
+            // while the mouse is grabbed, so with it on the camera cannot be turned BY HAND either.
+            // That is right for an unattended shoot, where a stray alt-tab would spin the camera
+            // between the command that framed a shot and the shot itself. It is wrong for every
+            // other reason to launch this client: somebody who opened the game to look at a block
+            // finds a camera that will not move and reads it as a broken game rather than a
+            // setting, which is exactly what happened.
+            //
+            //   ./gradlew runClient -PlockInput      <- unattended shoots (shoot_plates, gallery)
+            //   ./gradlew runClient                  <- looking at the game yourself
+            //
+            // `gamebridge input on` / `input off` flips it on a running client. Note the sense:
+            // `enabled` is what the MOUSE does, so `input off` takes the camera away.
+            if (project.hasProperty('lockInput')) {
+                systemProperty 'devbridge.lockInput', 'true'
+            }
             // Boot straight into a world instead of stopping at the title screen. Vanilla's own
             // launch argument, not a mod feature. `--args` on the Gradle task does NOT do this: a
             // moddev run reads it as a main class and the launch dies before Minecraft starts.
@@ -97,6 +167,10 @@ neoForge {
             // whatever the window happens to be, and the default 854x480 is unusable for comparing
             // fourteen textures. Fixed dimensions also mean every shot crops identically.
             programArguments.addAll '--width', '1920', '--height', '1080'
+
+            // JEI and Jade, fetched into run/mods rather than put on a classpath. See the
+            // fetchDevMods task; taskBefore is what scopes them to this run.
+            taskBefore(fetchDevMods)
         }
         server {
             server()
@@ -121,6 +195,13 @@ neoForge {
         // convenience method, so set the type directly.
         gameTestServer {
             type.set('gameTestServer')
+            // ITS OWN DIRECTORY, so it never sees run/mods. The dev-only mods there are for a human
+            // looking at the game; this is the layer CI gates on, and it has no use for them. That
+            // is not hypothetical tidiness - JEI's first version here demanded a newer NeoForge than
+            // this project pins, and took `runGameTestServer` down with a dependency error that had
+            // nothing to do with the mod under test. A test layer should not be breakable by a tool
+            // that exists to look at something else.
+            gameDirectory.set(file('run/gametest'))
             // Run one test, or a group, instead of the whole suite:
             //   ./gradlew runGameTestServer -Ptests=flattsthings:a_player_presses_the_player_plate
             //   ./gradlew runGameTestServer -Ptests=flattsthings:every_*
@@ -182,6 +263,11 @@ dependencies {
 
 tasks.named('test', Test) {
     useJUnitPlatform()
+    // A moddev JUnit run works out of build/minecraft-junit, not the project root, so a test that
+    // needs a file from the repo cannot use a relative path. ToolSlotSpriteTest reads the patched
+    // game jar to check that the empty-slot outlines name sprites that exist - the only way to see
+    // client assets, which are on neither test layer's classpath.
+    systemProperty 'flattsthings.projectDir', projectDir.absolutePath
     testLogging {
         events 'passed', 'skipped', 'failed'
         exceptionFormat 'full'
