@@ -199,6 +199,7 @@ def generate(v: Variant) -> None:
 # this repo is built to prevent. New non-plate strings go here.
 STATIC_LANG = {
     "itemGroup.flattsthings": "Flatts's Things",
+    "key.category.flattsthings.flattsthings": "Flatts's Things",
     "key.flattsthings.toggle_auto_swap": "Toggle Tool Auto-Swap",
     "message.flattsthings.auto_swap.on": "Tool auto-swap on",
     "message.flattsthings.auto_swap.off": "Tool auto-swap off",

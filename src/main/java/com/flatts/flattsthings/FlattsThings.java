@@ -7,6 +7,7 @@ import com.flatts.flattsthings.registry.FTBlocks;
 import com.flatts.flattsthings.registry.FTConditions;
 import com.flatts.flattsthings.registry.FTCreativeTabs;
 import com.flatts.flattsthings.registry.FTItems;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -26,6 +27,18 @@ public final class FlattsThings {
 
     public static final String MOD_ID = "flattsthings";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    /**
+     * This mod's key-binding category.
+     *
+     * <p>Here rather than in the client package so a unit test can check the lang file against this
+     * exact value. The screen's label is {@code id.toLanguageKey("key.category")}, so the identifier
+     * and the translation key are the same fact stated twice, and the failure when they disagree is
+     * a raw {@code key.category.flattsthings.flattsthings} rendered in the Key Binds screen - which
+     * nothing else here would notice, because no headless test looks at a screen.
+     */
+    public static final Identifier KEY_CATEGORY =
+        Identifier.fromNamespaceAndPath(MOD_ID, MOD_ID);
 
     public FlattsThings(IEventBus modEventBus, ModContainer modContainer) {
         // FIRST, because the creative tab below reads it while building its contents and a recipe

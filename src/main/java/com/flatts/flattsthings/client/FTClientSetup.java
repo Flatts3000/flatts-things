@@ -14,6 +14,23 @@ import org.lwjgl.glfw.GLFW;
 public final class FTClientSetup {
 
     /**
+     * This mod's own category in the Key Binds screen.
+     *
+     * <p><b>Its own, rather than borrowing vanilla's Gameplay.</b> A binding filed under Gameplay is
+     * sorted in among two dozen of the game's own and there is nothing to say which mod put it
+     * there, so a player looking for it has to know its name already. A named category is how every
+     * other mod is found in that screen.
+     *
+     * <p>Constructed rather than registered through {@code KeyMapping.Category.register}, which is
+     * deprecated in 26.1 in favour of {@link RegisterKeyMappingsEvent#registerCategory}. The label
+     * comes from {@code id.toLanguageKey("key.category")}, so this identifier fixes the lang key as
+     * {@code key.category.flattsthings.flattsthings} - rename the identifier and the screen shows
+     * the raw key instead of a name.
+     */
+    public static final KeyMapping.Category CATEGORY =
+        new KeyMapping.Category(FlattsThings.KEY_CATEGORY);
+
+    /**
      * Z by default.
      *
      * <p><b>Not V, and "vanilla does not use V" was simply wrong.</b> This was bound to V on that
@@ -32,13 +49,15 @@ public final class FTClientSetup {
      *
      */
     public static final KeyMapping TOGGLE_AUTO_SWAP = new KeyMapping(
-        "key.flattsthings.toggle_auto_swap", GLFW.GLFW_KEY_Z, KeyMapping.Category.GAMEPLAY);
+        "key.flattsthings.toggle_auto_swap", GLFW.GLFW_KEY_Z, CATEGORY);
 
     private FTClientSetup() {
     }
 
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
+        // The category first: a mapping naming a category nobody registered is filed nowhere.
+        event.registerCategory(CATEGORY);
         event.register(TOGGLE_AUTO_SWAP);
     }
 }

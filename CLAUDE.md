@@ -207,6 +207,14 @@ the key is bound to. The binding was V, on the belief that vanilla does not use 
 reported `bound to key.debug.dumpVersion, key.flattsthings.toggle_auto_swap`. Vanilla's F3 chords are
 ordinary key mappings and collide for real.
 
+**The binding sits in this mod's own category**, not vanilla's Gameplay, so a player can find it
+without knowing its name. `KeyMapping.Category` is constructed and passed to
+`RegisterKeyMappingsEvent.registerCategory` - `KeyMapping.Category.register` is deprecated in 26.1.
+The label is `id.toLanguageKey("key.category")`, so the identifier and the lang key are one fact
+stated twice; `FlattsThings.KEY_CATEGORY` is the single source and `KeyCategoryTest` checks the lang
+file against it. Get that wrong and the screen renders the raw key, which no other test here would
+see.
+
 **Probe before choosing a default binding**, with `gamebridge key <k> --check`, which reports the
 owners and presses nothing. In a client with JEI and Jade: G, H, N, B, C, X, T and V are vanilla's,
 R, U and F are JEI's. Z is free and the only unbound key within reach of WASD. Do not reason about
