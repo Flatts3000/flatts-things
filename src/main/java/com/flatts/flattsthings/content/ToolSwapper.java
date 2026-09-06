@@ -108,10 +108,15 @@ public final class ToolSwapper {
             return;
         }
         BlockPos pos = position.get().immutable();
-        Dig previous = DIGGING.put(player.getUUID(), new Dig(player.tickCount, pos));
+        Dig previous = DIGGING.get(player.getUUID());
         if (startsANewDig(player, previous, pos)) {
             swapIn(player, event.getState());
         }
+        // RECORDED AFTER the swap, not before. swapIn may unwind a previous swap on its way in, and
+        // unwinding clears this record - so writing it first meant the record vanished exactly when
+        // the player moved from one block to another, and forty ticks later the stranded backstop
+        // fired and took their tool away mid-dig.
+        DIGGING.put(player.getUUID(), new Dig(player.tickCount, pos));
     }
 
     /**
@@ -214,12 +219,27 @@ public final class ToolSwapper {
     }
 
     public static void swapIn(Player player, net.minecraft.world.level.block.state.BlockState state) {
-        if (player.getData(FTAttachments.TOOL_SWAP).active()) {
-            return;
-        }
         int slot = ToolSlots.bestSlotFor(player, state);
         if (slot < 0) {
+            // Nothing beats what is in hand. If that is because a swap already put the right tool
+            // there, leaving it alone is the answer - re-swapping the same tool every block would be
+            // visible fidgeting for no gain.
             return;
+        }
+        // A DIFFERENT BLOCK CAN WANT A DIFFERENT TOOL, and the first version could not say so. It
+        // refused outright whenever a swap was live, so starting on a log and sweeping onto dirt
+        // kept the axe - or, once the stranded backstop fired, left the player digging bare-handed
+        // with their own item put back. Found by doing exactly that: break a log, move to dirt.
+        //
+        // Unwinding first is what keeps the accounting honest. The displaced item goes back to the
+        // hand and the old tool to its slot before anything new is taken, so at no point are two
+        // tools out of their slots or one item recorded as displaced twice.
+        if (player.getData(FTAttachments.TOOL_SWAP).active()) {
+            swapOut(player);
+            slot = ToolSlots.bestSlotFor(player, state);
+            if (slot < 0) {
+                return;
+            }
         }
         int hotbarSlot = player.getInventory().getSelectedSlot();
         ItemStack tool = ToolSlots.get(player, slot).copy();

@@ -307,5 +307,84 @@ final class ToolSwapTests {
             helper.succeed();
         });
 
+
+        // MOVING FROM ONE BLOCK TO ANOTHER MID-HOLD MUST RE-PICK THE TOOL. Reported from real play:
+        // start breaking a log, then swing onto dirt. The first version refused to swap while a swap
+        // was live, so the axe stayed for the dirt - and worse, the dig record was written before the
+        // swap rather than after, so an unwind cleared it and the stranded backstop took the tool
+        // away forty ticks later, leaving the player digging bare-handed.
+        FTGameTests.test("sweeping_onto_a_different_block_picks_the_right_tool", 60, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.OAK_LOG);
+            BlockPos log = helper.absolutePos(TARGET);
+            BlockPos dirt = helper.absolutePos(TARGET.above());
+            helper.setBlock(TARGET.above(), Blocks.DIRT);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_AXE));
+            ToolSlots.set(player, 1, new ItemStack(Items.NETHERITE_SHOVEL));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+            player.snapTo(log.getX() + 0.5, log.getY() + 1.0, log.getZ() + 2.5, 0F, 0F);
+
+            // Drive the real hook rather than swapIn, so the dig record is written the way play
+            // writes it - that ordering is half the bug.
+            player.getDestroySpeed(Blocks.OAK_LOG.defaultBlockState(), log);
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_AXE),
+                "the axe should come out for a log, found " + player.getMainHandItem().getItem());
+
+            // Now the crosshair moves to dirt, still holding.
+            player.getDestroySpeed(Blocks.DIRT.defaultBlockState(), dirt);
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_SHOVEL),
+                "the shovel should come out for dirt, found " + player.getMainHandItem().getItem());
+
+            // AND NOTHING WAS DUPLICATED OR LOST ON THE WAY. The axe went back to a slot, the
+            // cobblestone is still recorded as the displaced item, and each exists exactly once.
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_AXE) == 1,
+                "exactly one axe, found " + countEverywhere(player, Items.NETHERITE_AXE));
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_SHOVEL) == 1,
+                "exactly one shovel, found " + countEverywhere(player, Items.NETHERITE_SHOVEL));
+
+            ToolSwapper.swapOut(player);
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "and the player's own item comes back at the end, found "
+                    + player.getMainHandItem().getItem());
+            helper.assertTrue(countEverywhere(player, Items.COBBLESTONE) == 1,
+                "exactly one cobblestone, found " + countEverywhere(player, Items.COBBLESTONE));
+            helper.succeed();
+        });
+
+        // THE DIG RECORD MUST SURVIVE A RE-SWAP, which is the half that made this a lost tool rather
+        // than merely the wrong one. Asserted through the backstop itself: after moving blocks, a
+        // player who is plainly still digging must not be unwound.
+        FTGameTests.test("moving_between_blocks_does_not_strand_the_swap", 60, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.OAK_LOG);
+            BlockPos log = helper.absolutePos(TARGET);
+            BlockPos dirt = helper.absolutePos(TARGET.above());
+            helper.setBlock(TARGET.above(), Blocks.DIRT);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_AXE));
+            ToolSlots.set(player, 1, new ItemStack(Items.NETHERITE_SHOVEL));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            player.getDestroySpeed(Blocks.OAK_LOG.defaultBlockState(), log);
+            player.getDestroySpeed(Blocks.DIRT.defaultBlockState(), dirt);
+
+            // One tick of the backstop. With the record cleared it unwinds here; with it written
+            // after the swap it does not.
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player));
+
+            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "a player still digging must not be unwound by the stranded backstop");
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_SHOVEL),
+                "and should still hold the shovel, found " + player.getMainHandItem().getItem());
+            ToolSwapper.swapOut(player);
+            helper.succeed();
+        });
+
     }
 }
