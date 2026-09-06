@@ -14,7 +14,15 @@ import org.lwjgl.glfw.GLFW;
 public final class FTClientSetup {
 
     /**
-     * V by default, which vanilla does not use.
+     * Z by default.
+     *
+     * <p><b>Not V, and "vanilla does not use V" was simply wrong.</b> This was bound to V on that
+     * belief until devbridge's {@code key} verb reported what the key actually owns:
+     * {@code key.debug.dumpVersion}. Vanilla's F3 chords are ordinary key mappings, so they collide
+     * for real - the controls screen shows the binding in red and the player is asked to resolve a
+     * clash nobody meant to create. The whole set was then probed rather than guessed at again, in a
+     * client with JEI and Jade loaded: G, H, N, B, C, X and T are vanilla's, R, U and F are JEI's,
+     * and Z is free and the only unbound key within reach of WASD.
      *
      * <p><b>A key rather than only a config option, because this is the setting you change mid-job.</b>
      * The config switch is the pack author's, applies to everybody and needs a file edit; this is the
@@ -22,11 +30,9 @@ public final class FTClientSetup {
      * just swapped a tool you did not want. Anything that needs you to leave the game to change it
      * will not get changed.
      *
-     * <p>There is no screen to open any more - the tool slots are in the inventory - so V, which this
-     * mod already used, is free again for the one thing left worth binding.
      */
     public static final KeyMapping TOGGLE_AUTO_SWAP = new KeyMapping(
-        "key.flattsthings.toggle_auto_swap", GLFW.GLFW_KEY_V, KeyMapping.Category.GAMEPLAY);
+        "key.flattsthings.toggle_auto_swap", GLFW.GLFW_KEY_Z, KeyMapping.Category.GAMEPLAY);
 
     private FTClientSetup() {
     }

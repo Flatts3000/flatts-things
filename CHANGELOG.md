@@ -11,7 +11,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
-- **A key to turn the auto-swap off and on, bound to V by default.** The config switch is the pack
+- **A key to turn the auto-swap off and on, bound to Z by default.** The config switch is the pack
   author's and applies to everybody; this is yours, and the moment you want it is while standing in
   front of the block that just swapped a tool you did not want. It says which way it went above your
   hotbar, survives death and logout, and cannot re-enable a swap a pack has switched off - it says

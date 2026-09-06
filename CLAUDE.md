@@ -187,7 +187,7 @@ the config. `ToolSwapper.onPlayerTick` unwinds when the switch goes off.
 ### Two switches for the auto-swap, and both must say yes
 
 `FTConfig.toolAutoSwap()` is the pack author's and applies to everyone. `AUTO_SWAP_WANTED` is the
-player's own attachment, flipped by a key (V), serialised and `copyOnDeath` because a preference that
+player's own attachment, flipped by a key (Z), serialised and `copyOnDeath` because a preference that
 resets when you die is not a preference. `ToolSwapper.swapping(player)` reads both, in one place, so
 that a caller cannot check one and forget the other - which would look like a key that works
 everywhere except the one path nobody tested.
@@ -201,9 +201,16 @@ because a player flipping a setting that will not take effect has no other way t
 means trusting a client about its own setting, and two presses arriving out of order leave the sides
 disagreeing. A bare "flip it" cannot disagree: the server owns the value and reports what it became.
 
-**Untested seam:** the key press itself. devbridge can drive a command and a click but has no verb
-for a keybind, so `KeyMapping.consumeClick` to payload is the one link no automated test here covers.
-Everything from the payload handler inwards is covered.
+**The key press is testable, and testing it found a bug immediately.** devbridge's `key` verb drives
+`KeyMapping.set` + `KeyMapping.click` the way vanilla's own `KeyboardHandler` does, and reports what
+the key is bound to. The binding was V, on the belief that vanilla does not use V; the first press
+reported `bound to key.debug.dumpVersion, key.flattsthings.toggle_auto_swap`. Vanilla's F3 chords are
+ordinary key mappings and collide for real.
+
+**Probe before choosing a default binding**, with `gamebridge key <k> --check`, which reports the
+owners and presses nothing. In a client with JEI and Jade: G, H, N, B, C, X, T and V are vanilla's,
+R, U and F are JEI's. Z is free and the only unbound key within reach of WASD. Do not reason about
+which keys are free - the answer depends on what else is loaded.
 
 ### The config is global, and GameTests run concurrently
 
