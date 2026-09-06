@@ -3,6 +3,7 @@ package com.flatts.flattsthings.content;
 import com.flatts.flattsthings.config.FTConfig;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -52,7 +53,22 @@ public final class ToolSlot extends Slot {
 
     @Override
     public boolean mayPlace(ItemStack stack) {
-        return ToolSlots.isValid(stack);
+        return FTConfig.toolSlots() && ToolSlots.isValid(stack);
+    }
+
+    /**
+     * <b>Also gated, and this is the half that makes the switch real.</b>
+     *
+     * <p>{@link #isActive()} is a CLIENT decision: it stops the slot being drawn and stops
+     * {@code findSlot} returning it. Nothing on the server consults it - {@code doClick} checks
+     * {@code mayPickup} and {@code mayPlace} and never {@code isActive} - and the config is COMMON,
+     * so it is per-side and unsynced. Without this, a player on a server that had the feature off
+     * could set it on in their own file and get working tool slots, because their client would
+     * render and hit-test them and the server would honour the clicks.
+     */
+    @Override
+    public boolean mayPickup(Player player) {
+        return FTConfig.toolSlots() && super.mayPickup(player);
     }
 
     /**

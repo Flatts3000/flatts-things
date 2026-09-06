@@ -211,7 +211,17 @@ final class ConfigGateTests {
                         "the slot COUNT must not change with the feature off, or client and server "
                             + "desync; was " + count + ", now " + menu.slots.size());
                     helper.assertFalse(menu.getSlot(firstToolSlot).isActive(),
-                        "but the slot should be inactive, which is what hides it and refuses clicks");
+                        "but the slot should be inactive, which is what hides it client-side");
+
+                    // THE SERVER MUST REFUSE TOO. isActive is presentation only - doClick checks
+                    // mayPickup and mayPlace and never isActive - and the config is per-side and
+                    // unsynced, so without these a player could switch it on in their own file and
+                    // click slots a server had switched off.
+                    helper.assertFalse(
+                        menu.getSlot(firstToolSlot).mayPlace(new ItemStack(Items.DIAMOND_PICKAXE)),
+                        "a switched-off slot must refuse a placement server-side");
+                    helper.assertFalse(menu.getSlot(firstToolSlot).mayPickup(player),
+                        "and must refuse a pickup server-side");
 
                     // And the shift-click route is off with it, rather than quietly still working.
                     player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));

@@ -73,7 +73,7 @@ public final class FTGameTests {
         test(name, maxTicks, DEFAULT_ENVIRONMENT, body);
     }
 
-    /** Register one test in a named environment. See {@link #ISOLATED_ENVIRONMENT}. */
+    /** Register one test in a named environment. See {@link #aloneIn}. */
     static void test(String name, int maxTicks, String environment, Consumer<GameTestHelper> body) {
         DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> holder =
             FUNCTIONS.register(name, () -> body);

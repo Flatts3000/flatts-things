@@ -73,9 +73,16 @@ abstract class InventoryMenuMixin extends AbstractContainerMenu {
      * a pickaxe to the hotbar and leave the tool slots empty. Losing that would be a step backwards
      * from a version players already had.
      *
-     * <p><b>Only from the inventory and hotbar, and only when a tool slot will actually take it.</b>
-     * If every tool slot is full, or the item is not tag-valid, this does nothing and vanilla's
-     * behaviour happens unchanged. So the vanilla rule is not replaced, it is tried second.
+     * <p><b>From the main inventory only, NOT the hotbar.</b> Covering the hotbar too was the first
+     * version and it quietly broke a vanilla habit: shift-clicking a pickaxe off your hotbar moves
+     * it to the inventory, and hijacking that sent it to a tool slot instead - and then
+     * {@code doClick}'s repeat loop kept going until every tool slot was full. Taking something OUT
+     * of the hotbar is the direction players already have a meaning for, so it is left alone. From
+     * the hotbar it takes two shift-clicks, or one drag.
+     *
+     * <p>And only when a tool slot will actually take it. If every tool slot is full, or the item is
+     * not tag-valid, this does nothing and vanilla's behaviour happens unchanged. So the vanilla
+     * rule is not replaced, it is tried second.
      *
      * <p>The return contract matters and is easy to get wrong: {@code doClick} loops on
      * {@code quickMoveStack} while the returned stack is non-empty and the slot still holds the same
@@ -89,7 +96,7 @@ abstract class InventoryMenuMixin extends AbstractContainerMenu {
                                                      CallbackInfoReturnable<ItemStack> callback) {
         if (!FTConfig.toolSlots()
             || index < InventoryMenu.INV_SLOT_START
-            || index >= InventoryMenu.USE_ROW_SLOT_END) {
+            || index >= InventoryMenu.INV_SLOT_END) {
             return;
         }
         Slot source = this.slots.get(index);

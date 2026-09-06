@@ -184,16 +184,18 @@ final class ToolSlotTests {
         // this is the mixin's second injection rather than anything inherited.
         FTGameTests.test("shift_clicking_a_tool_moves_it_into_a_slot", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
-            player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));
+            // Inventory slot 9 is the first MAIN inventory slot, menu index 9. The hotbar is
+            // deliberately not covered: shift-clicking out of it means "move to the inventory" and
+            // that meaning is vanilla's, not ours.
+            player.getInventory().setItem(9, new ItemStack(Items.DIAMOND_AXE));
             AbstractContainerMenu menu = player.inventoryMenu;
 
-            // Inventory slot 0 is the first hotbar slot, which is menu index 36 in vanilla numbering.
-            menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
+            menu.quickMoveStack(player, InventoryMenu.INV_SLOT_START);
 
             helper.assertTrue(ToolSlots.get(player, 0).is(Items.DIAMOND_AXE),
                 "the axe should now be in tool slot 0, found " + ToolSlots.get(player, 0).getItem());
-            helper.assertTrue(player.getInventory().getItem(0).isEmpty(),
-                "the axe should have left the hotbar");
+            helper.assertTrue(player.getInventory().getItem(9).isEmpty(),
+                "the axe should have left the inventory");
             helper.succeed();
         });
 
@@ -202,12 +204,12 @@ final class ToolSlotTests {
         // the failure a "did it arrive" assertion cannot see, because the axe did arrive.
         FTGameTests.test("shift_clicking_a_tool_into_a_slot_does_not_duplicate_it", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
-            player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));
+            player.getInventory().setItem(9, new ItemStack(Items.DIAMOND_AXE));
             AbstractContainerMenu menu = player.inventoryMenu;
 
-            menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
+            menu.quickMoveStack(player, InventoryMenu.INV_SLOT_START);
             // Again, the way doClick would: a second call must find nothing left to move.
-            menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
+            menu.quickMoveStack(player, InventoryMenu.INV_SLOT_START);
 
             helper.assertTrue(countEverywhere(player, Items.DIAMOND_AXE) == 1,
                 "exactly one axe should exist, found " + countEverywhere(player, Items.DIAMOND_AXE));
@@ -360,6 +362,28 @@ final class ToolSlotTests {
             }
             helper.assertTrue(outlined == 4,
                 "expected the four tool families to be named, found " + outlined + " outline(s)");
+            helper.succeed();
+        });
+
+
+        // THE HOTBAR KEEPS VANILLA'S MEANING. Shift-clicking a tool out of the hotbar moves it to
+        // the inventory, the way it always has - the hijack covers the main inventory only. The
+        // first version covered both, which silently broke a habit every player already has and
+        // then repeated until every tool slot was full.
+        FTGameTests.test("shift_clicking_out_of_the_hotbar_is_left_to_vanilla", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            player.getInventory().setItem(0, new ItemStack(Items.DIAMOND_AXE));
+            AbstractContainerMenu menu = player.inventoryMenu;
+
+            menu.quickMoveStack(player, InventoryMenu.USE_ROW_SLOT_START);
+
+            helper.assertTrue(ToolSlots.get(player, 0).isEmpty(),
+                "the hotbar shuffle must not divert into a tool slot, found "
+                    + ToolSlots.get(player, 0).getItem());
+            helper.assertTrue(player.getInventory().getItem(0).isEmpty(),
+                "and the axe should have left the hotbar the way vanilla moves it");
+            helper.assertTrue(countEverywhere(player, Items.DIAMOND_AXE) == 1,
+                "with exactly one axe, found " + countEverywhere(player, Items.DIAMOND_AXE));
             helper.succeed();
         });
 

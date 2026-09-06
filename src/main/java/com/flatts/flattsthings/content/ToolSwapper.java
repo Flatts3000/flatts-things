@@ -50,11 +50,19 @@ public final class ToolSwapper {
     /**
      * How long after the last sign of digging a stranded swap is unwound, in ticks.
      *
-     * <p>STOP and ABORT cover an ordinary release. This covers everything else: a teleport, a death,
-     * a block that vanished from under the cursor, a client that stopped sending. Without it a
-     * player can be left holding a tool they never chose with their own item nowhere in sight.
+     * <p><b>This is the ONLY unwind for letting go of the mouse, and the comment here used to claim
+     * otherwise.</b> It said STOP and ABORT covered an ordinary release; nothing in this file
+     * handles either, and it cannot - the client-side events are not posted server-side in 26.1. So
+     * every release waits for this, which is why it is five ticks and not forty. At forty a player
+     * who tapped a block and then went to place a torch spent two seconds swinging a pickaxe they
+     * never chose.
+     *
+     * <p>Five is the same gap {@link #DIG_GAP_TICKS} uses, and for the same reason: {@code
+     * BreakSpeed} fires every tick of a dig, so any gap at all means the player let go. A lag spike
+     * longer than that unwinds and the next tick swaps straight back in, which costs a frame of the
+     * wrong item in hand rather than an item.
      */
-    private static final int STRANDED_AFTER_TICKS = 40;
+    private static final int STRANDED_AFTER_TICKS = 5;
 
     /**
      * How long a gap in {@code BreakSpeed} ends a dig, in ticks.

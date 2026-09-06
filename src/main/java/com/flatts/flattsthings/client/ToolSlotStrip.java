@@ -56,8 +56,8 @@ public final class ToolSlotStrip {
         GuiGraphicsExtractor graphics = event.getGuiGraphics();
         int left = screen.getGuiLeft() + ToolSlotLayout.STRIP_X;
         int top = screen.getGuiTop() + ToolSlotLayout.STRIP_Y;
-        int right = left + ToolSlotLayout.SLOT * ToolSlots.SIZE;
-        int bottom = top + ToolSlotLayout.SLOT;
+        int right = left + ToolSlotLayout.stripWidth();
+        int bottom = top + ToolSlotLayout.stripHeight();
 
         graphics.fill(left, top, right, bottom, PANEL);
         // A two-pixel bevel, light top-left and dark bottom-right, which is what makes a flat fill

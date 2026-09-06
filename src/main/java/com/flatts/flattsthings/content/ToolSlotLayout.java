@@ -30,19 +30,39 @@ public final class ToolSlotLayout {
     /** The gap between the bottom of vanilla's panel and the top of ours. */
     public static final int GAP = 5;
 
+    /**
+     * The border around the slots.
+     *
+     * <p><b>Without it the panel is invisible.</b> Vanilla's {@code container/slot} sprite is 18x18
+     * and fully opaque, and five of them tile the strip exactly, so a background drawn to the same
+     * rectangle is painted over completely - every fill was dead paint and the strip had no edge at
+     * all between the slots and the world behind them. Four pixels is what vanilla insets its own
+     * slots by.
+     */
+    public static final int MARGIN = 4;
+
     /** Left edge of the strip's background, centred under the panel. */
-    public static final int STRIP_X = (PANEL_WIDTH - ToolSlots.SIZE * SLOT) / 2;
+    public static final int STRIP_X = (PANEL_WIDTH - (ToolSlots.SIZE * SLOT + MARGIN * 2)) / 2;
 
     /** Top edge of the strip's background. */
     public static final int STRIP_Y = PANEL_HEIGHT + GAP;
 
-    /** Where slot {@code index} puts its 16x16 of item, one pixel inside the background. */
+    /** The strip's full background, slots plus border. */
+    public static int stripWidth() {
+        return ToolSlots.SIZE * SLOT + MARGIN * 2;
+    }
+
+    public static int stripHeight() {
+        return SLOT + MARGIN * 2;
+    }
+
+    /** Where slot {@code index} puts its 16x16 of item: inside the border, then inside its sprite. */
     public static int slotX(int index) {
-        return STRIP_X + 1 + index * SLOT;
+        return STRIP_X + MARGIN + 1 + index * SLOT;
     }
 
     public static int slotY() {
-        return STRIP_Y + 1;
+        return STRIP_Y + MARGIN + 1;
     }
 
     private ToolSlotLayout() {

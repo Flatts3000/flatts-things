@@ -56,6 +56,13 @@ All notable changes to this project are documented here. Format follows
   everywhere else. Shift-clicking a tool in your inventory sends it to a tool slot. The **V** keybind
   and the `/toolslots` command are removed; nothing else opens.
 
+
+- **The recipe is a redstone dust, not an ender pearl.** The pearl read well and gated badly: the
+  problem these plates solve, a cow opening your door or an arrow tripping your plate, is one you hit
+  in your first hours, and a pearl put the fix behind finding endermen. Redstone is what you already
+  have in hand the first time you wire a door. A vanilla plate is not made obsolete by the cheaper
+  price, because a mob farm still wants a plate that fires for mobs.
+
 ### Fixed
 
 - **The auto-swap stopped working on any block you had already dug.** One dig that did not swap - and
@@ -64,14 +71,6 @@ All notable changes to this project are documented here. Format follows
   by position and time rather than position alone. Found in a real client with devbridge's new `mine`
   verb, not by a test: the whole suite dug freshly placed blocks, so `previous` was always empty and
   the second dig was never exercised.
-
-### Changed
-
-- **The recipe is a redstone dust, not an ender pearl.** The pearl read well and gated badly: the
-  problem these plates solve, a cow opening your door or an arrow tripping your plate, is one you hit
-  in your first hours, and a pearl put the fix behind finding endermen. Redstone is what you already
-  have in hand the first time you wire a door. A vanilla plate is not made obsolete by the cheaper
-  price, because a mob farm still wants a plate that fires for mobs.
 
 ### Notes
 
@@ -88,6 +87,7 @@ All notable changes to this project are documented here. Format follows
   candidate-review workflow that fourteen flat textures do not need.
 - **The first four commits will not be rewritten** to add the missing trailers. Every commit since
   carries them.
+
 
 ## v0.1.0 - 2026-09-05 - "Only You"
 
