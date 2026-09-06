@@ -241,5 +241,71 @@ final class ToolSwapTests {
             });
         });
 
+
+        // THE PLAYER'S OWN SWITCH, which is a different question from the pack's. Bound to a key
+        // because the moment you want it is while standing in front of the block that just swapped a
+        // tool you did not want - a setting that needs a file edit will not get changed.
+        FTGameTests.test("the_key_turns_the_swap_off_and_on_for_this_player", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+            BlockPos target = helper.absolutePos(TARGET);
+            player.snapTo(target.getX() + 0.5, target.getY() + 1.0, target.getZ() + 2.5, 0F, 0F);
+
+            helper.assertTrue(ToolSwapper.swapping(player), "premise: on by default");
+            helper.assertFalse(ToolSwapper.toggleWanted(player), "one press should turn it off");
+            helper.assertFalse(ToolSwapper.swapping(player), "and it should read as off");
+
+            // Off means the real break path does nothing, not merely that a flag changed.
+            player.gameMode.handleBlockBreakAction(target,
+                ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, Direction.UP,
+                player.level().getMaxY(), 0);
+            helper.runAfterDelay(20, () -> {
+                helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                    "nothing should have swapped in with the player's own switch off");
+                helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                    "and they should still hold their own item, found "
+                        + player.getMainHandItem().getItem());
+
+                helper.assertTrue(ToolSwapper.toggleWanted(player), "a second press turns it back on");
+                helper.assertTrue(ToolSwapper.swapping(player), "and it should read as on again");
+                helper.succeed();
+            });
+        });
+
+        // TURNING IT OFF MID-SWING RETURNS THE ITEM, the same invariant the config gate has and for
+        // the same reason: while a swap is live the player's own stack exists only in the attachment.
+        FTGameTests.test("pressing_the_key_mid_swing_returns_the_item", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            ToolSwapper.swapIn(player, Blocks.STONE.defaultBlockState());
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                "premise: the swap should be live before the key is pressed");
+
+            ToolSwapper.toggleWanted(player);
+
+            helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "the live swap should have been unwound");
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "and the player's own item should be back, found "
+                    + player.getMainHandItem().getItem());
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_PICKAXE) == 1,
+                "with exactly one pickaxe still in existence, found "
+                    + countEverywhere(player, Items.NETHERITE_PICKAXE));
+            // Leave the switch as it was found; this class shares an environment with its siblings.
+            ToolSwapper.toggleWanted(player);
+            helper.succeed();
+        });
+
     }
 }

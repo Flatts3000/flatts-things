@@ -1,5 +1,9 @@
 {
   "itemGroup.flattsthings": "Flatts's Things",
+  "key.flattsthings.toggle_auto_swap": "Toggle Tool Auto-Swap",
+  "message.flattsthings.auto_swap.on": "Tool auto-swap on",
+  "message.flattsthings.auto_swap.off": "Tool auto-swap off",
+  "message.flattsthings.auto_swap.unavailable": "Tool auto-swap is turned off in this pack's config",
   "block.flattsthings.stone_player_pressure_plate": "Stone Player Pressure Plate",
   "block.flattsthings.polished_blackstone_player_pressure_plate": "Polished Blackstone Player Pressure Plate",
   "block.flattsthings.oak_player_pressure_plate": "Oak Player Pressure Plate",

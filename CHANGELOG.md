@@ -11,6 +11,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **A key to turn the auto-swap off and on, bound to V by default.** The config switch is the pack
+  author's and applies to everybody; this is yours, and the moment you want it is while standing in
+  front of the block that just swapped a tool you did not want. It says which way it went above your
+  hotbar, survives death and logout, and cannot re-enable a swap a pack has switched off - it says
+  so instead. Pressing it mid-swing gives your own item back rather than stranding it.
 - **Every feature has an on/off switch** (`config/flattsthings-common.toml`). A grab bag has to be a
   menu rather than a package deal, so a pack that wants the tool slots and not the pressure plates
   can have exactly that. Off means no recipe and nothing in the creative tab, and the behaviour stops

@@ -96,7 +96,7 @@ public final class ToolSwapper {
     @SubscribeEvent
     public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
         Player player = event.getEntity();
-        if (player.level().isClientSide() || !FTConfig.toolAutoSwap()) {
+        if (player.level().isClientSide() || !swapping(player)) {
             return;
         }
         Optional<BlockPos> position = event.getPosition();
@@ -143,7 +143,7 @@ public final class ToolSwapper {
         // TURNED OFF MID-SWING STILL GIVES THE ITEM BACK. The displaced stack lives only in the
         // attachment while a swap is live, so a gate that merely stopped new swaps would strand
         // whatever the player was holding the moment somebody edited the config.
-        if (!FTConfig.toolAutoSwap()) {
+        if (!swapping(player)) {
             swapOut(player);
             return;
         }
@@ -182,6 +182,35 @@ public final class ToolSwapper {
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         swapOut(event.getEntity());
         DIGGING.remove(event.getEntity().getUUID());
+    }
+
+    /**
+     * Whether this player is currently having tools swapped for them.
+     *
+     * <p><b>Two answers, both of which must be yes, and they are different questions.</b> The config
+     * is the pack author's and applies to everyone; the attachment is the player's own and is flipped
+     * with a key. Reading them together here rather than at each call site is what stops one being
+     * checked and the other forgotten - the bug that would look like a key that works everywhere
+     * except the one path nobody tested.
+     */
+    public static boolean swapping(Player player) {
+        return FTConfig.toolAutoSwap() && player.getData(FTAttachments.AUTO_SWAP_WANTED);
+    }
+
+    /**
+     * Flip this player's own preference, and say what it became.
+     *
+     * <p>Unwinds a live swap on the way out, for the same reason the config gate does: while a swap
+     * is in progress the player's own item exists only in the attachment, so switching off without
+     * unwinding strands it.
+     */
+    public static boolean toggleWanted(Player player) {
+        boolean wanted = !player.getData(FTAttachments.AUTO_SWAP_WANTED);
+        player.setData(FTAttachments.AUTO_SWAP_WANTED, wanted);
+        if (!wanted) {
+            swapOut(player);
+        }
+        return wanted;
     }
 
     public static void swapIn(Player player, net.minecraft.world.level.block.state.BlockState state) {

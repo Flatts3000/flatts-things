@@ -184,6 +184,27 @@ cannot be reported without refusing to load the world.
 in the attachment, so a gate that merely stopped new swaps would strand it the instant somebody edited
 the config. `ToolSwapper.onPlayerTick` unwinds when the switch goes off.
 
+### Two switches for the auto-swap, and both must say yes
+
+`FTConfig.toolAutoSwap()` is the pack author's and applies to everyone. `AUTO_SWAP_WANTED` is the
+player's own attachment, flipped by a key (V), serialised and `copyOnDeath` because a preference that
+resets when you die is not a preference. `ToolSwapper.swapping(player)` reads both, in one place, so
+that a caller cannot check one and forget the other - which would look like a key that works
+everywhere except the one path nobody tested.
+
+**The pack's off always wins**, pinned by `the_key_cannot_re_enable_a_swap_the_pack_switched_off`.
+Separate switches are only safe if that holds; otherwise a key quietly restores a feature a pack
+deliberately removed. When the pack has it off the key says so rather than pretending to toggle,
+because a player flipping a setting that will not take effect has no other way to find out why.
+
+**The payload carries nothing, not even the new value.** Sending the state the client thinks it wants
+means trusting a client about its own setting, and two presses arriving out of order leave the sides
+disagreeing. A bare "flip it" cannot disagree: the server owns the value and reports what it became.
+
+**Untested seam:** the key press itself. devbridge can drive a command and a click but has no verb
+for a keybind, so `KeyMapping.consumeClick` to payload is the one link no automated test here covers.
+Everything from the payload handler inwards is covered.
+
 ### The config is global, and GameTests run concurrently
 
 **Tests in one environment run at the same time; environments run one after another.** Almost
@@ -408,6 +429,7 @@ these were found by reading the 26.1 sources after the obvious version failed.
 | `@EventBusSubscriber(bus = Bus.MOD)` | no `bus` argument at all; routing is by event type |
 | `PacketDistributor.sendToServer(...)` | `ClientPacketDistributor.sendToServer(...)`; `PacketDistributor` is server-to-client only |
 | `IMenuTypeExtension.create(Menu::new)` | the factory is `IContainerFactory`, three arguments including a `RegistryFriendlyByteBuf` |
+| `player.displayClientMessage(text, true)` | `player.sendOverlayMessage(text)` for the action bar; `sendSystemMessage(text)` for chat |
 
 The renames above were all found while building a standalone tool-slot screen. **That screen is
 gone** - the slots live in vanilla's inventory now - but the table stays, because every row is a

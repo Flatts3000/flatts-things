@@ -225,5 +225,30 @@ final class ConfigGateTests {
                 helper.succeed();
             });
 
+
+        // A PLAYER CANNOT TURN ON WHAT THE PACK TURNED OFF. The two switches are separate on purpose,
+        // and separate is only safe if the pack's one wins - otherwise a key would quietly re-enable
+        // a feature a pack author deliberately removed.
+        FTGameTests.test("the_key_cannot_re_enable_a_swap_the_pack_switched_off", 20,
+            FTGameTests.aloneIn("the_key_cannot_re_enable_a_swap_the_pack_switched_off"),
+            helper -> {
+                ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                try {
+                    FTConfig.switchFor(FTConfig.TOOL_AUTO_SWAP).set(false);
+                    helper.assertFalse(ToolSwapper.swapping(player),
+                        "premise: the pack switch is off");
+
+                    // The player's own preference flips, because it is theirs.
+                    ToolSwapper.toggleWanted(player);
+                    ToolSwapper.toggleWanted(player);
+
+                    helper.assertFalse(ToolSwapper.swapping(player),
+                        "however the player sets their own switch, the pack's off must win");
+                } finally {
+                    FTConfig.switchFor(FTConfig.TOOL_AUTO_SWAP).set(true);
+                }
+                helper.succeed();
+            });
+
     }
 }
