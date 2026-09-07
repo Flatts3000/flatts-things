@@ -90,6 +90,7 @@ public final class FTGameTests {
         PlateDataTests.register();
         EnchantedGoldenAppleTests.register();
         BuddingAmethystTests.register();
+        GravelToFlintTests.register();
         ConfigGateTests.register();
         RegistryCompletenessTests.register();
 
