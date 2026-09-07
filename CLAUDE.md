@@ -430,6 +430,29 @@ The `else` branch registers a task that explains what to set.
 - **A block's tags** come from `BuiltInRegistries.BLOCK.wrapAsHolder(block).tags()`; there is no
   `getTags()` on `BlockBehaviour`.
 
+### Global loot modifiers are discovered, not listed, in 26.1
+
+**`data/neoforge/loot_modifiers/global_loot_modifiers.json` is gone and writing one is worse than
+useless.** That file was Forge's registry of which modifiers are active. 26.1's
+`LootModifierManager` is a `SimpleJsonResourceReloadListener` over `loot_modifiers/`, so it loads
+**every** JSON in `data/<any namespace>/loot_modifiers/` directly - and the old list file, being in
+that folder, is then parsed as a modifier and fails:
+
+```
+Couldn't parse data file 'neoforge:global_loot_modifiers' from
+'neoforge:loot_modifiers/global_loot_modifiers.json': No key type in MapLike[...]
+```
+
+That error is logged on every data pack load and nothing else fails, so it sits in the log
+unnoticed. Written down because it cost a wrong conclusion: emptying the list file was used as the
+red drive for a loot modifier test, the test kept passing because the list is not read, and the
+honest-looking reading of that was "the test is a false green". The test was fine. Delete the
+modifier's own file to drive it red.
+
+**Prefer a modifier to overriding a vanilla loot table.** Both work. An override wins outright over
+any other mod touching the same block and silently suppresses a drop Mojang adds later; a modifier
+composes. `neoforge:add_table` plus a `neoforge:loot_table_id` condition needs no Java at all.
+
 ### The client and networking layer moved a long way in 26.1
 
 Anything written against an older version will not compile, and the renames are not guessable. All of

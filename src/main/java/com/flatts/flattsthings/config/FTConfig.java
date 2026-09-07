@@ -51,6 +51,14 @@ public final class FTConfig {
     /** Swapping the right tool into the hand when you start breaking a block. */
     public static final String TOOL_AUTO_SWAP = "tool_auto_swap";
 
+    /**
+     * Silk touch picks up budding amethyst, which vanilla never lets you take.
+     *
+     * <p>Off leaves it unobtainable, which is where vanilla puts it and why: an amethyst farm that
+     * cannot be moved is the point of the omission.
+     */
+    public static final String SILK_TOUCH_BUDDING_AMETHYST = "silk_touch_budding_amethyst";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -86,6 +94,12 @@ public final class FTConfig {
             "Restore the enchanted golden apple's crafting recipe: eight gold blocks around an",
             "apple, exactly as it was before 1.9. Off leaves it loot-only, which is where vanilla",
             "left it.");
+
+        define(builder, SILK_TOUCH_BUDDING_AMETHYST,
+            "Let silk touch pick up budding amethyst, which vanilla never drops. Note this is a",
+            "deliberate vanilla restriction rather than an oversight: an unobtainable budding block",
+            "is what stops an amethyst farm being picked up and moved, so turning this on makes",
+            "geodes portable.");
 
         builder.pop();
         SPEC = builder.build();

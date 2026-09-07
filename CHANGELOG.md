@@ -11,6 +11,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Silk touch picks up budding amethyst** (#38), which vanilla never drops with any tool. Off by
+  default it stays unobtainable, because that omission is deliberate: a budding block you cannot
+  take is what stops an amethyst farm being picked up and moved. Turning it on makes geodes
+  portable, which is the point and also the cost.
+
 - **The enchanted golden apple can be crafted again** (#33), eight gold blocks around an apple,
   exactly as it was before 1.9. Not a rebalance and not an invention: vanilla had this recipe and
   deleted it, leaving an item that exists and can only be found in loot. Off by config
