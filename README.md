@@ -118,7 +118,8 @@ tag, and what each becomes is the `flattsthings:cauldron_transform` data map.
 Put a chestplate and an elytra on an anvil. The chestplate comes back gliding, keeping its armour,
 its enchantments, its trim and its name. One chest slot does both jobs.
 
-The elytra is consumed, and flight wears the **chestplate** from then on - so the thing being used up
+The elytra is consumed - **and any enchantments on the elytra go with it**, since the chestplate is
+the item that survives. Flight wears the **chestplate** from then on - so the thing being used up
 is the armour keeping you alive, and it stops gliding one durability before it breaks, exactly as a
 vanilla elytra does.
 

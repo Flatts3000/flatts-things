@@ -5,6 +5,8 @@ import com.flatts.flattsthings.config.FTConfig;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.util.Unit;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -47,6 +49,11 @@ import net.neoforged.neoforge.event.AnvilUpdateEvent;
  * what an anvil already does with two items, it is the pattern this repo has used once before, and
  * a smithing version would be a custom recipe class for the same outcome.
  *
+ * <p><b>The elytra's own enchantments are destroyed with it</b>, and nothing merges them across.
+ * Somebody putting in a Mending, Unbreaking III elytra loses that work, so the config comment and the
+ * changelog say so rather than only saying the elytra is consumed. The chestplate is the item that
+ * survives, so its enchantments are the ones that matter.
+ *
  * <p><b>It does not come apart.</b> The elytra is consumed and there is nothing left to separate:
  * the result is a chestplate that glides, so "removing the elytra" would mean stripping a component
  * off a perfectly good chestplate to give back an item that no longer exists. Losing the elytra is
@@ -79,6 +86,24 @@ public final class ArmoredElytra {
         // THE VANILLA TAG, so a modded chestplate that joins it works with no compat patch and no
         // knowledge of it here. 26.1's copper chestplate is already in it, and was not in 1.21's.
         if (!chestplate.is(ItemTags.CHEST_ARMOR) || !event.getRight().is(Items.ELYTRA)) {
+            return;
+        }
+        // ONE AT A TIME. Chest armour does not stack in vanilla, but a stack size is a COMPONENT in
+        // 26.1 and a modded item in the tag can set it - and copy() keeps the count, so a stack of
+        // sixty-four would have come back as sixty-four gliders for one elytra and one level. The
+        // sibling handler on the enchanted golden apple shipped exactly this bug and had it found in
+        // review; there is no excuse for it twice.
+        if (chestplate.getCount() != 1) {
+            return;
+        }
+        // AND THE GAME'S OWN GATE, NOT JUST THE TAG. canGlideUsing wants an Equippable whose slot
+        // matches where the item is worn, so an item in this tag with no Equippable at all - or one
+        // worn on the body, which is a real slot in 26.1 - would come out of the anvil having eaten
+        // an elytra and a level, and would never glide. The tag says what a pack MEANT; this says
+        // what the game will actually accept. Mirroring vanilla's check is the only way to be sure
+        // the two agree.
+        Equippable equippable = chestplate.get(DataComponents.EQUIPPABLE);
+        if (equippable == null || equippable.slot() != EquipmentSlot.CHEST) {
             return;
         }
         // ALREADY GLIDES, so there is nothing to sell them. Without this the anvil would offer the

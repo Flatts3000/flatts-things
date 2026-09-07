@@ -87,6 +87,16 @@ Dip a stack of concrete powder in a water cauldron and it sets. Dirt comes out a
 Both are things you can already do one block at a time, against a water source or with a bottle. The
 cauldron does the stack, for one of its three levels.
 
+### Armoured elytra
+
+Put a chestplate and an elytra on an anvil. The chestplate comes back gliding, and keeps its armour,
+its enchantments, its trim and its name.
+
+The elytra is used up, and anything enchanted on the elytra goes with it. From then on flying wears
+the chestplate, and it stops gliding one durability before it breaks, the way an elytra does.
+
+This one takes away a choice the game makes you make. Turn it off if you want that choice back.
+
 ### Every one of these has an off switch
 
 `config/flattsthings-common.toml`, one line each. Off means no recipe and nothing in the creative

@@ -159,9 +159,15 @@ public final class FTConfig {
         define(builder, ARMORED_ELYTRA,
             "Combine a chestplate and an elytra on an anvil: the chestplate keeps its armour, its",
             "enchantments and its trim, and gains the elytra's gliding. One chest slot does both",
-            "jobs. The elytra is consumed and flight then wears the CHESTPLATE, so the armour you",
-            "are relying on is the thing being worn down. Note this removes a trade vanilla has kept",
-            "on purpose for years - off puts that choice back.");
+            "jobs. The elytra is consumed - ALONG WITH ANY ENCHANTMENTS ON IT, which are not carried",
+            "across - and flight then wears the CHESTPLATE, so the armour you are relying on is the",
+            "thing being worn down.",
+            "",
+            "Note this removes a trade vanilla has kept on purpose for years. On by default anyway,",
+            "for the same reason silk touch on budding amethyst is: a mod nobody switched on is a",
+            "mod that appears not to work, and a pack that wants the vanilla choice back has this",
+            "line to turn off. That is the deal every switch here offers, and it is worth more than",
+            "guessing which features a pack would have wanted.");
 
         builder.pop();
         SPEC = builder.build();

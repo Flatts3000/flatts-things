@@ -4,11 +4,15 @@ import com.flatts.flattsthings.config.FTConfig;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AnvilUpdateEvent;
 
@@ -78,8 +82,17 @@ final class ArmoredElytraTests {
         FTGameTests.test("an_enchanted_chestplate_keeps_everything_it_had", 20, helper -> {
             ItemStack worn = new ItemStack(Items.NETHERITE_CHESTPLATE);
             worn.setDamageValue(120);
-            worn.set(DataComponents.CUSTOM_NAME,
-                Component.literal("Old Faithful"));
+            worn.set(DataComponents.CUSTOM_NAME, Component.literal("Old Faithful"));
+            // ACTUALLY ENCHANTED, WHICH THE FIRST VERSION OF THIS TEST WAS NOT. It set a damage
+            // value and a name and called itself "an_enchanted_chestplate", so a refactor that built
+            // the result with new ItemStack(item) and hand-copied those two fields would have
+            // dropped the enchantments - the thing the README, the changelog and the config comment
+            // all lead with - and stayed green.
+            ItemEnchantments.Mutable enchantments =
+                new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+            enchantments.set(helper.getLevel().registryAccess()
+                .lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.PROTECTION), 4);
+            worn.set(DataComponents.ENCHANTMENTS, enchantments.toImmutable());
 
             AnvilUpdateEvent event = new AnvilUpdateEvent(worn, new ItemStack(Items.ELYTRA), null,
                 ItemStack.EMPTY, 0, 0, helper.makeMockServerPlayerInLevel());
@@ -90,20 +103,41 @@ final class ArmoredElytraTests {
                 "the wear should come along, found " + result.getDamageValue());
             helper.assertTrue(result.get(DataComponents.CUSTOM_NAME) != null,
                 "and so should the name");
+            ItemEnchantments kept = result.get(DataComponents.ENCHANTMENTS);
+            helper.assertTrue(kept != null && kept.size() == 1,
+                "and the enchantments, which is what this is really about");
+            helper.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(
+                    helper.getLevel().registryAccess()
+                        .lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.PROTECTION),
+                    result) == 4,
+                "at the level it had, found " + EnchantmentHelper.getItemEnchantmentLevel(
+                    helper.getLevel().registryAccess()
+                        .lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.PROTECTION),
+                    result));
             helper.succeed();
         });
 
         // A GLIDING CHESTPLATE STOPS GLIDING BEFORE IT BREAKS, which is vanilla's rule for an elytra
-        // and comes along free because canGlideUsing asks nextDamageWillBreak. Worth pinning because
-        // it is the difference between landing and falling out of the sky.
+        // and comes along free because canGlideUsing asks nextDamageWillBreak.
+        //
+        // BUILT THROUGH THE ANVIL, and the first version was not. It assembled the stack by hand and
+        // asserted vanilla's behaviour, so it passed with this entire feature class deleted - a pin
+        // on Mojang's code wearing this mod's name. The tell was that it was the one test missing
+        // from the red-drive table. It now takes the item the handler actually produces, so it says
+        // something about this mod: what comes out of the anvil obeys the durability rule.
         FTGameTests.test("a_nearly_broken_armoured_elytra_stops_gliding", 20, helper -> {
-            ItemStack result = new ItemStack(Items.NETHERITE_CHESTPLATE);
-            result.set(DataComponents.GLIDER, net.minecraft.util.Unit.INSTANCE);
-            result.setDamageValue(result.getMaxDamage() - 1);
+            AnvilUpdateEvent event = new AnvilUpdateEvent(
+                new ItemStack(Items.NETHERITE_CHESTPLATE), new ItemStack(Items.ELYTRA), null,
+                ItemStack.EMPTY, 0, 0, helper.makeMockServerPlayerInLevel());
+            NeoForge.EVENT_BUS.post(event);
+            ItemStack result = event.getOutput();
 
+            helper.assertTrue(LivingEntity.canGlideUsing(result, EquipmentSlot.CHEST),
+                "premise: fresh out of the anvil it glides");
+
+            result.setDamageValue(result.getMaxDamage() - 1);
             helper.assertFalse(LivingEntity.canGlideUsing(result, EquipmentSlot.CHEST),
                 "one durability from breaking, it must not glide");
-            helper.assertTrue(result.getMaxDamage() > 0, "premise: it is a damageable item");
             helper.succeed();
         });
 
@@ -151,6 +185,8 @@ final class ArmoredElytraTests {
         FTGameTests.test("the_elytra_handler_leaves_other_combinations_alone", 20, helper -> {
             ItemStack gliding = new ItemStack(Items.NETHERITE_CHESTPLATE);
             gliding.set(DataComponents.GLIDER, net.minecraft.util.Unit.INSTANCE);
+            ItemStack notEquippable = new ItemStack(Items.IRON_CHESTPLATE);
+            notEquippable.remove(DataComponents.EQUIPPABLE);
 
             record Case(String what, ItemStack left, ItemStack right) {}
             List<Case> cases = List.of(
@@ -163,7 +199,20 @@ final class ArmoredElytraTests {
                 // The one that would quietly eat elytras forever: a chestplate that already glides
                 // is still a chestplate, so without a guard the anvil keeps offering the same trade.
                 new Case("an elytra on a chestplate that already glides",
-                    gliding, new ItemStack(Items.ELYTRA)));
+                    gliding, new ItemStack(Items.ELYTRA)),
+                // A STACK. Chest armour does not stack in vanilla, but a stack size is a COMPONENT
+                // in 26.1 and a modded item in the tag can raise it - and copy() keeps the count,
+                // so without a guard one elytra buys a whole stack of gliders. The sibling handler
+                // on the enchanted golden apple shipped exactly this and had it caught in review.
+                new Case("an elytra on a stack of chestplates",
+                    new ItemStack(Items.NETHERITE_CHESTPLATE, 2), new ItemStack(Items.ELYTRA)),
+                // IN THE TAG BUT NOT ACTUALLY WORN ON THE CHEST. The tag says what a pack MEANT;
+                // canGlideUsing wants an Equippable whose slot matches. Without this the anvil eats
+                // an elytra and a level and hands back something that will never glide, with no
+                // way for the player to find out why. Stripping the component is the closest a
+                // vanilla-only test can get to the modded item that would do this for real.
+                new Case("an elytra on something in the tag that is not chest-equippable",
+                    notEquippable, new ItemStack(Items.ELYTRA)));
 
             List<String> wrong = new ArrayList<>();
             for (Case each : cases) {
