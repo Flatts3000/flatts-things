@@ -96,10 +96,19 @@ public final class CauldronTransforms {
         }
 
         if (!level.isClientSide()) {
-            ItemStack result = transform.resultFor(itemInHand.getCount());
-            itemInHand.setCount(0);
-            if (!player.getInventory().add(result)) {
-                player.drop(result, false);
+            if (player.hasInfiniteMaterials()) {
+                // CREATIVE FOLLOWS VANILLA'S RULE HERE, NOT THIS FEATURE'S. Doing the survival thing
+                // would DELETE the stack: Inventory.add reports success for a creative player and
+                // stores nothing, so the powder would vanish and no concrete would arrive. Vanilla's
+                // own ItemUtils.createFilledResult, which its bottle filling uses, does not consume
+                // a creative player's input and only hands over a result they do not already have.
+                ItemStack single = transform.resultFor(1);
+                if (!player.getInventory().contains(single)) {
+                    player.getInventory().add(single);
+                }
+            } else {
+                give(player, transform.resultFor(itemInHand.getCount()));
+                itemInHand.setCount(0);
             }
             for (int paid = 0; paid < transform.waterCost(); paid++) {
                 // Re-read: each call rewrites the state, and the last one replaces the block with an
@@ -115,5 +124,25 @@ public final class CauldronTransforms {
                 pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 8, 0.2, 0.0, 0.2, 1.0);
         }
         return InteractionResult.SUCCESS;
+    }
+
+    /**
+     * Hand over a result that may be bigger than a stack, and never delete it.
+     *
+     * <p>Nothing this mod ships converts more than one-for-one, so a full stack in is a full stack
+     * out and this is one pass. A pack that sets a {@code count} above one can ask for more than
+     * sixty-four at once, though, and an oversized {@code ItemStack} is not a thing the inventory
+     * handles gracefully - so it is split here rather than trusted to.
+     */
+    private static void give(Player player, ItemStack result) {
+        int remaining = result.getCount();
+        while (remaining > 0) {
+            ItemStack chunk = result.copy();
+            chunk.setCount(Math.min(remaining, result.getMaxStackSize()));
+            remaining -= chunk.getCount();
+            if (!player.getInventory().add(chunk)) {
+                player.drop(chunk, false);
+            }
+        }
     }
 }

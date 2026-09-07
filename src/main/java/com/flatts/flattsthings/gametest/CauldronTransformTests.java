@@ -145,6 +145,27 @@ final class CauldronTransformTests {
             helper.succeed();
         });
 
+        // A CREATIVE PLAYER MUST NOT LOSE THE STACK. Inventory.add reports success for a creative
+        // player and stores nothing (hasInfiniteMaterials), so the survival path would have emptied
+        // their hand and handed back nothing at all - a silent deletion in the one mode where items
+        // are supposed to be free. Vanilla's own answer, in ItemUtils.createFilledResult, is to leave
+        // a creative player's input alone and give them a result only if they have none, and this
+        // follows it rather than inventing a third behaviour.
+        FTGameTests.test("a_creative_player_keeps_their_stack", 20, helper -> {
+            fillCauldron(helper);
+            ServerPlayer player = holding(helper, new ItemStack(Items.WHITE_CONCRETE_POWDER, 64));
+            player.setGameMode(GameType.CREATIVE);
+
+            rightClick(helper, player);
+
+            helper.assertTrue(countOf(player, Items.WHITE_CONCRETE_POWDER) == 64,
+                "a creative player's input should be untouched, found "
+                    + countOf(player, Items.WHITE_CONCRETE_POWDER));
+            helper.assertTrue(countOf(player, Items.WHITE_CONCRETE) > 0,
+                "and they should still get a result rather than nothing");
+            helper.succeed();
+        });
+
         // THE NEGATIVE, without which a handler that ignored its input would pass everything above.
         FTGameTests.test("an_item_with_no_transform_is_left_alone", 20, helper -> {
             fillCauldron(helper);
