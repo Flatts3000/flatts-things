@@ -41,6 +41,13 @@ public final class FTConfig {
     /** The dedicated tool slots. Off hides them on the screen; stored tools stay stored. */
     public static final String TOOL_SLOTS = "tool_slots";
 
+    /**
+     * The enchanted golden apple's crafting recipe, which vanilla had until 1.9.
+     *
+     * <p>Off means no recipe, and the item goes back to being loot-only the way vanilla leaves it.
+     */
+    public static final String ENCHANTED_GOLDEN_APPLE = "enchanted_golden_apple";
+
     /** Swapping the right tool into the hand when you start breaking a block. */
     public static final String TOOL_AUTO_SWAP = "tool_auto_swap";
 
@@ -74,6 +81,11 @@ public final class FTConfig {
             "Swap the best tool for the job into your hand while you break a block, and put your own",
             "item back when you stop. Needs " + TOOL_SLOTS + ", since it swaps out of those slots -",
             "turning those off turns this off with them whatever this says.");
+
+        define(builder, ENCHANTED_GOLDEN_APPLE,
+            "Restore the enchanted golden apple's crafting recipe: eight gold blocks around an",
+            "apple, exactly as it was before 1.9. Off leaves it loot-only, which is where vanilla",
+            "left it.");
 
         builder.pop();
         SPEC = builder.build();

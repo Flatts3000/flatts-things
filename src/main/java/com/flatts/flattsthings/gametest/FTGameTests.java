@@ -88,6 +88,7 @@ public final class FTGameTests {
         ToolSlotTests.register();
         ToolSwapTests.register();
         PlateDataTests.register();
+        EnchantedGoldenAppleTests.register();
         ConfigGateTests.register();
         RegistryCompletenessTests.register();
 
