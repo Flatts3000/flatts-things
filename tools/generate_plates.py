@@ -233,6 +233,8 @@ STATIC_LANG = {
     "message.flattsthings.auto_swap.off": "Tool auto-swap off",
     "message.flattsthings.auto_swap.unavailable":
         "Tool auto-swap is turned off in this pack's config",
+    "block.flattsthings.woodcutter": "Woodcutter",
+    "container.flattsthings.woodcutter": "Woodcutter",
 }
 
 

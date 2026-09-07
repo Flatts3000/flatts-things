@@ -43,6 +43,12 @@ final class WoodcutterMenuTests {
         // SURVIVAL, because a creative player's Inventory.add reports success and stores nothing,
         // and every count in this file would then read zero for a reason unrelated to woodcutting.
         player.setGameMode(GameType.SURVIVAL);
+        // AND MOVED INTO THE PLOT. makeMockServerPlayerInLevel leaves the player at the world
+        // ORIGIN, so anything it drops lands in a chunk nothing has loaded and getEntitiesOfClass
+        // does not index it - the item is real and the query answers empty, which reads exactly
+        // like the deletion the drop test is here to rule out.
+        BlockPos here = helper.absolutePos(CUTTER);
+        player.snapTo(here.getX() + 0.5, here.getY(), here.getZ() + 1.5, 0F, 0F);
         return player;
     }
 
@@ -135,6 +141,38 @@ final class WoodcutterMenuTests {
                 "every plank should have come back, found " + countOf(player, Items.OAK_PLANKS));
             helper.assertTrue(menu.inputContainer.getItem(0).isEmpty(),
                 "and the input slot should be empty");
+            helper.succeed();
+        });
+
+        // SHIFT-CLICKING WITH NOWHERE TO PUT IT DROPS THE REMAINDER RATHER THAN EATING IT. This is
+        // the bug vanilla's own single trailing player.drop guards against, and leaving that line
+        // out reads as belt-and-braces until you work out why it is there: moveItemStackTo returns
+        // true after merging even ONE item, so a nearly full inventory leaves a remainder behind -
+        // and onTake has already charged the plank and overwritten the result slot's reference to
+        // it. The remainder then belongs to nothing.
+        FTGameTests.test("shift_clicking_a_result_that_barely_fits_loses_nothing", 40, helper -> {
+            ServerPlayer player = survivalPlayer(helper);
+            WoodcutterMenu menu = openWith(helper, player, new ItemStack(Items.OAK_PLANKS, 8));
+            menu.clickMenuButton(player, indexOf(menu, Items.OAK_SLAB));
+
+            // Every slot full, except room for exactly one more slab.
+            for (int index = 0; index < player.getInventory().getContainerSize(); index++) {
+                player.getInventory().setItem(index, new ItemStack(Items.DIRT, 64));
+            }
+            player.getInventory().setItem(0, new ItemStack(Items.OAK_SLAB, 63));
+
+            menu.quickMoveStack(player, 1);
+
+            int inInventory = countOf(player, Items.OAK_SLAB);
+            long onFloor = player.level().getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class,
+                player.getBoundingBox().inflate(8.0),
+                entity -> entity.getItem().is(Items.OAK_SLAB)).stream()
+                .mapToInt(entity -> entity.getItem().getCount()).sum();
+
+            helper.assertTrue(inInventory + onFloor == 65,
+                "sixty-three slabs plus the two just cut is sixty-five; found " + inInventory
+                    + " carried and " + onFloor + " on the ground");
             helper.succeed();
         });
 

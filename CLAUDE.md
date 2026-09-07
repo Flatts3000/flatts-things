@@ -209,6 +209,15 @@ here needs a per-world or synced value.
 tab entry and stops running. Placed blocks keep working and stored tools stay stored. A switch that
 ate somebody's build would not be reversible by flipping it back.
 
+**One exception, and it is the woodcutter** (2026-09-07). Every other feature here is behaviour
+attached to a block that does something on its own, so "keeps working" and "stops running" do not
+collide. A workstation IS its recipes: switch `wood_cutting` off and a placed woodcutter stays
+placed, stays breakable and gives its item back, but opens a menu with nothing in it. That is the
+honest reading of "the behaviour stops running" for a block whose behaviour is a recipe list, and it
+is written here rather than discovered - a pack author flipping the switch should know that the
+benches in their world go quiet rather than vanish. Nothing is deleted; turning it back on restores
+everything.
+
 **A recipe can only be turned off in data.** There is no runtime call that removes a loaded recipe, so
 hiding the item would leave it craftable, in the recipe book and in JEI. `tools/generate_plates.py`
 writes a `flattsthings:feature_enabled` condition into all fourteen recipes and NeoForge drops the

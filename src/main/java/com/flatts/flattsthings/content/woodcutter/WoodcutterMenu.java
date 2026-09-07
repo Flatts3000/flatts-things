@@ -290,6 +290,15 @@ public class WoodcutterMenu extends AbstractContainerMenu {
             return ItemStack.EMPTY;
         }
         slot.onTake(player, stack);
+        if (slotIndex == RESULT_SLOT) {
+            // WHATEVER WOULD NOT FIT GOES ON THE FLOOR, and leaving this out deletes it. Vanilla's
+            // cutter has the same line and it is easy to read as belt-and-braces; it is not.
+            // moveItemStackTo returns true after merging even ONE item, so a nearly full inventory
+            // leaves a remainder in `stack` - and onTake above has already charged a plank and told
+            // setupResult to overwrite the result slot's reference to it. The remainder then belongs
+            // to nothing and is silently gone, with the player charged for it.
+            player.drop(stack, false);
+        }
         this.broadcastChanges();
         return moved;
     }

@@ -6,6 +6,8 @@ import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -62,8 +64,8 @@ public class WoodcutterScreen extends AbstractContainerScreen<WoodcutterMenu> {
 
         List<ItemStack> options = this.menu.visibleOptions();
         for (int index = 0; index < options.size(); index++) {
-            int x = this.leftPos + GRID_X + (index % COLUMNS) * BUTTON_WIDTH;
-            int y = this.topPos + GRID_Y + (index / COLUMNS) * BUTTON_HEIGHT;
+            int x = buttonX(index, this.leftPos);
+            int y = buttonY(index, this.topPos);
 
             Identifier sprite = BUTTON;
             if (index == this.menu.selectedIndex()) {
@@ -78,12 +80,46 @@ public class WoodcutterScreen extends AbstractContainerScreen<WoodcutterMenu> {
         }
     }
 
+    /**
+     * <b>The plus one is not arbitrary.</b> The background blitted here is vanilla's
+     * {@code stonecutter.png}, whose button recesses start one pixel down from the grid origin -
+     * vanilla draws its sprite at {@code row * 18 + 1} and this did not, so every button sat a pixel
+     * proud of the hole it belongs in. Invisible to every test in this repo, and obvious the moment
+     * anybody looks at it.
+     */
+    private static int buttonX(int index, int leftPos) {
+        return leftPos + GRID_X + (index % COLUMNS) * BUTTON_WIDTH;
+    }
+
+    private static int buttonY(int index, int topPos) {
+        return topPos + GRID_Y + (index / COLUMNS) * BUTTON_HEIGHT + 1;
+    }
+
     private static boolean isOver(int index, double mouseX, double mouseY, int leftPos,
                                   int topPos) {
-        int x = leftPos + GRID_X + (index % COLUMNS) * BUTTON_WIDTH;
-        int y = topPos + GRID_Y + (index / COLUMNS) * BUTTON_HEIGHT;
+        int x = buttonX(index, leftPos);
+        int y = buttonY(index, topPos);
         return mouseX >= x && mouseX < x + BUTTON_WIDTH
             && mouseY >= y && mouseY < y + BUTTON_HEIGHT;
+    }
+
+    /**
+     * The name of whatever the cursor is over.
+     *
+     * <p>Without this an option is a picture with no label, and the two oak options differ only by
+     * being a stair or a slab - which is exactly the pair a player would want confirmed before
+     * spending a plank.
+     */
+    @Override
+    protected void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        super.extractTooltip(graphics, mouseX, mouseY);
+        List<ItemStack> options = this.menu.visibleOptions();
+        for (int index = 0; index < options.size(); index++) {
+            if (isOver(index, mouseX, mouseY, this.leftPos, this.topPos)) {
+                graphics.setTooltipForNextFrame(this.font, options.get(index), mouseX, mouseY);
+                return;
+            }
+        }
     }
 
     /**
@@ -102,6 +138,10 @@ public class WoodcutterScreen extends AbstractContainerScreen<WoodcutterMenu> {
                 if (this.minecraft != null && this.minecraft.gameMode != null) {
                     this.minecraft.gameMode.handleInventoryButtonClick(
                         this.menu.containerId, index);
+                    // The same click vanilla's cutter makes. A selection with no sound reads as a
+                    // button that did not register.
+                    this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(
+                        SoundEvents.UI_STONECUTTER_SELECT_RECIPE, 1.0F));
                 }
                 return true;
             }

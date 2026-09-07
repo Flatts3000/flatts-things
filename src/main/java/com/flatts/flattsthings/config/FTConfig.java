@@ -89,11 +89,17 @@ public final class FTConfig {
     public static final String ARMORED_ELYTRA = "armored_elytra";
 
     /**
-     * Cutting planks into stairs and slabs on a stonecutter.
+     * The woodcutter: a saw bench that cuts planks into stairs and slabs.
      *
-     * <p>Off removes the recipes, and the stonecutter goes back to refusing wood. Because these are
-     * recipes rather than behaviour, the switch has to act in data - there is no runtime call that
-     * unloads one, and a recipe left loaded would still show in the recipe book and in JEI.
+     * <p>Off removes the block from the creative tab, its crafting recipe, and all the cuts. Because
+     * those are recipes rather than behaviour, the switch has to act in data - there is no runtime
+     * call that unloads one, and a recipe left loaded would still show in the recipe book and in JEI.
+     *
+     * <p><b>This is the one feature where "placed blocks keep working" does not fully hold</b>, and
+     * the exception is recorded in CLAUDE.md beside the rule. A woodcutter already placed stays
+     * placed, breakable and unchanged - but its whole purpose is the cuts, and those are gone, so it
+     * opens a menu that offers nothing. Nothing is deleted and turning the switch back on restores
+     * it completely.
      */
     public static final String WOOD_CUTTING = "wood_cutting";
 
@@ -179,15 +185,15 @@ public final class FTConfig {
             "guessing which features a pack would have wanted.");
 
         define(builder, WOOD_CUTTING,
-            "Let a stonecutter cut planks into stairs and slabs, at the same ratios it already cuts",
-            "stone: one plank per stair, where a crafting bench charges one and a half, and one",
-            "plank per two slabs, which is what the bench charges anyway. Vanilla ships 275",
-            "stonecutting recipes and none of them take wood.",
+            "The woodcutter: a saw bench that cuts planks into stairs and slabs, at the same ratios",
+            "a stonecutter already cuts stone. One plank per stair, where a crafting bench charges",
+            "one and a half, and one plank per two slabs, which is what the bench charges anyway.",
+            "The game has a cutter for stone and none for wood.",
             "",
-            "This puts wood on the STONEcutter rather than adding a saw of its own, which is the",
-            "arguable part: it is one data file per recipe and no new block, against a second",
-            "workstation with a screen nothing automated can check. Off if a stone blade cutting",
-            "planks reads wrong in your pack.");
+            "Off removes the block from the creative tab, its recipe, and every cut. A woodcutter",
+            "already placed stays where it is and can still be broken and picked up, but it has",
+            "nothing left to offer until this is turned back on - unlike the other switches here,",
+            "which leave placed blocks fully working.");
 
         builder.pop();
         SPEC = builder.build();
