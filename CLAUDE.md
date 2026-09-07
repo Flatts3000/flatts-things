@@ -131,6 +131,19 @@ The mod ships additions to vanilla tag files under `data/minecraft/`, which is l
 **tags MERGE across data packs** rather than the top file at a path winning - the opposite of how a
 recipe at the same path behaves. None of those files may ever carry a `"replace"` key.
 
+**But merging is not the only thing that can go wrong with a tag, and the sentence above was for a
+while the whole story here.** A plain string in `values` is a REQUIRED entry, and
+`TagLoader.tryBuildTag` drops the ENTIRE tag if any required entry is missing - the vanilla entries
+with it - logging one line and failing nothing. So a required entry naming something this mod loads
+from data behind a feature condition is a way to break a vanilla system for everyone who switches
+that feature off. It shipped once: `#minecraft:in_enchanting_table` listed a conditionally-loaded
+enchantment, and switching that feature off would have stopped every enchanting table in the game
+from offering anything to anybody.
+
+**So: anything added to a tag this mod does not own must be `{"id": "...", "required": false}`,
+unless the thing named is registered unconditionally in Java.** The plate tags are the unconditional
+case - the blocks exist or the mod did not load. `everyEntryAddedToAVanillaTagIsOptional` pins it.
+
 **When a thing comes in variants, the list exists twice** - once in Java, once in
 `tools/plate_variants.py` - and that is accepted rather than engineered away, because the two sides
 need different data. It is safe only because two tests close the loop:
@@ -569,6 +582,21 @@ the slot and everything downstream sees the new item.
 how a book becomes an enchanted book - but reaching it for a vanilla item means a mixin, and this
 repo has exactly one with a written reason. The event lands in the same place. **Look for the event
 before reaching for a second mixin.**
+
+**The handler deliberately does NOT re-check the config.** The switch acts where the enchantment is
+loaded, so with it off the table never offers Blessing and the handler is unreachable. Checking again
+would be worse than redundant: the config is editable at runtime while the enchantment is only
+removed on a data pack reload, so a switch flipped mid-session leaves the offer standing - and
+`clickMenuButton` takes the player's levels BEFORE this event and their lapis AFTER it. An early
+return there charges somebody for a golden apple carrying an inert enchantment. Finish what the table
+started; the gate is upstream.
+
+**A book bypasses `supported_items` entirely.** `isPrimaryItemFor` is
+`isPrimaryItem(stack) || stack.is(Items.BOOK)`, so any enchantment in the table's tag can roll onto a
+book whatever it claims to support. A Blessing book was then a paid-for dead end - applied on an
+anvil it gave a golden apple carrying an inert enchantment, because nothing posts
+`PlayerEnchantItemEvent` outside the enchanting table. Closing that needed either a mixin on a
+NeoForge default method or an `AnvilUpdateEvent` handler that makes the book work. It works.
 
 **Guard on the enchantment, not just the item.** Another mod could make golden apples take an
 enchantment of its own; turning that into an enchanted golden apple would be this mod quietly eating

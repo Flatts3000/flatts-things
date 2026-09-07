@@ -42,11 +42,20 @@ class RecipeGateTest {
      * The directories whose files are gated by a condition read at load.
      *
      * <p>Recipes were the first. A loot modifier is the same shape - the folder is scanned, the
-     * file is live for the session, and nothing removes it at runtime - so it belongs here, and it
-     * was outside the sweep for exactly one PR before this was noticed. Tags are NOT here: they
-     * merge rather than replace, and a tag entry for a disabled feature is inert.
+     * file is live for the session, and nothing removes it at runtime - so it belongs here. So is
+     * an enchantment. Each was outside the sweep for exactly one PR before somebody noticed, which
+     * is the argument for keeping the list rather than against it.
+     *
+     * <p><b>Tags are still not here, but the reason first written down was wrong.</b> It said a tag
+     * entry for a disabled feature is inert because tags merge. Merging is about two packs writing
+     * the same tag; it says nothing about an entry pointing at something that failed to load.
+     * {@code TagLoader.tryBuildTag} drops the WHOLE tag when any REQUIRED entry is missing - the
+     * vanilla entries with it - and only logs. So a required entry naming a conditionally-loaded
+     * thing breaks a vanilla system for everyone who switches that feature off. The answer is
+     * {@code "required": false} on the entry rather than a condition on the tag file, which is why
+     * sweeping for conditions would not have caught it and tags still do not belong in this list.
      */
-    private static final List<String> GATED = List.of("recipe", "loot_modifiers");
+    private static final List<String> GATED = List.of("recipe", "loot_modifiers", "enchantment");
 
     @Test
     void everyGatedDataFileNamesAKnownFeature() throws IOException {
@@ -90,7 +99,7 @@ class RecipeGateTest {
     @Test
     void everyHandWrittenGatedFileNamesTheFeatureItShould() throws IOException {
         Map<String, String> expected = Map.of(
-            "recipe/enchanted_golden_apple.json", FTConfig.ENCHANTED_GOLDEN_APPLE,
+            "enchantment/blessing.json", FTConfig.ENCHANTED_GOLDEN_APPLE,
             "recipe/flint_from_gravel.json", FTConfig.GRAVEL_TO_FLINT,
             "loot_modifiers/silk_touch_budding_amethyst.json",
             FTConfig.SILK_TOUCH_BUDDING_AMETHYST);
@@ -136,6 +145,58 @@ class RecipeGateTest {
         }
         return named;
     }
+
+    /**
+     * Every entry this mod adds to a VANILLA tag is optional.
+     *
+     * <p><b>This guards the worst bug in the repo's history so far, which shipped in a PR and was
+     * caught in review.</b> {@code TagLoader.tryBuildTag} drops an entire tag when any REQUIRED
+     * entry is missing - the vanilla entries with it - and does nothing louder than one log line.
+     * The Blessing enchantment is conditionally loaded, so with its feature switched off the entry
+     * would have gone missing and taken {@code #minecraft:in_enchanting_table} with it: no
+     * enchanting table anywhere would offer anything, for any item, to any player, and the only
+     * evidence would be a line in a log nobody reads.
+     *
+     * <p>So: anything this mod adds to a tag it does not own must be {@code "required": false},
+     * unless it is something this mod always registers unconditionally. The plate tags are the
+     * unconditional case - the blocks are registered in Java and cannot fail to exist - which is why
+     * this checks the vanilla-namespace tags for entries naming THIS mod and lets plain strings
+     * pass only when the feature that owns them cannot switch them off.
+     */
+    @Test
+    void everyEntryAddedToAVanillaTagIsOptional() throws IOException {
+        Path vanillaTags = Path.of(System.getProperty("flattsthings.projectDir", "."),
+            "src", "main", "resources", "data", "minecraft", "tags");
+        assertTrue(Files.isDirectory(vanillaTags), vanillaTags + " is missing");
+
+        List<String> problems = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(vanillaTags)) {
+            for (Path file : files.filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".json")).toList()) {
+                JsonObject tag = JsonParser
+                    .parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
+                JsonArray values = tag.getAsJsonArray("values");
+                for (int index = 0; index < values.size(); index++) {
+                    // A plain string is a required entry. That is only safe for something this mod
+                    // registers unconditionally, which is true of the blocks and not of anything
+                    // loaded from data behind a feature condition.
+                    if (!values.get(index).isJsonPrimitive()) {
+                        continue;
+                    }
+                    String entry = values.get(index).getAsString();
+                    if (entry.startsWith("flattsthings:") && CONDITIONAL.contains(entry)) {
+                        problems.add(vanillaTags.relativize(file) + " requires " + entry
+                            + ", which is loaded behind a feature switch - turning that switch off"
+                            + " would delete the whole tag, vanilla entries included");
+                    }
+                }
+            }
+        }
+        assertTrue(problems.isEmpty(), String.join(NEWLINE_INDENT, problems));
+    }
+
+    /** Things this mod loads from data behind a condition, so they can fail to exist. */
+    private static final List<String> CONDITIONAL = List.of("flattsthings:blessing");
 
     private static List<String> check(Path file) throws IOException {
         List<String> problems = new ArrayList<>();

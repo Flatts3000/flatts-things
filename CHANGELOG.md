@@ -25,7 +25,8 @@ All notable changes to this project are documented here. Format follows
 - **Enchant a golden apple to make an enchanted golden apple** (#47). The item's name says what it
   is: a golden apple that has been enchanted. Put one in an enchanting table, spend the levels and
   lapis, and take out the real thing. It needs a full ring of bookshelves - the offer does not appear
-  at a bare table - and the enchantment is called Blessing where the table shows it.
+  at a bare table - and the enchantment is called Blessing where the table shows it. A Blessing book,
+  which the table can roll onto a book like any other enchantment, does the same thing on an anvil.
 
 - **A key to turn the auto-swap off and on, bound to Z by default, under its own Flatts's Things
   category in Key Binds.** The config switch is the pack

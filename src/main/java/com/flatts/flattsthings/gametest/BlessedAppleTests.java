@@ -2,9 +2,11 @@ package com.flatts.flattsthings.gametest;
 
 import com.flatts.flattsthings.content.enchant.BlessedApples;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -54,9 +56,16 @@ final class BlessedAppleTests {
         }
     }
 
+    /**
+     * <b>SURVIVAL, explicitly.</b> {@code makeMockServerPlayerInLevel} comes up in CREATIVE, where
+     * {@code hasInfiniteMaterials} short-circuits both the lapis check and the level check in
+     * {@code clickMenuButton} - so a creative test passes with no lapis and no experience and proves
+     * nothing about the cost this feature is balanced around.
+     */
     @SuppressWarnings("removal")
     private static EnchantmentMenu tableWith(GameTestHelper helper, ServerPlayer player,
                                              ItemStack input, int lapis) {
+        player.setGameMode(GameType.SURVIVAL);
         helper.setBlock(TABLE, Blocks.ENCHANTING_TABLE);
         EnchantmentMenu menu = new EnchantmentMenu(1, player.getInventory(),
             ContainerLevelAccess.create(helper.getLevel(), helper.absolutePos(TABLE)));
@@ -77,10 +86,20 @@ final class BlessedAppleTests {
             helper.assertTrue(menu.costs[2] > 0,
                 "the top slot should offer something for a golden apple at a full table, cost was "
                     + menu.costs[2]);
-            helper.assertTrue(menu.clickMenuButton(player, 2), "the top slot refused the click");
+            // clickMenuButton returns true whenever the slot has a cost and an item, INCLUDING when
+            // it then finds no enchantment and does nothing at all - so this is a precondition, not
+            // proof of anything. The assertions after it are what carry the test.
+            helper.assertTrue(menu.clickMenuButton(player, 2),
+                "the top slot would not even accept the click");
             helper.assertTrue(menu.getSlot(0).getItem().is(Items.ENCHANTED_GOLDEN_APPLE),
                 "expected an enchanted golden apple, slot holds "
                     + menu.getSlot(0).getItem().getItem());
+            // AND IT WAS PAID FOR. In survival the levels come off; a test that only checked the
+            // item would pass just as well against a version that gave it away.
+            helper.assertTrue(player.experienceLevel < 60,
+                "enchanting should have cost levels, player still has " + player.experienceLevel);
+            helper.assertTrue(menu.getSlot(1).getItem().getCount() < 3,
+                "and lapis, slot still holds " + menu.getSlot(1).getItem().getCount());
             helper.succeed();
         });
 
@@ -106,7 +125,12 @@ final class BlessedAppleTests {
                 "a golden apple must be enchantable, or the table ignores it");
             helper.assertFalse(new ItemStack(Items.ENCHANTED_GOLDEN_APPLE).isEnchantable(),
                 "an enchanted golden apple must not be enchantable again");
-            helper.assertTrue(BlessedApples.BLESSING != null, "the enchantment key exists");
+            // RESOLVED THROUGH THE REGISTRY, not compared against null. The key is a constant and
+            // could never be null, so the old version of this proved the field existed rather than
+            // that blessing.json parsed, registered, and survived its own condition.
+            helper.assertTrue(helper.getLevel().registryAccess()
+                    .lookupOrThrow(Registries.ENCHANTMENT).get(BlessedApples.BLESSING).isPresent(),
+                "flattsthings:blessing did not load; the table has nothing to offer");
             helper.succeed();
         });
 
