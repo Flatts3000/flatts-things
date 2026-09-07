@@ -110,6 +110,11 @@ There is deliberately **no recipe back** to the vanilla plate.
 This replaced an ender pearl on 2026-09-05; the reasoning for both the original choice and the
 reversal is under Decisions.
 
+**An unlock advancement ships beside every recipe**, added 2026-09-07 (#43). It was missing for the
+first fourteen versions, and nothing failed: a recipe with nothing to unlock it never enters the
+recipe book, and on a pack running `gamerule doLimitedCrafting true` cannot be crafted at all, so
+the feature read as switched on and did nothing.
+
 ## Where the content comes from
 
 The variant list exists twice, and that is a deliberate trade rather than an oversight. `FTBlocks`
@@ -118,7 +123,8 @@ the generator (display names, palettes, texture styles). The two need different 
 would mean one side carrying fields it has no use for.
 
 `python tools/generate_plates.py` writes every per-variant resource from its half: texture,
-blockstate, both block models, the client item definition, the loot table, the recipe, and the lang
+blockstate, both block models, the client item definition, the loot table, the recipe, the
+recipe's unlock advancement, and the lang
 file. It is seeded and deterministic, so re-running on one machine produces byte-identical output, and a
 texture change is a palette line you can read rather than a binary you have to trust.
 
