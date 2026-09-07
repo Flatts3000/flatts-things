@@ -12,6 +12,18 @@ through a long play session by anybody but the author.
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+
+- **Combine a chestplate and an elytra on an anvil** (#37). The chestplate keeps its armour, its
+  enchantments, its trim and its name, and gains the gliding. One chest slot does both jobs.
+  The elytra is consumed, and any enchantments on the elytra go with it - the chestplate is the item
+  that survives. Flight then wears the CHESTPLATE - so the armour keeping you alive is
+  the thing being worn down, and it stops gliding one durability before it breaks exactly as a
+  vanilla elytra does. Note this removes a trade Mojang has kept on purpose for years, which is why
+  it has a switch like everything else here.
+
 ## v0.2.0 - 2026-09-07 - "Sleight of Hand"
 
 ### Added

@@ -20,6 +20,7 @@ all of them now in an uploaded build. Last reviewed 2026-09-07.
 | Silk touch takes budding amethyst | `silk_touch_budding_amethyst` | a loot modifier; see the 26.1 loot notes |
 | Three gravel to one flint | `gravel_to_flint` | one recipe file, no Java |
 | Cauldron transforms | `cauldron_transforms` | the cauldron section below |
+| Armoured elytra | `armored_elytra` | the components section below |
 
 **Derive that list from `FTConfig.features()` rather than trusting the table**, which is this file's
 own standing advice about lists that read as complete. The previous banner here said "one family
@@ -743,6 +744,39 @@ would have been speculation with ceremony.
 click, vanilla carries on to the item, so a block item gets PLACED above the cauldron. That is
 vanilla's business rather than this feature's, but it eats one item, and it made two negative tests
 fail for a reason that had nothing to do with cauldrons. They now fill the space above first.
+
+## A component can be the whole feature
+
+The armoured elytra is a chestplate with `minecraft:glider` set on it. No new item, no model, no
+mixin, and no client code at all.
+
+**Gliding in 26.1 is a marker component and the check is slot-generic:**
+
+```java
+public static boolean canGlideUsing(ItemStack itemStack, EquipmentSlot slot) {
+    if (!itemStack.has(DataComponents.GLIDER)) return false;
+    Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
+    return equippable != null && slot == equippable.slot() && !itemStack.nextDamageWillBreak();
+}
+```
+
+The elytra is not special. It is an item with 432 durability and
+`.component(DataComponents.GLIDER, Unit.INSTANCE)`. `LivingEntity.canGlide` scans EVERY equipment
+slot for any item with that component whose `Equippable` slot matches where it is worn, and flight
+damage goes to whatever is gliding: `getItemBySlot(slotToDamage).hurtAndBreak(1, ...)`.
+
+**So the whole feature falls out, and four design decisions with it.** The result renders as a
+chestplate because it IS one; it keeps its armour value, its enchantments and its trim because
+nothing copied them anywhere; it has one durability pool because there is only one item; and it stops
+gliding at one durability left because `nextDamageWillBreak` is already in the check.
+
+**The issue proposed the opposite** - a component on the ELYTRA carrying the chestplate - and listed
+five decisions that were mostly artefacts of that shape. Worth remembering as a pattern rather than a
+one-off: **before designing a container, check whether the behaviour you want is already a component
+you can set on the thing you already have.** The wrong design was the plausible one.
+
+**Look for the tag, too.** `#minecraft:chest_armor` already lists all seven chestplates, including
+26.1's new copper one, so a modded chestplate that joins it works with no compat patch.
 
 ## Events that only fire on one side
 

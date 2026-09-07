@@ -79,6 +79,15 @@ public final class FTConfig {
      */
     public static final String CAULDRON_TRANSFORMS = "cauldron_transforms";
 
+    /**
+     * Combining a chestplate and an elytra so one chest slot does both jobs.
+     *
+     * <p><b>This one changes the game rather than filling a gap in it</b>, and the switch matters
+     * more here than elsewhere. The chestplate-or-elytra choice is a cost Mojang has kept
+     * deliberately for years; this removes it. Off leaves that choice exactly where vanilla put it.
+     */
+    public static final String ARMORED_ELYTRA = "armored_elytra";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -146,6 +155,19 @@ public final class FTConfig {
             "bottle; the cauldron is the bulk version, and costs one of the cauldron's three levels",
             "per stack. Off gives you an ordinary vanilla cauldron back - washing dye and filling",
             "bottles are untouched either way.");
+
+        define(builder, ARMORED_ELYTRA,
+            "Combine a chestplate and an elytra on an anvil: the chestplate keeps its armour, its",
+            "enchantments and its trim, and gains the elytra's gliding. One chest slot does both",
+            "jobs. The elytra is consumed - ALONG WITH ANY ENCHANTMENTS ON IT, which are not carried",
+            "across - and flight then wears the CHESTPLATE, so the armour you are relying on is the",
+            "thing being worn down.",
+            "",
+            "Note this removes a trade vanilla has kept on purpose for years. On by default anyway,",
+            "for the same reason silk touch on budding amethyst is: a mod nobody switched on is a",
+            "mod that appears not to work, and a pack that wants the vanilla choice back has this",
+            "line to turn off. That is the deal every switch here offers, and it is worth more than",
+            "guessing which features a pack would have wanted.");
 
         builder.pop();
         SPEC = builder.build();
@@ -233,6 +255,10 @@ public final class FTConfig {
 
     public static boolean enchantedGoldenApple() {
         return enabled(ENCHANTED_GOLDEN_APPLE);
+    }
+
+    public static boolean armoredElytra() {
+        return enabled(ARMORED_ELYTRA);
     }
 
     public static boolean cauldronTransforms() {
