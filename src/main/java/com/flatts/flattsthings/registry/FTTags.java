@@ -20,6 +20,19 @@ public final class FTTags {
     public static final TagKey<Item> TOOL_SLOT_VALID = TagKey.create(
         Registries.ITEM, Identifier.fromNamespaceAndPath(FlattsThings.MOD_ID, "tool_slot_valid"));
 
+    /**
+     * What a water cauldron will react to.
+     *
+     * <p>The dispatcher vanilla asks is built once at startup, but it tests {@code stack.is(tag)}
+     * when the player clicks, and tag contents are data pack material - so this tag is the seam that
+     * lets a pack add a cauldron conversion without any code. What each item BECOMES is the
+     * {@code flattsthings:cauldron_transform} data map; this tag only decides what the cauldron
+     * bothers to look at.
+     */
+    public static final TagKey<Item> CAULDRON_TRANSFORMABLE = TagKey.create(
+        Registries.ITEM,
+        Identifier.fromNamespaceAndPath(FlattsThings.MOD_ID, "cauldron_transformable"));
+
     private FTTags() {
     }
 }

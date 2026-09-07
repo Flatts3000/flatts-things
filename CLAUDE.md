@@ -18,6 +18,7 @@ one of them released: last reviewed 2026-09-07.
 | Enchant a golden apple | `enchanted_golden_apple` | the no-second-mixin section below |
 | Silk touch takes budding amethyst | `silk_touch_budding_amethyst` | a loot modifier; see the 26.1 loot notes |
 | Three gravel to one flint | `gravel_to_flint` | one recipe file, no Java |
+| Cauldron transforms | `cauldron_transforms` | the cauldron section below |
 
 **Derive that list from `FTConfig.features()` rather than trusting the table**, which is this file's
 own standing advice about lists that read as complete. The previous banner here said "one family
@@ -676,6 +677,45 @@ NeoForge default method or an `AnvilUpdateEvent` handler that makes the book wor
 **Guard on the enchantment, not just the item.** Another mod could make golden apples take an
 enchantment of its own; turning that into an enchanted golden apple would be this mod quietly eating
 somebody else's feature.
+
+## Adding to a vanilla block's interactions, without a mixin or an event of ours
+
+The cauldron transforms (concrete powder sets, dirt becomes mud) hang off **vanilla's own extension
+point**, and finding it was most of the work.
+
+**`AbstractCauldronBlock.useItemOn` asks a `CauldronInteraction.Dispatcher`**, and vanilla keeps one
+per fill state - `empty`, `water`, `lava`, `powder_snow`. NeoForge's `RegisterCauldronInteractionEvent
+.Interaction` (mod bus) puts an entry in a named one. Reaching for `UseItemOnBlockEvent` instead would
+have worked and would have run this mod's code on every right click on every block in the game to
+answer "no".
+
+**Register against a TAG, not an item, and that is what makes it extensible.** The dispatcher is built
+once at startup, long before data packs load, so a per-item registration would freeze the list. But
+`Dispatcher.get` evaluates `stack.is(tag)` at click time and tag contents ARE data pack material. So
+one tag registration at startup gives packs a seam they can widen later.
+
+**Which dispatcher you register to is a gameplay decision.** `registerToAll` is one word away and
+would let an EMPTY cauldron transform things out of nothing.
+`an_empty_cauldron_transforms_nothing` pins the water-only choice - and pins it for that reason
+rather than the one first written on it, which claimed it covered the water-level check. It does not:
+an empty cauldron is a different block on a different dispatcher, so the interaction is never
+consulted and that check is never reached. Found by driving it red.
+
+**`ItemStack.CODEC` cannot be used in a data map.** Data maps are read before item components are
+populated, so it fails with `Item minecraft:white_concrete does not have components yet`, the whole
+map fails to load, and the feature silently does nothing with one ERROR line in the log. Store an item
+id and a count and build the stack at use time.
+
+**A data map rather than a recipe type, deliberately.** #36 assumed this would define the format #34
+(brewing in a cauldron) would reuse. It does not and should not: brewing needs several ingredients, a
+potion result and a heat source, while this is one item in and one item out keyed on the item, which
+is exactly a data map's shape. Building a recipe type here to serve a feature nobody has designed yet
+would have been speculation with ceremony.
+
+**Declining an interaction is not the same as nothing happening.** When no interaction claims the
+click, vanilla carries on to the item, so a block item gets PLACED above the cauldron. That is
+vanilla's business rather than this feature's, but it eats one item, and it made two negative tests
+fail for a reason that had nothing to do with cauldrons. They now fill the space above first.
 
 ## Events that only fire on one side
 

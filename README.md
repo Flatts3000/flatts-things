@@ -95,6 +95,23 @@ Worse, gravel that does not roll flint drops as gravel, so with any Fortune shov
 and re-break the same stack until every piece has become flint. This buys that loop out at three to
 one: worse than any Fortune level in yield, better than digging unenchanted.
 
+### Cauldron transforms
+
+Dip a stack in a water cauldron and it comes out as something else. Concrete powder sets to
+concrete; dirt becomes mud.
+
+Both are things vanilla already lets you do the slow way. Concrete powder only sets against a water
+**source block**, so the loop is carry a bucket, place a source, place powder against it one block at
+a time, break the source, move on - a chore with no decision in it. Mud already comes from a water
+bottle on dirt, one block at a time. The cauldron is the bulk version of both: a whole stack per
+right-click, for one of the cauldron's three levels.
+
+Washing dye off leather and filling bottles work exactly as they always did, and turning this off
+gives you a completely ordinary cauldron.
+
+Packs extend it without code: which items react is the `#flattsthings:cauldron_transformable` item
+tag, and what each becomes is the `flattsthings:cauldron_transform` data map.
+
 ## Every feature has a switch
 
 `config/flattsthings-common.toml` carries one boolean per feature, all on by default.
