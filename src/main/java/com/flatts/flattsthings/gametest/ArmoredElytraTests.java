@@ -4,6 +4,7 @@ import com.flatts.flattsthings.config.FTConfig;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -78,7 +79,7 @@ final class ArmoredElytraTests {
             ItemStack worn = new ItemStack(Items.NETHERITE_CHESTPLATE);
             worn.setDamageValue(120);
             worn.set(DataComponents.CUSTOM_NAME,
-                net.minecraft.network.chat.Component.literal("Old Faithful"));
+                Component.literal("Old Faithful"));
 
             AnvilUpdateEvent event = new AnvilUpdateEvent(worn, new ItemStack(Items.ELYTRA), null,
                 ItemStack.EMPTY, 0, 0, helper.makeMockServerPlayerInLevel());
@@ -103,6 +104,45 @@ final class ArmoredElytraTests {
             helper.assertFalse(LivingEntity.canGlideUsing(result, EquipmentSlot.CHEST),
                 "one durability from breaking, it must not glide");
             helper.assertTrue(result.getMaxDamage() > 0, "premise: it is a damageable item");
+            helper.succeed();
+        });
+
+        // THE ANVIL'S NAME BOX STILL WORKS, which it would not for free. NeoForge fires this event
+        // after vanilla built its own result and then throws that result away in favour of ours, so
+        // vanilla's renaming goes with it. A player typing a name and getting an unnamed item back
+        // blames the anvil.
+        FTGameTests.test("naming_it_in_the_anvil_works", 20, helper -> {
+            AnvilUpdateEvent event = new AnvilUpdateEvent(
+                new ItemStack(Items.NETHERITE_CHESTPLATE), new ItemStack(Items.ELYTRA), "Wings",
+                ItemStack.EMPTY, 0, 0, helper.makeMockServerPlayerInLevel());
+            NeoForge.EVENT_BUS.post(event);
+
+            helper.assertTrue(event.getOutput().get(DataComponents.CUSTOM_NAME) != null,
+                "a name typed in the anvil should be on the result");
+            helper.assertTrue(event.getOutput().getHoverName().getString().equals("Wings"),
+                "and it should be the name typed, found "
+                    + event.getOutput().getHoverName().getString());
+            helper.assertTrue(event.getXpCost() > 1,
+                "renaming costs a level on top, as it does in vanilla; cost was "
+                    + event.getXpCost());
+            helper.succeed();
+        });
+
+        // AND AN EMPTY BOX MUST NOT EAT A NAME. Vanilla clears a custom name when the field is blank;
+        // doing that here would take the name off a chestplate somebody was only trying to make
+        // glide, so a blank field is left alone and this pins that.
+        FTGameTests.test("an_empty_name_box_leaves_the_name_alone", 20, helper -> {
+            ItemStack named = new ItemStack(Items.NETHERITE_CHESTPLATE);
+            named.set(DataComponents.CUSTOM_NAME, Component.literal("Old Faithful"));
+
+            AnvilUpdateEvent event = new AnvilUpdateEvent(named, new ItemStack(Items.ELYTRA), "",
+                ItemStack.EMPTY, 0, 0, helper.makeMockServerPlayerInLevel());
+            NeoForge.EVENT_BUS.post(event);
+
+            helper.assertTrue(
+                event.getOutput().getHoverName().getString().equals("Old Faithful"),
+                "an empty name box should leave the existing name alone, found "
+                    + event.getOutput().getHoverName().getString());
             helper.succeed();
         });
 

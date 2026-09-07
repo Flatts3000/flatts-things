@@ -3,6 +3,7 @@ package com.flatts.flattsthings.content.equipment;
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.config.FTConfig;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Unit;
 import net.minecraft.world.item.ItemStack;
@@ -88,8 +89,27 @@ public final class ArmoredElytra {
 
         ItemStack result = chestplate.copy();
         result.set(DataComponents.GLIDER, Unit.INSTANCE);
+
+        // THE NAME FIELD HAS TO BE HONOURED HERE, because nothing else will. NeoForge fires this
+        // event after vanilla has computed its own result and then REPLACES that result with
+        // whatever setOutput was given - so vanilla's renaming, which it had already applied to the
+        // stack being thrown away, is lost. Without this the text box silently does nothing for this
+        // one combination, which is the sort of small wrongness a player blames the anvil for.
+        //
+        // Only a non-blank name that differs, and only for one extra level, which is vanilla's own
+        // naming cost. An empty box is left alone rather than treated as "remove the name": vanilla
+        // does clear it, but doing that here would mean somebody loses the name off a chestplate
+        // they were only trying to make glide.
+        int cost = ANVIL_COST;
+        String typed = event.getName();
+        if (typed != null && !typed.isBlank()
+                && !typed.equals(chestplate.getHoverName().getString())) {
+            result.set(DataComponents.CUSTOM_NAME, Component.literal(typed));
+            cost += 1;
+        }
+
         event.setOutput(result);
-        event.setXpCost(ANVIL_COST);
+        event.setXpCost(cost);
         event.setMaterialCost(1);
     }
 }
