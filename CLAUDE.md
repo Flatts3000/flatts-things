@@ -794,9 +794,19 @@ handler reaching for something the fake does not model fails by name instead of 
 it would force the test into the `network` package, and the coverage gate excludes `gametest/**`
 only, so the test class would then be measured as production code.
 
-**What a fake cannot see is the message.** `sendOverlayMessage` puts a packet on a connection that
-goes nowhere in a test. The three strings are pinned for existence and translation by
-`ActionBarMessagesTest`; which one is chosen is a real-client observation.
+**A mock player's outbound packets ARE readable, and this section first said they were not.**
+`makeMockServerPlayerInLevel` builds a real `Connection` over an `EmbeddedChannel`, so
+`player.connection.getConnection().channel()` casts to `EmbeddedChannel` and `outboundMessages()`
+holds everything the server sent it. Clear it first: joining queues twenty-odd packets before
+anything a test cares about.
+
+That is how the action bar line the Z key answers with is asserted, translation key and all. It
+matters more than it looks: the message is the ONLY thing the pack-off branch changes, because
+everything else the key protects is enforced a layer down in `ToolSwapper.swapping`. Without reading
+the packet, a handler that kept its guard and reported the wrong state passed every assertion.
+
+**The claim that it could not be read survived one probe.** Check before documenting a limit; this
+file has now been wrong about what a test can see more than once.
 
 ## Events that only fire on one side
 

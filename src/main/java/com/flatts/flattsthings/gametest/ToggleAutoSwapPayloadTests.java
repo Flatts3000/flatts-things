@@ -5,6 +5,9 @@ import com.flatts.flattsthings.content.ToolSwapper;
 import com.flatts.flattsthings.network.FTPayloads;
 import com.flatts.flattsthings.network.ToggleAutoSwapPayload;
 import com.flatts.flattsthings.registry.FTAttachments;
+import io.netty.channel.embedded.EmbeddedChannel;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -17,14 +20,46 @@ import net.minecraft.server.level.ServerPlayer;
  * would actually have broken is the thing a player sees: on a pack with the feature off, the key
  * would silently claim to have turned the swap on.
  *
- * <p><b>What these cannot see is the message itself.</b> {@code sendOverlayMessage} puts a packet on
- * a connection, and a mock player's connection goes nowhere a test can read. The three strings are
- * pinned for existence and translation by {@code ActionBarMessagesTest} in the unit layer; which of
- * them is chosen is only observable in a real client. Said plainly rather than papered over.
+ * <p><b>The message IS readable, and the first version of this file said it was not.</b> A mock
+ * player has a real {@code Connection} over an {@link io.netty.channel.embedded.EmbeddedChannel}, and
+ * {@code channel().outboundMessages()} holds the packets it was sent - so the action bar line the key
+ * answers with can be read back, translation key and all. That was written off as a real-client
+ * observation and it took one probe to disprove, which is the more useful lesson: check before
+ * documenting a limit.
+ *
+ * <p>It matters because the message is the ONLY thing the pack-off branch changes. Everything else
+ * the key protects is enforced a layer down in {@code ToolSwapper.swapping}, so without reading the
+ * packet, the guard could be deleted and every assertion here would still hold.
  */
 final class ToggleAutoSwapPayloadTests {
 
     private ToggleAutoSwapPayloadTests() {
+    }
+
+    private static EmbeddedChannel channelOf(ServerPlayer player) {
+        return (EmbeddedChannel) player.connection.getConnection().channel();
+    }
+
+    /**
+     * Press the key as the network layer would, and return the translation key of the action bar
+     * line the server answered with.
+     *
+     * <p>The channel is emptied first because joining the world queues twenty-odd packets, and the
+     * one under test is whatever arrives after that.
+     */
+    private static String pressAndReadMessage(ServerPlayer player) {
+        EmbeddedChannel channel = channelOf(player);
+        channel.outboundMessages().clear();
+        FTPayloads.onToggleAutoSwap(new ToggleAutoSwapPayload(), new FakePayloadContext(player));
+
+        for (Object sent : channel.outboundMessages()) {
+            if (sent instanceof ClientboundSystemChatPacket chat
+                    && chat.overlay()
+                    && chat.content().getContents() instanceof TranslatableContents translatable) {
+                return translatable.getKey();
+            }
+        }
+        return "<the key said nothing>";
     }
 
     static void register() {
@@ -35,15 +70,17 @@ final class ToggleAutoSwapPayloadTests {
             helper.assertTrue(player.getData(FTAttachments.AUTO_SWAP_WANTED),
                 "premise: a player starts wanting the swap");
 
-            FakePayloadContext context = new FakePayloadContext(player);
-            FTPayloads.onToggleAutoSwap(new ToggleAutoSwapPayload(), context);
-
+            String first = pressAndReadMessage(player);
             helper.assertFalse(player.getData(FTAttachments.AUTO_SWAP_WANTED),
                 "one press should have turned it off");
+            helper.assertTrue(first.equals("message.flattsthings.auto_swap.off"),
+                "and should have said so on the action bar, said " + first);
 
-            FTPayloads.onToggleAutoSwap(new ToggleAutoSwapPayload(), context);
+            String second = pressAndReadMessage(player);
             helper.assertTrue(player.getData(FTAttachments.AUTO_SWAP_WANTED),
                 "and a second press should turn it back on");
+            helper.assertTrue(second.equals("message.flattsthings.auto_swap.on"),
+                "reporting the new value rather than the old, said " + second);
             helper.succeed();
         });
 
@@ -93,12 +130,14 @@ final class ToggleAutoSwapPayloadTests {
                     helper.assertFalse(ToolSwapper.swapping(player),
                         "premise: the pack switch is off");
 
-                    FTPayloads.onToggleAutoSwap(new ToggleAutoSwapPayload(),
-                        new FakePayloadContext(player));
+                    String said = pressAndReadMessage(player);
 
+                    helper.assertTrue(said.equals("message.flattsthings.auto_swap.unavailable"),
+                        "the key has to SAY the pack turned this off rather than pretending to"
+                            + " toggle, and this is the only place that is observable; said "
+                            + said);
                     helper.assertTrue(player.getData(FTAttachments.AUTO_SWAP_WANTED),
-                        "the preference must be left exactly as it was, because the key reported"
-                            + " that the feature is unavailable rather than toggling anything");
+                        "and it must leave the preference exactly as it was");
                 } finally {
                     FTConfig.switchFor(FTConfig.TOOL_AUTO_SWAP).set(true);
                 }
