@@ -42,9 +42,10 @@ public final class FTConfig {
     public static final String TOOL_SLOTS = "tool_slots";
 
     /**
-     * The enchanted golden apple's crafting recipe, which vanilla had until 1.9.
+     * Making an enchanted golden apple by enchanting a golden apple.
      *
-     * <p>Off means no recipe, and the item goes back to being loot-only the way vanilla leaves it.
+     * <p>Off means the enchantment is never offered and the item goes back to being loot-only, the
+     * way vanilla leaves it.
      */
     public static final String ENCHANTED_GOLDEN_APPLE = "enchanted_golden_apple";
 
@@ -110,9 +111,9 @@ public final class FTConfig {
             "turning those off turns this off with them whatever this says.");
 
         define(builder, ENCHANTED_GOLDEN_APPLE,
-            "Restore the enchanted golden apple's crafting recipe: eight gold blocks around an",
-            "apple, exactly as it was before 1.9. Off leaves it loot-only, which is where vanilla",
-            "left it.");
+            "Enchant a golden apple at an enchanting table to turn it into an enchanted golden",
+            "apple. Needs a full ring of bookshelves: the offer only appears at thirty levels, so a",
+            "bare table cannot reach it. Off leaves the item loot-only, where vanilla left it.");
 
         define(builder, SILK_TOUCH_BUDDING_AMETHYST,
             "Let silk touch pick up budding amethyst, which vanilla never drops. Note this is a",
@@ -210,6 +211,10 @@ public final class FTConfig {
 
     public static boolean playerPressurePlates() {
         return enabled(PLAYER_PRESSURE_PLATES);
+    }
+
+    public static boolean enchantedGoldenApple() {
+        return enabled(ENCHANTED_GOLDEN_APPLE);
     }
 
     public static boolean toolSlots() {

@@ -1,0 +1,26 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "enchanted_golden_apple"
+    }
+  ],
+  "description": {
+    "translate": "enchantment.flattsthings.blessing"
+  },
+  "supported_items": "minecraft:golden_apple",
+  "weight": 1,
+  "max_level": 1,
+  "min_cost": {
+    "base": 30,
+    "per_level_above_first": 0
+  },
+  "max_cost": {
+    "base": 60,
+    "per_level_above_first": 0
+  },
+  "anvil_cost": 1,
+  "slots": [
+    "mainhand"
+  ]
+}

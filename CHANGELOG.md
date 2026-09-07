@@ -22,10 +22,10 @@ All notable changes to this project are documented here. Format follows
   what stops an amethyst farm being picked up and moved, so this makes geodes portable. On by
   default like everything else, and its config switch is there for packs that want vanilla's rule.
 
-- **The enchanted golden apple can be crafted again** (#33), eight gold blocks around an apple,
-  exactly as it was before 1.9. Not a rebalance and not an invention: vanilla had this recipe and
-  deleted it, leaving an item that exists and can only be found in loot. Off by config
-  leaves it that way.
+- **Enchant a golden apple to make an enchanted golden apple** (#47). The item's name says what it
+  is: a golden apple that has been enchanted. Put one in an enchanting table, spend the levels and
+  lapis, and take out the real thing. It needs a full ring of bookshelves - the offer does not appear
+  at a bare table - and the enchantment is called Blessing where the table shows it.
 
 - **A key to turn the auto-swap off and on, bound to Z by default, under its own Flatts's Things
   category in Key Binds.** The config switch is the pack

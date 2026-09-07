@@ -227,6 +227,7 @@ def generate(v: Variant) -> None:
 STATIC_LANG = {
     "itemGroup.flattsthings": "Flatts's Things",
     "key.category.flattsthings.flattsthings": "Flatts's Things",
+    "enchantment.flattsthings.blessing": "Blessing",
     "key.flattsthings.toggle_auto_swap": "Toggle Tool Auto-Swap",
     "message.flattsthings.auto_swap.on": "Tool auto-swap on",
     "message.flattsthings.auto_swap.off": "Tool auto-swap off",

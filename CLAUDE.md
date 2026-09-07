@@ -541,6 +541,39 @@ refuses. The fifth slot has no outline at all, because it is the free one.
 `InventoryMenu`, so the strip does not appear there and a creative player cannot reach their tools
 from the inventory tab. Stored tools are untouched and come back in survival.
 
+## Making a vanilla item do something new, without a second mixin
+
+The enchanted golden apple is made by enchanting a golden apple at a table. That needs three things
+a vanilla item does not do, and **none of them turned out to need a mixin** - worth recording,
+because the first instinct was that all three did.
+
+**An item is enchantable only if it has the `minecraft:enchantable` component.** `ItemStack
+.isEnchantable` checks for it, and a golden apple has none, so the table ignores it. NeoForge's
+`ModifyDefaultComponentsEvent` (mod bus) adds a component to a VANILLA item, which is the supported
+way to change one without touching its class.
+
+**The table offers only what some enchantment supports.** `EnchantmentMenu` builds its three options
+from `#minecraft:in_enchanting_table` filtered by each enchantment's supported items, so a new
+data-driven enchantment whose only supported item is the golden apple is what makes an offer exist.
+Its `min_cost` is the balance control: an offer appears only when the slot's level lands inside
+`[min_cost, max_cost]`, so a minimum of 30 means a bare table cannot reach it and a full ring of
+bookshelves is the price of admission. Joining the vanilla tag is safe because **tags merge**.
+
+**Enchanting normally leaves the same item carrying an enchantment**, and this feature needs a
+different item. `EnchantmentMenu.clickMenuButton` fires `PlayerEnchantItemEvent` immediately after
+putting the enchanted stack back, and before the menu recomputes its offers, so a handler can swap
+the slot and everything downstream sees the new item.
+
+**The obvious route was a mixin and it was not needed.** NeoForge added
+`IItemExtension.applyEnchantments` precisely so an item can transform itself when enchanted - it is
+how a book becomes an enchanted book - but reaching it for a vanilla item means a mixin, and this
+repo has exactly one with a written reason. The event lands in the same place. **Look for the event
+before reaching for a second mixin.**
+
+**Guard on the enchantment, not just the item.** Another mod could make golden apples take an
+enchantment of its own; turning that into an enchanted golden apple would be this mod quietly eating
+somebody else's feature.
+
 ## Events that only fire on one side
 
 **`PlayerInteractEvent.LeftClickBlock` is CLIENT ONLY in 26.1.** It is posted from
