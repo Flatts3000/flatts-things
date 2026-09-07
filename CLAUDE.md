@@ -613,9 +613,21 @@ player's business. `a_weapon_does_not_belong_in_a_tool_slot` pins the shipped de
 no sword outline for the same reason - an outline promising one would be an invitation the slot then
 refuses. The fifth slot has no outline at all, because it is the free one.
 
-**Known gap: the creative inventory.** `CreativeModeInventoryScreen` has its own menu rather than
-`InventoryMenu`, so the strip does not appear there and a creative player cannot reach their tools
-from the inventory tab. Stored tools are untouched and come back in survival.
+**The creative inventory has no strip, and that is a ruling rather than a gap (2026-09-07, #51).**
+`CreativeModeInventoryScreen` has its own menu rather than `InventoryMenu`, so the mixin does not
+reach it and a creative player cannot see their tools on the inventory tab. Stored tools are
+untouched and come back in survival.
+
+It was filed as a gap and closed as intended. Reaching the creative screen means a SECOND mixin, on a
+different class with its own hardcoded index ranges, and the argument that justifies the first one
+does not transfer: `InventoryMenu` is rebuilt on join, respawn and dimension change on both sides, so
+a constructor injection is the only thing that cannot be missed. Nothing of that kind is true here.
+Against that cost, a creative player has every item in the game two clicks away and loses nothing but
+the convenience. **The trade would be paying this repo's one-mixin rule for a case that costs a
+player nothing**, which is the wrong way round.
+
+Overturn it by writing the reversal beside this paragraph. The thing that would justify one is
+evidence that players actually reach for the tab and are confused, not that the asymmetry is untidy.
 
 ## Making a vanilla item do something new, without a second mixin
 

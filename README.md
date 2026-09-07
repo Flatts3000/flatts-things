@@ -54,8 +54,9 @@ families plus shears, so another mod's pickaxe fits with no compat patch and a p
 a data pack. **Weapons are deliberately not in it.** These slots feed the auto-swap below, and a
 storable sword would mean a mod that puts a weapon in your hand while you are mining.
 
-**Known gap:** the creative inventory is a different screen with a different menu, so the strip does
-not appear there. Stored tools are untouched and come back in survival.
+**The strip is not on the creative inventory tab**, which is a different screen with a different
+menu. That is deliberate rather than unfinished: a creative player has every item in the game two
+clicks away. Stored tools are untouched and come back in survival.
 
 ### Tool auto-swap
 

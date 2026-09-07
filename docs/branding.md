@@ -1,6 +1,7 @@
 # Branding
 
-**Status:** current as of 2026-09-05. One asset exists; the wordmark is deferred and needs a ruling.
+**Status:** current as of 2026-09-07. One asset exists; there is deliberately no wordmark
+(ruled 2026-09-07, below).
 
 **Nothing here is AI output, and that is a rule rather than a preference.** ModJam 2026's terms say
 "AI-generated project avatars and gallery images are not allowed", so it constrains this file.
@@ -31,8 +32,14 @@ Regenerate with `python branding/compose_logo.py`. It writes both copies.
 
 ## The wordmark, and why there isn't one
 
+**Ruled 2026-09-07: there will not be one, rather than not one yet.** This was carried as "deferred,
+needs a ruling" for two days, which is a question nobody was going to ask again. The two reasons
+below are not blockers waiting to clear; they are the answer, and both get worse rather than better
+with time. If a wordmark is ever wanted, it starts from a shorter name or a hand-drawn mark, not from
+revisiting this.
+
 Recompile composites a full wordmark over its avatar, rendered in the Minecraft Title Generator. Two
-reasons this repo has none yet:
+reasons this repo has none:
 
 1. **The name is long.** "Recompile" is one word and fits. "Flatts's Things" is two words and a
    possessive, and at 400x400 it lands somewhere between cramped and unreadable.
