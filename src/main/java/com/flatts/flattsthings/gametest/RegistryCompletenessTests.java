@@ -3,6 +3,8 @@ package com.flatts.flattsthings.gametest;
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.registry.FTCreativeTabs;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.function.BiConsumer;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -193,6 +195,32 @@ final class RegistryCompletenessTests {
                 problems.add("this mod loaded no advancements at all");
             }
             report(helper, problems, "advancements rewarding recipes that do not exist");
+        });
+
+
+        // THE OTHER DIRECTION, and it is the one that was actually broken. The sweep above catches
+        // an advancement pointing at a recipe that is not there; this catches a recipe with no
+        // advancement pointing at it, which is what fourteen plate recipes shipped as. Neither
+        // fails anything on its own - the recipe simply never enters the recipe book, and under
+        // `doLimitedCrafting` cannot be crafted at all.
+        FTGameTests.test("every_mod_recipe_is_unlocked_by_an_advancement", 30, helper -> {
+            var server = helper.getLevel().getServer();
+            Set<Identifier> unlocked = new HashSet<>();
+            for (var advancement : server.getAdvancements().getAllAdvancements()) {
+                for (var recipe : advancement.value().rewards().recipes()) {
+                    unlocked.add(recipe.identifier());
+                }
+            }
+            List<String> problems = new ArrayList<>();
+            server.getRecipeManager().getRecipes().forEach(holder -> {
+                Identifier id = holder.id().identifier();
+                if (id.getNamespace().equals(FlattsThings.MOD_ID) && !unlocked.contains(id)) {
+                    problems.add(id.toString());
+                }
+            });
+            report(helper, problems,
+                "mod recipes no advancement unlocks (invisible in the recipe book, and "
+                    + "uncraftable under doLimitedCrafting)");
         });
 
     }

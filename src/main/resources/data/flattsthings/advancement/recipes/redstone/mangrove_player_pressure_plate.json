@@ -1,0 +1,39 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "player_pressure_plates"
+    }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_the_plate": {
+      "conditions": {
+        "items": [
+          {
+            "items": "minecraft:mangrove_pressure_plate"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "flattsthings:mangrove_player_pressure_plate"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_the_plate"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "flattsthings:mangrove_player_pressure_plate"
+    ]
+  },
+  "sends_telemetry_event": false
+}

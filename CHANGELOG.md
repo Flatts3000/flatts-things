@@ -81,6 +81,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- **The player pressure plates could not be crafted on packs that limit crafting** (#43). They
+  shipped with no recipe-unlock advancement, so the recipes never appeared in the recipe book, and
+  with `gamerule doLimitedCrafting true` they were entirely uncraftable - the feature looked switched
+  on and did nothing. All fourteen now ship one.
+
 - **The auto-swap stopped working on any block you had already dug.** One dig that did not swap - and
   digging with the right tool already in hand is exactly that - left the block's position recorded
   permanently, and every later dig on it silently refused to swap. A dig is now told from the next one

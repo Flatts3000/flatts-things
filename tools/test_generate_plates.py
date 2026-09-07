@@ -288,6 +288,38 @@ def case_every_recipe_is_gated_on_the_feature_switch():
     return problems
 
 
+def case_every_recipe_has_an_unlock_advancement():
+    """Every generated recipe ships an advancement that unlocks it, gated the same way.
+
+    A recipe with nothing to unlock it never enters the recipe book, and on a pack running
+    `gamerule doLimitedCrafting true` cannot be crafted at all - so the feature reads as on and does
+    nothing. Fourteen plate recipes shipped that way, because nothing checked and nothing failed.
+
+    The condition is checked too: an advancement without it would survive the plates being switched
+    off and reward a recipe that no longer loads, which vanilla drops silently rather than reporting.
+    """
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "out"
+        _generate_into(out, "1")
+        data = out / "src/main/resources/data/flattsthings"
+        for v in VARIANTS:
+            bid = block_id(v)
+            path = data / f"advancement/recipes/redstone/{bid}.json"
+            if not path.exists():
+                problems.append(f"{bid}: no unlock advancement")
+                continue
+            adv = json.loads(path.read_text(encoding="utf-8"))
+            rewards = adv.get("rewards", {}).get("recipes", [])
+            if f"flattsthings:{bid}" not in rewards:
+                problems.append(f"{bid}: advancement rewards {rewards}, not its own recipe")
+            named = [c.get("feature") for c in adv.get("neoforge:conditions", [])
+                     if c.get("type") == "flattsthings:feature_enabled"]
+            if "player_pressure_plates" not in named:
+                problems.append(f"{bid}: advancement is not gated on player_pressure_plates")
+    return problems
+
+
 CASES = [
     ("output is byte-identical across processes", case_output_is_byte_identical_across_processes),
     ("the generator actually writes its output", case_generator_writes_something),
@@ -297,6 +329,7 @@ CASES = [
     ("every block has the 26.1 asset set", case_every_block_has_the_26_1_asset_set),
     ("textures are shaped and legible", case_textures_are_shaped_and_legible),
     ("every recipe is gated on the feature switch", case_every_recipe_is_gated_on_the_feature_switch),
+    ("every recipe has an unlock advancement", case_every_recipe_has_an_unlock_advancement),
 ]
 
 

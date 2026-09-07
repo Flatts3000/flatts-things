@@ -192,6 +192,33 @@ def generate(v: Variant) -> None:
         "ingredients": [vanilla_plate(v), "minecraft:redstone"],
         "result": {"id": f"{NS}:{bid}", "count": 1},
     })
+    # THE RECIPE UNLOCK, WITHOUT WHICH THE RECIPE MIGHT AS WELL NOT EXIST. Vanilla ships one of
+    # these beside every recipe, and nothing warns when a mod does not: the recipe never enters the
+    # recipe book, and on a pack running `gamerule doLimitedCrafting true` it cannot be crafted at
+    # all - so the feature reads as on and does nothing. Shipped for fourteen versions without one.
+    #
+    # Carries the same feature condition as the recipe. Without it, switching the plates off would
+    # leave an advancement rewarding a recipe that no longer loads, which is silently dropped rather
+    # than reported - the same class of quiet failure this file keeps closing.
+    write_json(DATA / f"advancement/recipes/redstone/{bid}.json", {
+        "neoforge:conditions": [
+            {"type": f"{NS}:feature_enabled", "feature": "player_pressure_plates"},
+        ],
+        "parent": "minecraft:recipes/root",
+        "criteria": {
+            "has_the_plate": {
+                "conditions": {"items": [{"items": vanilla_plate(v)}]},
+                "trigger": "minecraft:inventory_changed",
+            },
+            "has_the_recipe": {
+                "conditions": {"recipe": f"{NS}:{bid}"},
+                "trigger": "minecraft:recipe_unlocked",
+            },
+        },
+        "requirements": [["has_the_recipe", "has_the_plate"]],
+        "rewards": {"recipes": [f"{NS}:{bid}"]},
+        "sends_telemetry_event": False,
+    })
 
 
 # Keys that are not per-variant. The generator owns en_us.json wholesale, so anything hand-added to
