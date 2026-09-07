@@ -160,6 +160,9 @@ jobs:
       - name: Test the cauldron generator
         run: python tools/test_generate_cauldron.py
 
+      - name: Test the wood cutting generator
+        run: python tools/test_generate_woodcutting.py
+
       - name: Test the dash linter
         run: python tools/test_check_dashes.py
 

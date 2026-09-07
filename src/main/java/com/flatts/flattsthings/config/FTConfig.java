@@ -88,6 +88,15 @@ public final class FTConfig {
      */
     public static final String ARMORED_ELYTRA = "armored_elytra";
 
+    /**
+     * Cutting planks into stairs and slabs on a stonecutter.
+     *
+     * <p>Off removes the recipes, and the stonecutter goes back to refusing wood. Because these are
+     * recipes rather than behaviour, the switch has to act in data - there is no runtime call that
+     * unloads one, and a recipe left loaded would still show in the recipe book and in JEI.
+     */
+    public static final String WOOD_CUTTING = "wood_cutting";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -168,6 +177,17 @@ public final class FTConfig {
             "mod that appears not to work, and a pack that wants the vanilla choice back has this",
             "line to turn off. That is the deal every switch here offers, and it is worth more than",
             "guessing which features a pack would have wanted.");
+
+        define(builder, WOOD_CUTTING,
+            "Let a stonecutter cut planks into stairs and slabs, at the same ratios it already cuts",
+            "stone: one plank per stair, where a crafting bench charges one and a half, and one",
+            "plank per two slabs, which is what the bench charges anyway. Vanilla ships 275",
+            "stonecutting recipes and none of them take wood.",
+            "",
+            "This puts wood on the STONEcutter rather than adding a saw of its own, which is the",
+            "arguable part: it is one data file per recipe and no new block, against a second",
+            "workstation with a screen nothing automated can check. Off if a stone blade cutting",
+            "planks reads wrong in your pack.");
 
         builder.pop();
         SPEC = builder.build();
@@ -255,6 +275,10 @@ public final class FTConfig {
 
     public static boolean enchantedGoldenApple() {
         return enabled(ENCHANTED_GOLDEN_APPLE);
+    }
+
+    public static boolean woodCutting() {
+        return enabled(WOOD_CUTTING);
     }
 
     public static boolean armoredElytra() {

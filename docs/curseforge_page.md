@@ -97,6 +97,13 @@ the chestplate, and it stops gliding one durability before it breaks, the way an
 
 This one takes away a choice the game makes you make. Turn it off if you want that choice back.
 
+### Planks on a stonecutter
+
+A stonecutter will cut planks into stairs and slabs, the way it already cuts stone. One plank makes
+one stair, where a crafting bench wants six for four.
+
+Vanilla has 275 stonecutting recipes and none of them take wood.
+
 ### Every one of these has an off switch
 
 `config/flattsthings-common.toml`, one line each. Off means no recipe and nothing in the creative

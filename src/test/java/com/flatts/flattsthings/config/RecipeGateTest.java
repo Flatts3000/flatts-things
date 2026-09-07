@@ -116,6 +116,18 @@ class RecipeGateTest {
                     if (key.endsWith("_player_pressure_plate.json")) {
                         continue;
                     }
+                    // The wood cutting recipes are generated the same way, from one template per
+                    // shape, so listing twenty-four names would be a copy of the generator rather
+                    // than a check on it. CHECKED AS A FAMILY rather than skipped, though: the
+                    // template's feature is exactly the thing a copy-paste would get wrong, and it
+                    // is one assertion instead of twenty-four lines.
+                    if (key.endsWith("_stonecutting.json")) {
+                        if (!features(file).contains(FTConfig.WOOD_CUTTING)) {
+                            problems.add(key + " should be gated on '" + FTConfig.WOOD_CUTTING
+                                + "' but names " + features(file));
+                        }
+                        continue;
+                    }
                     String want = expected.get(key);
                     if (want == null) {
                         problems.add(key + " is gated but not listed here; say which switch owns it");

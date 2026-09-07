@@ -126,6 +126,20 @@ vanilla elytra does.
 **This one changes the game rather than filling a gap in it.** The chestplate-or-elytra choice is a
 cost Mojang has kept deliberately for years, and this removes it. Off puts that choice back.
 
+### Planks on a stonecutter
+
+A stonecutter will cut planks into stairs and slabs, at the same rates it already cuts stone: one
+plank per stair, where a crafting bench charges one and a half, and one plank per two slabs, which is
+what the bench charges anyway.
+
+Vanilla ships 275 stonecutting recipes and **not one of them takes wood**. There is no principle
+behind that, it is where Mojang stopped. The saving is real but small; the point is making one stair
+without laying six planks out in a grid, and switching shapes with one click.
+
+**This puts wood on the stone cutter rather than adding a saw of its own**, which is the arguable
+part: it is twenty-four data files and no new block, against a second workstation with a screen. If a
+stone blade cutting planks reads wrong in your world, the switch turns it off.
+
 ## Every feature has a switch
 
 `config/flattsthings-common.toml` carries one boolean per feature, all on by default.

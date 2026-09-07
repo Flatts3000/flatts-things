@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "wood_cutting"
+    }
+  ],
+  "type": "minecraft:stonecutting",
+  "ingredient": "minecraft:oak_planks",
+  "result": {
+    "id": "minecraft:oak_slab",
+    "count": 2
+  }
+}
