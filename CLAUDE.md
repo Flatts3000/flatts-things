@@ -778,6 +778,26 @@ you can set on the thing you already have.** The wrong design was the plausible 
 **Look for the tag, too.** `#minecraft:chest_armor` already lists all seven chestplates, including
 26.1's new copper one, so a modded chestplate that joins it works with no compat patch.
 
+## Testing a payload handler
+
+The server side of the Z key had zero coverage for a while, because the only caller is the network
+layer delivering a packet and a headless test has no client to send one. It is now covered by a fake.
+
+**`IPayloadContext` has SEVEN abstract methods**; everything else on it is a default. The issue that
+filed this guessed nineteen and deferred the work on that basis, which is a good argument for
+counting before estimating. `gametest/FakePayloadContext` is thirty lines: it returns the player,
+runs `enqueueWork` inline, and **throws for everything else** rather than returning null, so a
+handler reaching for something the fake does not model fails by name instead of somewhere downstream.
+
+**`FTPayloads.onToggleAutoSwap` is public purely so a test can call it**, the same trade
+`FTConfig.switchFor` makes. Package-private would be tighter and was rejected for a specific reason:
+it would force the test into the `network` package, and the coverage gate excludes `gametest/**`
+only, so the test class would then be measured as production code.
+
+**What a fake cannot see is the message.** `sendOverlayMessage` puts a packet on a connection that
+goes nowhere in a test. The three strings are pinned for existence and translation by
+`ActionBarMessagesTest`; which one is chosen is a real-client observation.
+
 ## Events that only fire on one side
 
 **`PlayerInteractEvent.LeftClickBlock` is CLIENT ONLY in 26.1.** It is posted from
