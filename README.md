@@ -1,6 +1,7 @@
 # Flatts's Things
 
-**Status:** v0.1.0, unreleased. One family shipped and verified in-world. Last reviewed 2026-09-05.
+**Status:** v0.1.0 uploaded to CurseForge 2026-09-05 and Under Review; six features on `main`, five
+of them unreleased. Last reviewed 2026-09-07.
 
 A grab bag of blocks, tools and small features that vanilla Minecraft never shipped.
 
@@ -36,6 +37,75 @@ The two **weighted** plates have no counterpart. `light_weighted_pressure_plate`
 `heavy_weighted_pressure_plate` are a different block that counts dropped item stacks and outputs a
 proportional signal; "player-only" has no meaning for a block whose whole job is weighing items.
 
+### Tool slots
+
+Five dedicated slots for your tools, under the inventory panel, that are not part of inventory
+space. A pickaxe, axe, shovel and hoe stop eating four of your nine hotbar slots.
+
+![The tool slots under the vanilla inventory panel](docs/img/tool_slots_screen.png)
+
+They are real slots in vanilla's own inventory menu rather than a screen of their own, so clicking,
+dragging, stack splitting and tooltips are the game's and behave the way they do everywhere else.
+Shift-click moves a tool in or out. Four of the five carry a faint outline of what belongs in them;
+the fifth is deliberately blank, because it is the free one.
+
+What fits is the `#flattsthings:tool_slot_valid` item tag, which defaults to the vanilla tool
+families plus shears, so another mod's pickaxe fits with no compat patch and a pack can widen it in
+a data pack. **Weapons are deliberately not in it.** These slots feed the auto-swap below, and a
+storable sword would mean a mod that puts a weapon in your hand while you are mining.
+
+**Known gap:** the creative inventory is a different screen with a different menu, so the strip does
+not appear there. Stored tools are untouched and come back in survival.
+
+### Tool auto-swap
+
+Start breaking a block and the right tool comes out of your slots into your hand. Stop, and whatever
+you were carrying comes back.
+
+Selection is vanilla's own destroy-speed arithmetic, so a modded pickaxe sorts against a vanilla one
+correctly and a tie goes to what you are already holding. The swap happens once, at the start of a
+dig, because changing the held item resets destroy progress.
+
+**Z toggles it**, under this mod's own category in Key Binds, and it says which way it went above
+your hotbar. Your preference survives death and logout. It is your switch, not the pack's: it cannot
+re-enable a swap a pack has turned off, and says so rather than pretending to toggle.
+
+### Enchant a golden apple into an enchanted golden apple
+
+The item's name says what it is, and vanilla has had no way to make one since 1.9. Put a golden
+apple in an enchanting table, spend the levels and the lapis, and take out the real thing.
+
+The offer is called **Blessing** and needs thirty levels, so a bare table cannot reach it and a full
+ring of bookshelves is the price of admission. A Blessing book, which a table can roll onto a book
+like any other enchantment, does the same job on an anvil.
+
+### Silk touch picks up budding amethyst
+
+Vanilla drops nothing for budding amethyst with any tool. This lets silk touch take it.
+
+**This one changes the game rather than adding to it**, and the restriction it lifts is deliberate:
+a budding block you cannot take is what stops an amethyst farm being picked up and moved. It ships on
+like everything else, and its switch is there for packs that want vanilla's rule back.
+
+### Three gravel makes one flint
+
+Vanilla drops flint one time in ten, so getting a few means mining gravel until the dice cooperate.
+Worse, gravel that does not roll flint drops as gravel, so with any Fortune shovel you can re-place
+and re-break the same stack until every piece has become flint. This buys that loop out at three to
+one: worse than any Fortune level in yield, better than digging unenchanted.
+
+## Every feature has a switch
+
+`config/flattsthings-common.toml` carries one boolean per feature, all on by default.
+
+A grab bag has to be a menu rather than a package deal, so a pack that wants the tool slots and not
+the pressure plates can have exactly that. **Off means no new ones and never deletion:** a disabled
+feature loses its recipe and its creative tab entry and stops running, while blocks already placed
+keep working and tools already in a slot stay in it. A switch is always safe to flip back.
+
+Recipes are turned off by a real data-pack condition rather than by hiding the item, which is the
+only version of "off" that is also true in the recipe book and in JEI.
+
 ## Build and test
 
 The system `JAVA_HOME` on the dev machine points at a JDK that does not exist, so **every** gradle
@@ -54,6 +124,7 @@ JAVA_HOME="/c/Program Files/Java/jdk-25" ./gradlew build
 | Unit tests | `./gradlew test` |
 | Merged coverage, both layers | `./gradlew test runGameTestServer -PgameTestCoverage coverageReport` |
 | Dev client | `./gradlew runClient` |
+| Fetch JEI + Jade into `run/mods` (dev client only) | `./gradlew fetchDevMods` |
 | Regenerate IntelliJ run configs after `clean` | `./gradlew prepareAllRuns` |
 | Regenerate plate resources (textures, models, recipes, tags, lang) | `python tools/generate_plates.py` |
 | Build the dev world (once) | `python tools/make_dev_world.py` |

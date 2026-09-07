@@ -7,16 +7,29 @@ repository.
 9.5.1 via moddev 2.0.141. A grab bag of blocks, tools and small features vanilla never shipped. Mod
 id / package: `flattsthings` / `com.flatts.flattsthings`.
 
-**Status:** v0.1.0, unreleased. One family shipped, the **Player Pressure Plates**: a player-only
-counterpart to each of the fourteen vanilla `PressurePlateBlock`s
-(`docs/player_pressure_plate_spec.md`), verified in-world. Last reviewed 2026-09-05.
+**Status:** v0.1.0 uploaded to CurseForge 2026-09-05 and Under Review. **Six features on `main`**,
+one of them released: last reviewed 2026-09-07.
 
-**All open questions were ruled on 2026-09-05**, delegated by the owner rather than answered
+| Feature | Config id | Where it is written up |
+| --- | --- | --- |
+| Player Pressure Plates | `player_pressure_plates` | `docs/player_pressure_plate_spec.md`, shipped in v0.1.0 |
+| Tool slots | `tool_slots` | the mixin section below |
+| Tool auto-swap | `tool_auto_swap` | the two-switches section below |
+| Enchant a golden apple | `enchanted_golden_apple` | the no-second-mixin section below |
+| Silk touch takes budding amethyst | `silk_touch_budding_amethyst` | a loot modifier; see the 26.1 loot notes |
+| Three gravel to one flint | `gravel_to_flint` | one recipe file, no Java |
+
+**Derive that list from `FTConfig.features()` rather than trusting the table**, which is this file's
+own standing advice about lists that read as complete. The previous banner here said "one family
+shipped" for two days after five more had.
+
+**The five plate questions were ruled on 2026-09-05**, delegated by the owner rather than answered
 individually, and recorded with their reasoning in `docs/player_pressure_plate_spec.md` under
 Decisions. In short: the recipe is redstone rather than an ender pearl (#6), fake players do not
 press the plate and the block does nothing to arrange that (#7), fuel parity is kept (#8), and the
 local texture generator is kept over texgen (#9). A delegated ruling is still a ruling; overturn one
-by writing the reversal down beside it, not by deleting the reasoning.
+by writing the reversal down beside it, not by deleting the reasoning. **Those five are not the only
+open questions any more** - the backlog carries live ones, #35 among them.
 
 ## Build and test
 

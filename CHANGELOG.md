@@ -1,8 +1,12 @@
 # Changelog
 
-**Status:** current, reviewed 2026-09-05. **v0.1.0 was uploaded to CurseForge on 2026-09-05 and is
+**Status:** current, reviewed 2026-09-07. **v0.1.0 was uploaded to CurseForge on 2026-09-05 and is
 Under Review.** A new project is not visible to anyone and its files do not synchronize across
 CurseForge until a moderator approves it, so this is uploaded rather than released.
+
+**Everything under Unreleased has therefore never been downloadable by anybody.** Five of the mod's
+six features live there. When the next version ships, that section is the release notes rather than
+a delta on something players have.
 
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
