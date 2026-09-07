@@ -59,6 +59,14 @@ public final class FTConfig {
      */
     public static final String SILK_TOUCH_BUDDING_AMETHYST = "silk_touch_budding_amethyst";
 
+    /**
+     * Three gravel on a bench makes one flint.
+     *
+     * <p>A floor under vanilla's ten percent drop, and deliberately worse than Fortune III, which
+     * already guarantees flint from every gravel.
+     */
+    public static final String GRAVEL_TO_FLINT = "gravel_to_flint";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -113,6 +121,12 @@ public final class FTConfig {
             "geodes portable. On by default like everything else here, because a mod nobody",
             "switched on is a mod that appears not to work - turn it off if your pack wants",
             "vanilla's restriction.");
+
+        define(builder, GRAVEL_TO_FLINT,
+            "Craft one flint from three gravel. Vanilla drops flint one time in ten, and gravel",
+            "that does not roll flint drops as gravel - so with any Fortune shovel you can",
+            "re-place and re-break until every gravel has become flint. This buys that loop out at",
+            "three to one: worse than any Fortune level in yield, better than digging unenchanted.");
 
         builder.pop();
         SPEC = builder.build();

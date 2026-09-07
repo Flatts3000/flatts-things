@@ -166,5 +166,34 @@ final class RegistryCompletenessTests {
             helper.assertTrue(!icon.isEmpty(), "the creative tab icon must resolve to a real item");
             helper.succeed();
         });
+
+        // ADVANCEMENTS LOAD, AND THE RECIPES THEY UNLOCK EXIST. Both halves fail silently:
+        // AdvancementRewards.recipes resolves through recipeManager.byKey(...).stream(), so a key
+        // naming a recipe that is not there is quietly dropped and recipe_unlocked never fires. The
+        // symptom is a recipe that never enters the recipe book and cannot be crafted at all on a
+        // pack running doLimitedCrafting - with every test green.
+        FTGameTests.test("every_mod_advancement_unlocks_a_recipe_that_exists", 30, helper -> {
+            List<String> problems = new ArrayList<>();
+            var server = helper.getLevel().getServer();
+            long seen = 0;
+            for (var advancement : server.getAdvancements().getAllAdvancements()) {
+                if (!advancement.id().getNamespace().equals(FlattsThings.MOD_ID)) {
+                    continue;
+                }
+                seen++;
+                for (var recipe : advancement.value().rewards().recipes()) {
+                    if (server.getRecipeManager().byKey(recipe).isEmpty()) {
+                        problems.add(advancement.id() + " rewards " + recipe.identifier()
+                            + ", which is not a loaded recipe");
+                    }
+                }
+            }
+            // Counted, so deleting every advancement cannot pass this by leaving nothing to check.
+            if (seen == 0) {
+                problems.add("this mod loaded no advancements at all");
+            }
+            report(helper, problems, "advancements rewarding recipes that do not exist");
+        });
+
     }
 }

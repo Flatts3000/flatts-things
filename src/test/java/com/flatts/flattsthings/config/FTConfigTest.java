@@ -36,7 +36,8 @@ class FTConfigTest {
     void everyFeatureIdIsAccountedFor() {
         assertEquals(
             List.of("player_pressure_plates", "tool_slots", "tool_auto_swap",
-                "enchanted_golden_apple", "silk_touch_budding_amethyst"),
+                "enchanted_golden_apple", "silk_touch_budding_amethyst",
+                "gravel_to_flint"),
             List.copyOf(FTConfig.features()),
             "a feature id changed; every generated recipe and every pack's config names these");
     }
