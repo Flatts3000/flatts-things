@@ -1,8 +1,9 @@
 # CurseForge project page
 
-**Status:** live on the listing as of 2026-09-05. Project **1683375**, slug `flatts-things`.
-v0.1.0 is uploaded and Under Review; the description below has been pasted into the console. **The
-gallery has not been uploaded yet.** This file stays the source of truth: edit here, then paste.
+**Status:** rewritten for v0.2.0 on 2026-09-07 and **NOT yet pasted into the console.** Project
+**1683375**, slug `flatts-things`. v0.1.0 and v0.2.0 are uploaded and the project is Under Review.
+**The gallery has not been uploaded yet, and still shows only the plates** - five of the six features
+have never been photographed. This file stays the source of truth: edit here, then paste.
 
 **Voice: what it is like to play, not what it contains.** Short, image-led, written from inside the
 game. No selling, no marketing verbs, nothing personified. Every line has to be true of the current
@@ -35,10 +36,65 @@ furnace, and takes the same piston shove. Only the sensitivity changed.
 
 Craft one from the plate you have and a redstone dust.
 
+### Tool slots
+
+Five slots under your inventory, for tools, that are not part of your inventory space. The pickaxe,
+the axe, the shovel and the hoe stop taking four of your nine hotbar slots.
+
+They are slots in the inventory screen you already open. Clicking, dragging and shift-clicking work
+the way they do everywhere else, because they are ordinary slots. Four of them show a faint outline
+of what belongs in them. The fifth is blank; it is the free one.
+
+Swords do not fit, and that is deliberate. These slots feed the swap below, and a stored sword would
+mean something putting a weapon in your hand while you are mining.
+
+### The right tool, without asking for it
+
+Start breaking a block and the tool for it comes into your hand. Stop, and whatever you were carrying
+comes back.
+
+It picks by the same arithmetic the game uses to decide how fast a block breaks, so another mod's
+pickaxe sorts correctly against a vanilla one, and a tie leaves what you are already holding alone.
+
+Press Z to turn it off and on. It says which way it went above your hotbar, and it remembers across
+death and logout.
+
+### An enchanted golden apple, enchanted
+
+Put a golden apple in an enchanting table, spend the levels and the lapis, and take out the real
+thing. The offer is called Blessing, and it needs thirty levels, so a bare table cannot reach it.
+
+A Blessing book works too, on an anvil, one apple at a time.
+
+### Silk touch takes budding amethyst
+
+Vanilla drops nothing for it, with any tool. This lets silk touch pick it up, and a geode becomes
+something you can move.
+
+That restriction is deliberate in vanilla, and lifting it is the whole feature. The switch is there
+for anyone who wants it back.
+
+### Three gravel, one flint
+
+Vanilla gives you flint one gravel in ten, and the gravel that does not roll flint drops as gravel,
+so a Fortune shovel and a wall to re-place it against turns every stack into flint eventually. This
+buys that loop out: three gravel on a bench, one flint, no dice.
+
+### Concrete and mud in a cauldron
+
+Dip a stack of concrete powder in a water cauldron and it sets. Dirt comes out as mud.
+
+Both are things you can already do one block at a time, against a water source or with a bottle. The
+cauldron does the stack, for one of its three levels.
+
+### Every one of these has an off switch
+
+`config/flattsthings-common.toml`, one line each. Off means no recipe and nothing in the creative
+tab, and the behaviour stops. It never removes anything you have already built or stored.
+
 ### Not in yet
 
-This is the first release and the plates are all of it. More things will follow, and each one has to
-earn its place on its own.
+Six features, and each one had to earn its place on its own. More will follow the same way.
 
 ---
 
@@ -65,3 +121,16 @@ earn its place on its own.
 | `03-redstone.png` | An ordinary redstone source: pressed, it lights a lamp |
 
 `02` is the one that explains the mod. Lead with it if only one image is shown.
+
+**The gallery is a release behind.** Those three are all plates, and five features have shipped since
+without a picture between them - above all the tool slots, which are the hardest to understand from
+words and the easiest to show. Capturing more is a client run
+(`./gradlew runClient`, then `python tools/shoot_gallery.py --promote`) and cannot be done headlessly.
+A candidate list, in the order they would earn a slot:
+
+| Would show | Why it is worth a slot |
+| --- | --- |
+| The tool slot strip under the inventory panel | The one feature nobody can picture from a sentence. `docs/img/tool_slots_screen.png` already exists and could be promoted |
+| A tool swapping in mid-dig | The swap is invisible when it works, so a still of the hand mid-block is the only way to show it happened |
+| A golden apple in the enchanting table showing Blessing | Answers "how" and "what does it cost" in one frame |
+| A cauldron of concrete powder before and after | The clearest before/after in the mod |
