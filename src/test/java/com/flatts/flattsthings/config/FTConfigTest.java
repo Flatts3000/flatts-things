@@ -36,7 +36,7 @@ class FTConfigTest {
     void everyFeatureIdIsAccountedFor() {
         assertEquals(
             List.of("player_pressure_plates", "tool_slots", "tool_auto_swap",
-                "enchanted_golden_apple"),
+                "enchanted_golden_apple", "silk_touch_budding_amethyst"),
             List.copyOf(FTConfig.features()),
             "a feature id changed; every generated recipe and every pack's config names these");
     }
@@ -58,11 +58,21 @@ class FTConfigTest {
      * two alternatives - throwing, or answering false - are both silently catastrophic in a context
      * that has no config file.
      */
+    /**
+     * The unloaded answer is each feature's declared default, for every feature.
+     *
+     * <p>Written as a property rather than three hardcoded trues on purpose. The fallback used to be
+     * a blanket yes, which is indistinguishable from correct while every feature ships on - and
+     * would silently be wrong for the first one that does not.
+     */
     @Test
-    void anUnloadedConfigReadsAsOn() {
-        assertTrue(FTConfig.SPEC.isLoaded() || FTConfig.playerPressurePlates());
-        assertTrue(FTConfig.SPEC.isLoaded() || FTConfig.toolSlots());
-        assertTrue(FTConfig.SPEC.isLoaded() || FTConfig.toolAutoSwap());
+    void anUnloadedConfigReadsAsEachFeaturesOwnDefault() {
+        for (String feature : FTConfig.features()) {
+            assertTrue(FTConfig.SPEC.isLoaded()
+                    || FTConfig.enabled(feature) == FTConfig.defaultOf(feature),
+                feature + " reads as " + FTConfig.enabled(feature)
+                    + " with no config loaded, but its default is " + FTConfig.defaultOf(feature));
+        }
     }
 
     @Test

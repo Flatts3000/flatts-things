@@ -51,8 +51,27 @@ public final class FTConfig {
     /** Swapping the right tool into the hand when you start breaking a block. */
     public static final String TOOL_AUTO_SWAP = "tool_auto_swap";
 
+    /**
+     * Silk touch picks up budding amethyst, which vanilla never lets you take.
+     *
+     * <p>Off leaves it unobtainable, which is where vanilla puts it and why: an amethyst farm that
+     * cannot be moved is the point of the omission.
+     */
+    public static final String SILK_TOUCH_BUDDING_AMETHYST = "silk_touch_budding_amethyst";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
+
+    /**
+     * What each feature answers before the config file is loaded.
+     *
+     * <p>Kept separately because {@link ModConfigSpec.BooleanValue} will not give up its default
+     * without a loaded config, and the unloaded answer has to be each feature's own default rather
+     * than a blanket yes. Every feature ships on today, so the two agree - but the blanket yes was
+     * a coincidence rather than a rule, and the first feature to ship off would have been quietly
+     * on in exactly the contexts where nothing is loaded.
+     */
+    private static final Map<String, Boolean> DEFAULTS = new LinkedHashMap<>();
 
     public static final ModConfigSpec SPEC;
 
@@ -87,6 +106,14 @@ public final class FTConfig {
             "apple, exactly as it was before 1.9. Off leaves it loot-only, which is where vanilla",
             "left it.");
 
+        define(builder, SILK_TOUCH_BUDDING_AMETHYST,
+            "Let silk touch pick up budding amethyst, which vanilla never drops. Note this is a",
+            "deliberate vanilla restriction rather than an oversight: an unobtainable budding block",
+            "is what stops an amethyst farm being picked up and moved, so turning this on makes",
+            "geodes portable. On by default like everything else here, because a mod nobody",
+            "switched on is a mod that appears not to work - turn it off if your pack wants",
+            "vanilla's restriction.");
+
         builder.pop();
         SPEC = builder.build();
     }
@@ -95,12 +122,34 @@ public final class FTConfig {
     }
 
     private static void define(ModConfigSpec.Builder builder, String feature, String... comment) {
-        FEATURES.put(feature, builder.comment(comment).define(feature, true));
+        define(builder, feature, true, comment);
+    }
+
+    /**
+     * A feature with a default of its own.
+     *
+     * <p>Almost everything here ships on, because a mod nobody switched on is a mod that appears not
+     * to work. The exception is a feature that changes the game rather than adding to it, where a
+     * pack should be asked rather than told.
+     */
+    private static void define(ModConfigSpec.Builder builder, String feature, boolean defaultValue,
+                               String... comment) {
+        DEFAULTS.put(feature, defaultValue);
+        FEATURES.put(feature, builder.comment(comment).define(feature, defaultValue));
     }
 
     /** Every feature id, in file order. Used by the completeness test rather than by gameplay. */
     public static Set<String> features() {
         return Collections.unmodifiableSet(FEATURES.keySet());
+    }
+
+    /** What a feature answers with no config loaded. Used by the test that pins the two together. */
+    public static boolean defaultOf(String feature) {
+        Boolean value = DEFAULTS.get(feature);
+        if (value == null) {
+            throw new IllegalArgumentException(feature + " is not a feature of this mod");
+        }
+        return value;
     }
 
     public static boolean isFeature(String feature) {
@@ -110,16 +159,20 @@ public final class FTConfig {
     /**
      * Whether a feature is on.
      *
-     * <p><b>Unloaded reads as ON, deliberately.</b> The config is loaded well before anything here
+     * <p><b>Unloaded reads as the feature's DEFAULT, deliberately.</b> The config is loaded well before anything here
      * is asked, but "well before" is not "always": a JUnit test running against a mod context with
      * no config file is a real case, and so is any call that ends up earlier in startup than
      * expected. The two ways to be wrong are to throw, which turns a missing file into a crash, or
      * to answer false, which turns it into a mod that silently does nothing and looks like it failed
      * to install. Answering with the shipped default is the only one of the three that is merely
-     * uninteresting when it happens.
+     * uninteresting when it happens - and it has to be the feature's OWN default, not a blanket
+     * yes, or a feature that ships off is on wherever nothing is loaded.
      */
     public static boolean enabled(String feature) {
-        return !SPEC.isLoaded() || switchFor(feature).get();
+        if (!SPEC.isLoaded()) {
+            return DEFAULTS.getOrDefault(feature, Boolean.TRUE);
+        }
+        return switchFor(feature).get();
     }
 
     /**

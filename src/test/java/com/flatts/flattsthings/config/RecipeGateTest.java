@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
- * Every recipe this mod ships is behind a feature switch.
+ * Every data file this mod ships that can be gated is behind a feature switch.
  *
  * <p>A recipe is the one part of a feature that cannot be turned off at runtime - nothing removes a
  * loaded one - so the condition in the file IS the off switch. A recipe added without one is
@@ -29,26 +29,69 @@ import org.junit.jupiter.api.Test;
  */
 class RecipeGateTest {
 
-    private static final Path RECIPES = Path.of(
+    private static final Path DATA = Path.of(
         System.getProperty("flattsthings.projectDir", "."),
-        "src", "main", "resources", "data", "flattsthings", "recipe");
+        "src", "main", "resources", "data", "flattsthings");
+
+    /**
+     * The directories whose files are gated by a condition read at load.
+     *
+     * <p>Recipes were the first. A loot modifier is the same shape - the folder is scanned, the
+     * file is live for the session, and nothing removes it at runtime - so it belongs here, and it
+     * was outside the sweep for exactly one PR before this was noticed. Tags are NOT here: they
+     * merge rather than replace, and a tag entry for a disabled feature is inert.
+     */
+    private static final List<String> GATED = List.of("recipe", "loot_modifiers");
 
     @Test
-    void everyShippedRecipeIsGatedOnAKnownFeature() throws IOException {
-        assertTrue(Files.isDirectory(RECIPES), RECIPES.toAbsolutePath() + " is missing");
+    void everyGatedDataFileNamesAKnownFeature() throws IOException {
         List<String> problems = new ArrayList<>();
-        // WALK, NOT LIST. Minecraft's recipe loader recurses and folds the subpath into the id
-        // (recipe/food/x.json -> flattsthings:food/x), and this mod already nests one level down in
-        // loot_table/blocks/. A non-recursive sweep would stay green for the first recipe put in a
-        // subdirectory - which is precisely the case this class says it exists to catch.
-        try (Stream<Path> files = Files.walk(RECIPES)) {
-            for (Path file : files.filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".json")).toList()) {
-                problems.addAll(check(file));
+        for (String folder : GATED) {
+            Path root = DATA.resolve(folder);
+            assertTrue(Files.isDirectory(root), root.toAbsolutePath() + " is missing");
+            // WALK, NOT LIST. Minecraft's loaders recurse and fold the subpath into the id
+            // (recipe/food/x.json -> flattsthings:food/x), and this mod already nests one level
+            // down in loot_table/blocks/. A non-recursive sweep would stay green for the first file
+            // put in a subdirectory - precisely the case this class says it exists to catch.
+            try (Stream<Path> files = Files.walk(root)) {
+                for (Path file : files.filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith(".json")).toList()) {
+                    problems.addAll(check(file));
+                }
             }
         }
         assertTrue(problems.isEmpty(),
-            "recipes that cannot be switched off:\n  " + String.join("\n  ", problems));
+            "data files that cannot be switched off:\n  " + String.join("\n  ", problems));
+    }
+
+    /**
+     * The budding amethyst modifier is gated on ITS OWN feature, not merely on some feature.
+     *
+     * <p>The sweep above proves every gated file names a feature that exists. It would stay green if
+     * this modifier were gated on {@code tool_slots} - the switch would work, on the wrong switch,
+     * and the silk touch tests would pass because they run with everything on.
+     *
+     * <p><b>Why this is a file assertion rather than a runtime one.</b> The gate is read when the
+     * data pack loads, so flipping the switch in a running server changes nothing until a reload;
+     * there is no in-world state to assert against. What can be checked is the chain: this file
+     * names this feature, {@code the_recipe_condition_follows_the_switch} proves the condition
+     * follows that switch, and the drop tests prove the modifier works when it loads.
+     */
+    @Test
+    void theBuddingAmethystModifierIsGatedOnItsOwnFeature() throws IOException {
+        Path file = DATA.resolve("loot_modifiers").resolve("silk_touch_budding_amethyst.json");
+        assertTrue(Files.isRegularFile(file), file + " is missing");
+        JsonObject modifier = JsonParser
+            .parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
+        JsonArray conditions = modifier.getAsJsonArray("neoforge:conditions");
+        boolean named = false;
+        for (int index = 0; index < conditions.size(); index++) {
+            JsonObject condition = conditions.get(index).getAsJsonObject();
+            named |= "flattsthings:feature_enabled".equals(condition.get("type").getAsString())
+                && FTConfig.SILK_TOUCH_BUDDING_AMETHYST.equals(condition.get("feature").getAsString());
+        }
+        assertTrue(named, file.getFileName() + " is not gated on "
+            + FTConfig.SILK_TOUCH_BUDDING_AMETHYST + ", so its switch does nothing");
     }
 
     private static List<String> check(Path file) throws IOException {
