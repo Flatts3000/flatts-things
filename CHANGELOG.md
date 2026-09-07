@@ -16,13 +16,14 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
-- **A stonecutter cuts planks into stairs and slabs** (#53). At the ratios it already uses for stone:
-  one plank per stair, against one and a half on a crafting bench, and one plank per two slabs, which
-  is the bench rate anyway. Vanilla ships 275 stonecutting recipes and none of them take wood. The
-  saving is small and the point is the convenience: one stair without laying six planks in a grid.
-  Twelve wood families, generated from a table. This deliberately uses the STONEcutter rather than
-  adding a saw of its own - one data file per recipe and no new block, against a second workstation
-  with a screen no automated test can look at. Off if that reads wrong in your pack.
+- **The woodcutter** (#53): a saw bench for planks. Put planks in, pick a shape, take it out - stairs
+  or slabs, at the ratios a stonecutter already uses for stone. One plank per stair, against one and
+  a half on a crafting bench; one plank per two slabs, which is the bench rate anyway. Twelve wood
+  families. Crafted from planks and an iron ingot.
+
+  The saving is small and only on stairs; the point is making one stair without laying six planks out
+  in a grid, and switching shapes with one click. Vanilla has a cutter for stone and nothing for wood,
+  which is not a principle - it is where Mojang stopped.
 
 - **Combine a chestplate and an elytra on an anvil** (#37). The chestplate keeps its armour, its
   enchantments, its trim and its name, and gains the gliding. One chest slot does both jobs.

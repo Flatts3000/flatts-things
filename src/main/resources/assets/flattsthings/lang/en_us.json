@@ -19,5 +19,7 @@
   "block.flattsthings.mangrove_player_pressure_plate": "Mangrove Player Pressure Plate",
   "block.flattsthings.bamboo_player_pressure_plate": "Bamboo Player Pressure Plate",
   "block.flattsthings.crimson_player_pressure_plate": "Crimson Player Pressure Plate",
-  "block.flattsthings.warped_player_pressure_plate": "Warped Player Pressure Plate"
+  "block.flattsthings.warped_player_pressure_plate": "Warped Player Pressure Plate",
+  "block.flattsthings.woodcutter": "Woodcutter",
+  "container.flattsthings.woodcutter": "Woodcutter"
 }

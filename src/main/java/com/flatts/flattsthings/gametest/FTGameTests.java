@@ -94,6 +94,7 @@ public final class FTGameTests {
         ArmoredElytraTests.register();
         ToggleAutoSwapPayloadTests.register();
         WoodCuttingTests.register();
+        WoodcutterMenuTests.register();
         CauldronTransformTests.register();
         ConfigGateTests.register();
         RegistryCompletenessTests.register();

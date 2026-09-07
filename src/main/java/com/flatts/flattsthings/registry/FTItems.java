@@ -28,6 +28,11 @@ public final class FTItems {
     private FTItems() {
     }
 
+    /** The woodcutter's block item. */
+    public static final net.neoforged.neoforge.registries.DeferredItem<
+        net.minecraft.world.item.BlockItem> WOODCUTTER =
+            ITEMS.registerSimpleBlockItem("woodcutter", FTBlocks.WOODCUTTER);
+
     public static void register(IEventBus modEventBus) {
         ITEMS.register(modEventBus);
     }

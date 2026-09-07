@@ -1,7 +1,9 @@
 """Write the wood stonecutting recipes and their unlock advancements.
 
-Vanilla ships 275 stonecutting recipes and not one of them takes wood, so a saw that cuts planks into
-stairs and slabs is a gap rather than a duplicate. The families below are the twelve that have planks,
+These are a recipe type of this mod's own, read by the woodcutter block. An earlier version of this
+generator wrote `minecraft:stonecutting` recipes so that the VANILLA stonecutter would cut wood; that
+was rejected (owner, 2026-09-07) because a stone saw cutting planks is the wrong block for the job.
+Nothing here touches the stonecutter now. The families below are the twelve that have planks,
 stairs and a slab in 26.1; they are listed here rather than derived because the generator has no
 registry to walk, and the GameTest closes the loop from the other end by resolving every one of these
 through the real recipe lookup.
@@ -43,10 +45,10 @@ def recipes():
     """Yield (name, recipe json, wood) for every family and shape."""
     for wood in WOODS:
         for suffix, count in SHAPES:
-            name = "{}_{}_from_{}_planks_stonecutting".format(wood, suffix, wood)
+            name = "{}_{}_from_{}_planks_woodcutting".format(wood, suffix, wood)
             yield name, {
                 "neoforge:conditions": CONDITION,
-                "type": "minecraft:stonecutting",
+                "type": "flattsthings:wood_cutting",
                 "ingredient": "minecraft:{}_planks".format(wood),
                 "result": {"id": "minecraft:{}_{}".format(wood, suffix), "count": count},
             }, wood

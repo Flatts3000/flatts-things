@@ -21,6 +21,7 @@ all of them now in an uploaded build. Last reviewed 2026-09-07.
 | Three gravel to one flint | `gravel_to_flint` | one recipe file, no Java |
 | Cauldron transforms | `cauldron_transforms` | the cauldron section below |
 | Armoured elytra | `armored_elytra` | the components section below |
+| The woodcutter | `wood_cutting` | the woodcutter section below |
 
 **Derive that list from `FTConfig.features()` rather than trusting the table**, which is this file's
 own standing advice about lists that read as complete. The previous banner here said "one family
@@ -814,6 +815,41 @@ the packet, a handler that kept its guard and reported the wrong state passed ev
 
 **The claim that it could not be read survived one probe.** Check before documenting a limit; this
 file has now been wrong about what a test can see more than once.
+
+## A workstation of our own, and what vanilla will not lend you
+
+The woodcutter is a block, a menu, a screen and a recipe type. It was **not** built that way first:
+version one wrote `minecraft:stonecutting` recipes so the vanilla stonecutter would cut wood, which
+works - `StonecutterMenu` has no ingredient restriction at all, it looks up `RecipeType.STONECUTTING`
+and nothing else - and was rejected (owner, 2026-09-07) because a stone saw is the wrong block to be
+cutting planks on. Written down because the cheap version is genuinely tempting and genuinely wrong.
+
+**`RecipeAccess` is not extensible, and that decides the menu's whole design.** Vanilla's cutter
+reads `level.recipeAccess().stonecutterRecipes()` - a prebuilt list the server syncs so the client
+can draw the buttons. That interface declares exactly one `stonecutterRecipes()`, and
+`RecipeManager`'s property sets are a fixed `Map.of`. A custom cutter cannot reuse any of it.
+
+**So the options are real slots.** `WoodcutterMenu` puts each possible result in a container and adds
+it as a display slot that refuses pickup and placement. Menus already sync slot contents, so the
+client learns the options for free, and there is no second recipe-syncing mechanism that can drift
+out of step with the server. The screen turns a click on one into `clickMenuButton`, which is the
+route vanilla's cutter uses anyway.
+
+**The recipe lookup is server-only.** A client has no full recipe manager in 26.1, so `refreshOptions`
+sits behind an `isClientSide` guard; calling it on the client would find nothing and blank the list.
+
+**`StonecutterBlock` cannot be subclassed**, the same codec-invariance trap `PressurePlateBlock` has:
+`codec()` returns `MapCodec<StonecutterBlock>`. There the answer was to extend the abstract parent;
+here there is no abstract cutter, so `WoodcutterBlock` extends `Block` and copies the shape.
+
+**`RecipeBookCategories` is a list of static fields, not a registry**, so a new cutting category is
+not registrable and the recipes borrow the stonecutter's. It decides only which heading the recipe
+book files them under.
+
+**Known gap: it ships no art.** The block model parents `minecraft:block/stonecutter` and swaps in
+vanilla plank, log and saw textures; the screen blits vanilla's stonecutter background and button
+sprites. Nothing is stranded if a resource pack changes those, and nothing here is distinctive
+either. A texture set of its own is the obvious follow-up.
 
 ## Events that only fire on one side
 

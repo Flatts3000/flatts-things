@@ -57,13 +57,13 @@ def main():
     # files on disk, still loading, still cuttable, with nothing regenerating them - the drift a
     # byte comparison over the CURRENT table cannot see because it never looks at that file.
     on_disk = {name for name in os.listdir(generate_woodcutting.RECIPES)
-               if name.endswith("_stonecutting.json")}
+               if name.endswith("_woodcutting.json")}
     on_disk |= {name for name in os.listdir(generate_woodcutting.ADVANCEMENTS)
-                if name.endswith("_stonecutting.json")}
+                if name.endswith("_woodcutting.json")}
     wanted = {os.path.basename(path) for path in TARGETS}
     orphans = sorted(on_disk - wanted)
     if orphans:
-        print("FAIL: stonecutting recipes on disk that the generator no longer writes:")
+        print("FAIL: wood cutting recipes on disk that the generator no longer writes:")
         for name in orphans:
             print("   ", name)
         return 1

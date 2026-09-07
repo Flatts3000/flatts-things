@@ -1,40 +1,71 @@
 package com.flatts.flattsthings.gametest;
 
-import com.flatts.flattsthings.config.FTConfig;
 import java.util.ArrayList;
 import java.util.List;
+import com.flatts.flattsthings.content.woodcutter.WoodCuttingRecipe;
+import com.flatts.flattsthings.registry.FTRecipes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
-import net.minecraft.world.item.crafting.StonecutterRecipe;
 import net.minecraft.world.level.block.Blocks;
 
 /**
- * Planks on a stonecutter.
+ * Planks on the woodcutter.
  *
- * <p>These resolve every recipe through the real {@code RecipeType.STONECUTTING} lookup rather than
- * checking that twenty-four files exist. A recipe naming an item that does not exist is dropped
- * silently during load, with a log line and no failure anywhere, which is exactly what a file check
- * cannot see - the same reason {@code PlateDataTests} exists.
+ * <p>These resolve every recipe through the real recipe lookup rather than checking that files
+ * exist. A recipe naming an item that does not exist is dropped silently during load, with a log
+ * line and no failure anywhere, which is exactly what a file check cannot see - the same reason
+ * {@code PlateDataTests} exists.
+ *
+ * <p><b>The expected families are derived from the ITEM REGISTRY, not copied from the generator</b>,
+ * and the first version of this file got that wrong. It listed the same twelve names the generator
+ * lists and claimed in a comment that this "closes the loop from the other end" the way the plate
+ * sweep does. It did not: both sides read the same hand-written list, so a thirteenth wood family in
+ * some future 26.x - the way pale oak arrived - would be absent from the generator, absent from here,
+ * and every test would pass while the feature silently half-shipped. A review caught the claim.
+ *
+ * <p>Walking the registry for every {@code <x>_planks} that also has {@code <x>_stairs} and
+ * {@code <x>_slab} is what actually closes it: vanilla is the source of truth, and a family Mojang
+ * adds fails here until the generator learns about it.
  */
 final class WoodCuttingTests {
-
-    /** The twelve families the generator writes. Listed again here on purpose: see the sweep. */
-    private static final List<String> WOODS = List.of(
-        "acacia", "bamboo", "birch", "cherry", "crimson", "dark_oak",
-        "jungle", "mangrove", "oak", "pale_oak", "spruce", "warped");
 
     private WoodCuttingTests() {
     }
 
-    private static List<RecipeHolder<StonecutterRecipe>> cuttingFor(
+    private static List<RecipeHolder<WoodCuttingRecipe>> cuttingFor(
             net.minecraft.gametest.framework.GameTestHelper helper, ItemStack input) {
         return helper.getLevel().getServer().getRecipeManager().recipeMap()
-            .getRecipesFor(RecipeType.STONECUTTING, new SingleRecipeInput(input),
+            .getRecipesFor(FTRecipes.WOOD_CUTTING_TYPE.get(), new SingleRecipeInput(input),
                 helper.getLevel())
             .toList();
+    }
+
+    /**
+     * Every wood family vanilla ships, derived rather than listed: planks that also have stairs and
+     * a slab.
+     */
+    private static List<String> woodFamilies() {
+        List<String> families = new ArrayList<>();
+        for (Item item : BuiltInRegistries.ITEM) {
+            String id = BuiltInRegistries.ITEM.getKey(item).getPath();
+            if (!id.endsWith("_planks")) {
+                continue;
+            }
+            String family = id.substring(0, id.length() - "_planks".length());
+            if (BuiltInRegistries.ITEM.containsKey(
+                    Identifier.withDefaultNamespace(family + "_stairs"))
+                    && BuiltInRegistries.ITEM.containsKey(
+                        Identifier.withDefaultNamespace(family + "_slab"))) {
+                families.add(family);
+            }
+        }
+        return families;
     }
 
     static void register() {
@@ -44,14 +75,9 @@ final class WoodCuttingTests {
         // generator forgot fails here rather than shipping half-done.
         FTGameTests.test("every_wood_can_be_cut_into_stairs_and_slabs", 40, helper -> {
             List<String> missing = new ArrayList<>();
-            for (String wood : WOODS) {
-                ItemStack planks = new ItemStack(helper.getLevel().registryAccess()
-                    .lookupOrThrow(net.minecraft.core.registries.Registries.ITEM)
-                    .getOrThrow(net.minecraft.resources.ResourceKey.create(
-                        net.minecraft.core.registries.Registries.ITEM,
-                        net.minecraft.resources.Identifier.withDefaultNamespace(
-                            wood + "_planks")))
-                    .value());
+            for (String wood : woodFamilies()) {
+                ItemStack planks = new ItemStack(BuiltInRegistries.ITEM.getValue(
+                    Identifier.withDefaultNamespace(wood + "_planks")));
 
                 List<String> results = cuttingFor(helper, planks).stream()
                     .map(holder -> holder.value()
@@ -66,8 +92,11 @@ final class WoodCuttingTests {
                     missing.add(wood + " slab");
                 }
             }
+            helper.assertTrue(!woodFamilies().isEmpty(),
+                "premise: vanilla has wood families to cut at all");
             helper.assertTrue(missing.isEmpty(),
-                "these could not be cut on a stonecutter: " + missing);
+                "these could not be cut on the woodcutter, which means the generator's table has"
+                    + " fallen behind the game: " + missing);
             helper.succeed();
         });
 
@@ -79,7 +108,7 @@ final class WoodCuttingTests {
             ItemStack planks = new ItemStack(Items.OAK_PLANKS);
             int stairs = 0;
             int slab = 0;
-            for (RecipeHolder<StonecutterRecipe> holder : cuttingFor(helper, planks)) {
+            for (RecipeHolder<WoodCuttingRecipe> holder : cuttingFor(helper, planks)) {
                 ItemStack result = holder.value()
                     .assemble(new SingleRecipeInput(planks));
                 if (result.is(Items.OAK_STAIRS)) {
@@ -100,7 +129,7 @@ final class WoodCuttingTests {
         FTGameTests.test("cutting_planks_makes_only_stairs_and_slabs", 20, helper -> {
             ItemStack planks = new ItemStack(Items.OAK_PLANKS);
             List<String> unexpected = new ArrayList<>();
-            for (RecipeHolder<StonecutterRecipe> holder : cuttingFor(helper, planks)) {
+            for (RecipeHolder<WoodCuttingRecipe> holder : cuttingFor(helper, planks)) {
                 ItemStack result = holder.value()
                     .assemble(new SingleRecipeInput(planks));
                 if (!result.is(Items.OAK_STAIRS) && !result.is(Items.OAK_SLAB)) {
@@ -112,12 +141,23 @@ final class WoodCuttingTests {
             helper.succeed();
         });
 
-        // AND STONE STILL CUTS. The feature adds recipes to a vanilla recipe type, so the thing to
-        // prove is that it added rather than replaced.
-        FTGameTests.test("the_stonecutter_still_cuts_stone", 20, helper -> {
-            ItemStack stone = new ItemStack(Blocks.STONE);
-            helper.assertTrue(!cuttingFor(helper, stone).isEmpty(),
-                "vanilla stone cutting should be untouched");
+        // AND THE STONECUTTER IS LEFT ALONE, which is the whole reason this is a block of its own.
+        // An earlier version of this feature added minecraft:stonecutting recipes so the vanilla
+        // cutter would cut wood; that was rejected (owner, 2026-09-07). This pins the reversal:
+        // planks offer nothing on a stonecutter, and stone still cuts there.
+        FTGameTests.test("the_stonecutter_is_left_alone", 20, helper -> {
+            List<RecipeHolder<net.minecraft.world.item.crafting.StonecutterRecipe>> onStone =
+                helper.getLevel().getServer().getRecipeManager().recipeMap()
+                    .getRecipesFor(RecipeType.STONECUTTING,
+                        new SingleRecipeInput(new ItemStack(Items.OAK_PLANKS)), helper.getLevel())
+                    .toList();
+            helper.assertTrue(onStone.isEmpty(),
+                "a stonecutter must not cut planks; it offered " + onStone.size() + " recipes");
+            helper.assertTrue(!helper.getLevel().getServer().getRecipeManager().recipeMap()
+                    .getRecipesFor(RecipeType.STONECUTTING,
+                        new SingleRecipeInput(new ItemStack(Blocks.STONE)), helper.getLevel())
+                    .toList().isEmpty(),
+                "and vanilla stone cutting should be untouched");
             helper.succeed();
         });
     }

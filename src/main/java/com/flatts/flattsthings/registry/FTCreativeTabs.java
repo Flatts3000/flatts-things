@@ -34,6 +34,14 @@ public final class FTCreativeTabs {
                     if (FTConfig.playerPressurePlates()) {
                         FTItems.PLATES.values().forEach(plate -> output.accept(plate.get()));
                     }
+
+                    // --- Building: the woodcutter ---
+                    // Gated like everything else. The BLOCK is registered unconditionally, because a
+                    // registry that changes with a config file is how two sides end up disagreeing
+                    // about what exists; the switch decides whether a player can obtain one.
+                    if (FTConfig.woodCutting()) {
+                        output.accept(FTItems.WOODCUTTER.get());
+                    }
                 })
                 .build());
 

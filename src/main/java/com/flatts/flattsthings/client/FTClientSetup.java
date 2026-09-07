@@ -5,7 +5,9 @@ import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import com.flatts.flattsthings.registry.FTMenus;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import org.lwjgl.glfw.GLFW;
 
 /** Client-side registration. MOD bus, client only. */
@@ -52,6 +54,17 @@ public final class FTClientSetup {
         "key.flattsthings.toggle_auto_swap", GLFW.GLFW_KEY_Z, CATEGORY);
 
     private FTClientSetup() {
+    }
+
+    /**
+     * The woodcutter's screen, bound to its menu type.
+     *
+     * <p>Without this the block opens a menu the client has no screen for, which is a crash rather
+     * than a blank window - the one failure in this feature that no server-side test can see.
+     */
+    @SubscribeEvent
+    public static void registerScreens(RegisterMenuScreensEvent event) {
+        event.register(FTMenus.WOODCUTTER.get(), WoodcutterScreen::new);
     }
 
     @SubscribeEvent
