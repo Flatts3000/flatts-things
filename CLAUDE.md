@@ -754,6 +754,17 @@ the hook that constructs it and see which class calls that hook. The auto-swap e
 `PlayerEvent.BreakSpeed`, which fires server-side every tick of a dig, acted on only when the block
 position changes so that it means "the start of a dig".
 
+## A commit message can close an issue by accident
+
+**GitHub reads only the word immediately before an issue reference**, not the sentence around it. So
+`FILED RATHER THAN FIXED: #49` closed #49 the moment that PR merged, in a commit whose whole point
+was to say the work had NOT been done. It had to be reopened by hand.
+
+This repo's commit style makes it likelier than usual: bodies here lead with capitalised summary
+phrases, and several natural ones end in a closing keyword - `FIXED`, `CLOSED`, `RESOLVED`. Put the
+number somewhere that cannot be misread (`see #49`, `filed as #49`) or write the issue number without
+the `#`.
+
 ## The commit trailers, and why the first four lack them
 
 Every commit from `f084abb` onward carries `Co-Authored-By` and `Claude-Session`. The first four do
