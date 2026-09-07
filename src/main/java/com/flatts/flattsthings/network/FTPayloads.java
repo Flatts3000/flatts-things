@@ -33,12 +33,23 @@ public final class FTPayloads {
      * The sender is the authorisation. A player can only ever flip their own setting, because the
      * value is read from {@code context.player()} and nothing in the message names anybody.
      *
+     * <p><b>Public so a test can reach it, and that is a deliberate trade</b> - the same one
+     * {@code FTConfig.switchFor} makes, with the same warning attached: this exists for the tests and
+     * gameplay code must not call it. The alternative was leaving the whole server side of the
+     * keybind at zero coverage, because the only other caller is the network layer delivering a
+     * packet and a GameTest has no client to send one.
+     *
+     * <p>Package-private would have been tighter and was tried. It fails for a reason worth writing
+     * down: it would put the test in this package, and the coverage gate excludes {@code gametest/**}
+     * only - so a test class living here would be measured as production code. Keeping every GameTest
+     * in one package is worth one public method.
+     *
      * <p><b>Says what happened, every time.</b> A key that silently changes a setting you cannot see
      * is a key players press twice and then distrust. When a pack has the feature switched off it
      * says that instead of pretending to toggle, because the alternative is a player flipping a
      * setting that will not take effect and having no way to find out why.
      */
-    private static void onToggleAutoSwap(ToggleAutoSwapPayload payload, IPayloadContext context) {
+    public static void onToggleAutoSwap(ToggleAutoSwapPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!FTConfig.toolAutoSwap()) {
                 context.player().sendOverlayMessage(

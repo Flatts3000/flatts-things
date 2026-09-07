@@ -778,6 +778,43 @@ you can set on the thing you already have.** The wrong design was the plausible 
 **Look for the tag, too.** `#minecraft:chest_armor` already lists all seven chestplates, including
 26.1's new copper one, so a modded chestplate that joins it works with no compat patch.
 
+## Testing a payload handler
+
+The server side of the Z key had zero coverage for a while, because the only caller is the network
+layer delivering a packet and a headless test has no client to send one. It is now covered by a fake.
+
+**`IPayloadContext` has SEVEN abstract methods** in 26.1.2.76; everything else on it is a default.
+The issue that filed this guessed nineteen and deferred the work on that basis, which is the argument
+for counting before estimating - and then the PR making that argument asserted a line count nobody
+had counted either, and a review caught it. The lesson does not exempt the person stating it.
+
+`gametest/FakePayloadContext` returns the player, runs `enqueueWork` inline, and **throws for
+everything else** rather than returning null, so a handler reaching for something the fake does not
+model fails by name instead of somewhere downstream.
+
+**That seven has an expiry date.** `IPayloadContext` is `@ApiStatus.NonExtendable`, so NeoForge may
+add to it in a patch release; a bump that does will break `compileJava` on the fake. Loud, one place,
+one line to fix, and worth knowing before it happens.
+
+**`FTPayloads.onToggleAutoSwap` is public purely so a test can call it**, the same trade
+`FTConfig.switchFor` makes. Package-private would be tighter and was rejected for a specific reason:
+it would force the test into the `network` package, and the coverage gate excludes `gametest/**`
+only, so the test class would then be measured as production code.
+
+**A mock player's outbound packets ARE readable, and this section first said they were not.**
+`makeMockServerPlayerInLevel` builds a real `Connection` over an `EmbeddedChannel`, so
+`player.connection.getConnection().channel()` casts to `EmbeddedChannel` and `outboundMessages()`
+holds everything the server sent it. Clear it first: joining queues twenty-odd packets before
+anything a test cares about.
+
+That is how the action bar line the Z key answers with is asserted, translation key and all. It
+matters more than it looks: the message is the ONLY thing the pack-off branch changes, because
+everything else the key protects is enforced a layer down in `ToolSwapper.swapping`. Without reading
+the packet, a handler that kept its guard and reported the wrong state passed every assertion.
+
+**The claim that it could not be read survived one probe.** Check before documenting a limit; this
+file has now been wrong about what a test can see more than once.
+
 ## Events that only fire on one side
 
 **`PlayerInteractEvent.LeftClickBlock` is CLIENT ONLY in 26.1.** It is posted from
