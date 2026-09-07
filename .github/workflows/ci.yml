@@ -155,6 +155,11 @@ jobs:
       - name: Test the resource generator
         run: python tools/test_generate_plates.py
 
+      # Same job for the same reason: nothing else notices if PAIRS and the committed JSON drift,
+      # and the failure is an item that is in neither the tag nor the data map.
+      - name: Test the cauldron generator
+        run: python tools/test_generate_cauldron.py
+
       - name: Test the dash linter
         run: python tools/test_check_dashes.py
 

@@ -15,6 +15,15 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Dip a stack in a water cauldron to transform it** (#36). Concrete powder sets to concrete and
+  dirt becomes mud, a whole stack at a time, for one of the cauldron's three levels. Both already
+  work in vanilla - powder against a water SOURCE block, dirt under a water bottle - so this is the
+  bulk form of something you can already do rather than a new capability: the vanilla loop is carry a
+  bucket, place a source, place powder against it one block at a time, break the source. Washing dye
+  and filling bottles are untouched, and turning the feature off gives you an ordinary cauldron back.
+  Which items convert is the `#flattsthings:cauldron_transformable` tag and what they become is the
+  `flattsthings:cauldron_transform` data map, so a pack adds its own with no code.
+
 - **Three gravel crafts one flint** (#41). Vanilla drops flint one time in ten, so getting a few
   means mining gravel until the dice cooperate - repetition with no decision in it. Gravel that does
   not roll flint drops as gravel, so with any Fortune shovel you can re-place and re-break until

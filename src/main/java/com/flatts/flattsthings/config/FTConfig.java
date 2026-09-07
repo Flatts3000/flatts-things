@@ -68,6 +68,17 @@ public final class FTConfig {
      */
     public static final String GRAVEL_TO_FLINT = "gravel_to_flint";
 
+    /**
+     * Dipping a stack in a water cauldron to transform it: concrete powder sets, dirt becomes mud.
+     *
+     * <p>Off leaves the cauldron doing exactly what vanilla's does, which is the test a switch like
+     * this has to pass: a pack that turns it off gets its dye washing and bottle filling back
+     * untouched. That holds because nothing this mod puts in the tag has a vanilla cauldron use of
+     * its own - NOT because the registration is additive, which it is not. See
+     * {@code CauldronTransforms} for what a tag entry actually does to the item it names.
+     */
+    public static final String CAULDRON_TRANSFORMS = "cauldron_transforms";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -128,6 +139,13 @@ public final class FTConfig {
             "that does not roll flint drops as gravel - so with any Fortune shovel you can",
             "re-place and re-break until every gravel has become flint. This buys that loop out at",
             "three to one: worse than any Fortune level in yield, better than digging unenchanted.");
+
+        define(builder, CAULDRON_TRANSFORMS,
+            "Dip a stack in a water cauldron to transform it: concrete powder sets to concrete, and",
+            "dirt becomes mud. Both already work in vanilla against a water SOURCE block or a water",
+            "bottle; the cauldron is the bulk version, and costs one of the cauldron's three levels",
+            "per stack. Off gives you an ordinary vanilla cauldron back - washing dye and filling",
+            "bottles are untouched either way.");
 
         builder.pop();
         SPEC = builder.build();
@@ -215,6 +233,10 @@ public final class FTConfig {
 
     public static boolean enchantedGoldenApple() {
         return enabled(ENCHANTED_GOLDEN_APPLE);
+    }
+
+    public static boolean cauldronTransforms() {
+        return enabled(CAULDRON_TRANSFORMS);
     }
 
     public static boolean toolSlots() {
