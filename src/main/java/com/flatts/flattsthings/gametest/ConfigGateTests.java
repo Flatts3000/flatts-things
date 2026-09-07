@@ -1,6 +1,7 @@
 package com.flatts.flattsthings.gametest;
 
 import com.flatts.flattsthings.config.FTConfig;
+import com.flatts.flattsthings.config.FeatureCondition;
 import com.flatts.flattsthings.content.ToolSlots;
 import com.flatts.flattsthings.content.ToolSwapper;
 import com.flatts.flattsthings.registry.FTAttachments;
@@ -20,6 +21,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
@@ -257,6 +259,34 @@ final class ConfigGateTests {
                 } finally {
                     FTConfig.switchFor(FTConfig.TOOL_AUTO_SWAP).set(true);
                 }
+                helper.succeed();
+            });
+
+
+        // THE CONDITION'S OWN ANSWER, which nothing asserted until a review pointed it out. The
+        // codec was tested and the switch was tested; the two-line method joining them was not, so
+        // an inverted body - or one that just returned true - passed the entire suite while every
+        // recipe in the mod became permanently on. That is the whole off switch for a recipe, since
+        // nothing removes a loaded one.
+        //
+        // It has to be here rather than in the unit layer: FTConfig answers with the shipped default
+        // while no config is loaded, so a JUnit test cannot tell a working condition from a stubbed
+        // one. Inside a server the config is real.
+        FTGameTests.test("the_recipe_condition_follows_the_switch", 20,
+            FTGameTests.aloneIn("the_recipe_condition_follows_the_switch"),
+            helper -> {
+                FeatureCondition condition = new FeatureCondition(FTConfig.PLAYER_PRESSURE_PLATES);
+                helper.assertTrue(condition.test(ICondition.IContext.EMPTY),
+                    "premise: the condition should hold while the feature is on");
+                try {
+                    FTConfig.switchFor(FTConfig.PLAYER_PRESSURE_PLATES).set(false);
+                    helper.assertFalse(condition.test(ICondition.IContext.EMPTY),
+                        "with the feature off the condition must fail, or the recipe loads anyway");
+                } finally {
+                    FTConfig.switchFor(FTConfig.PLAYER_PRESSURE_PLATES).set(true);
+                }
+                helper.assertTrue(condition.test(ICondition.IContext.EMPTY),
+                    "and hold again once restored");
                 helper.succeed();
             });
 

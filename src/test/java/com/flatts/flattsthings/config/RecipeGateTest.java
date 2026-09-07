@@ -37,8 +37,13 @@ class RecipeGateTest {
     void everyShippedRecipeIsGatedOnAKnownFeature() throws IOException {
         assertTrue(Files.isDirectory(RECIPES), RECIPES.toAbsolutePath() + " is missing");
         List<String> problems = new ArrayList<>();
-        try (Stream<Path> files = Files.list(RECIPES)) {
-            for (Path file : files.filter(p -> p.toString().endsWith(".json")).toList()) {
+        // WALK, NOT LIST. Minecraft's recipe loader recurses and folds the subpath into the id
+        // (recipe/food/x.json -> flattsthings:food/x), and this mod already nests one level down in
+        // loot_table/blocks/. A non-recursive sweep would stay green for the first recipe put in a
+        // subdirectory - which is precisely the case this class says it exists to catch.
+        try (Stream<Path> files = Files.walk(RECIPES)) {
+            for (Path file : files.filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".json")).toList()) {
                 problems.addAll(check(file));
             }
         }
@@ -54,11 +59,31 @@ class RecipeGateTest {
             problems.add(file.getFileName() + ": no neoforge:conditions");
             return problems;
         }
+        // EVERY MALFORMED SHAPE NAMES THE FILE. A hand-edited conditions block with no type, no
+        // feature, or an object where an array belongs is exactly the slip this test polices, and a
+        // raw NPE or ClassCastException would hand the developer a stack trace with no filename -
+        // from the one test whose whole output is meant to be which file is wrong.
+        if (!recipe.get("neoforge:conditions").isJsonArray()) {
+            problems.add(file.getFileName() + ": neoforge:conditions is not an array");
+            return problems;
+        }
         JsonArray conditions = recipe.getAsJsonArray("neoforge:conditions");
         boolean gated = false;
         for (int index = 0; index < conditions.size(); index++) {
+            if (!conditions.get(index).isJsonObject()) {
+                problems.add(file.getFileName() + ": condition " + index + " is not an object");
+                continue;
+            }
             JsonObject condition = conditions.get(index).getAsJsonObject();
+            if (!condition.has("type")) {
+                problems.add(file.getFileName() + ": condition " + index + " has no type");
+                continue;
+            }
             if (!"flattsthings:feature_enabled".equals(condition.get("type").getAsString())) {
+                continue;
+            }
+            if (!condition.has("feature")) {
+                problems.add(file.getFileName() + ": a feature_enabled condition with no feature");
                 continue;
             }
             String feature = condition.get("feature").getAsString();
