@@ -160,6 +160,14 @@ jobs:
       - name: Test the cauldron generator
         run: python tools/test_generate_cauldron.py
 
+      # Pixel comparison, not bytes: PNGs compress differently across platforms, which is the
+      # same trap the plate generator's test documents at length.
+      - name: Test the woodcutter textures
+        run: python tools/test_generate_woodcutter.py
+
+      - name: Test the wood cutting generator
+        run: python tools/test_generate_woodcutting.py
+
       - name: Test the dash linter
         run: python tools/test_check_dashes.py
 

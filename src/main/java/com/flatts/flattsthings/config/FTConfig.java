@@ -88,6 +88,21 @@ public final class FTConfig {
      */
     public static final String ARMORED_ELYTRA = "armored_elytra";
 
+    /**
+     * The woodcutter: a saw bench that cuts planks into stairs and slabs.
+     *
+     * <p>Off removes the block from the creative tab, its crafting recipe, and all the cuts. Because
+     * those are recipes rather than behaviour, the switch has to act in data - there is no runtime
+     * call that unloads one, and a recipe left loaded would still show in the recipe book and in JEI.
+     *
+     * <p><b>This is the one feature where "placed blocks keep working" does not fully hold</b>, and
+     * the exception is recorded in CLAUDE.md beside the rule. A woodcutter already placed stays
+     * placed, breakable and unchanged - but its whole purpose is the cuts, and those are gone, so it
+     * opens a menu that offers nothing. Nothing is deleted and turning the switch back on restores
+     * it completely.
+     */
+    public static final String WOOD_CUTTING = "wood_cutting";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -168,6 +183,17 @@ public final class FTConfig {
             "mod that appears not to work, and a pack that wants the vanilla choice back has this",
             "line to turn off. That is the deal every switch here offers, and it is worth more than",
             "guessing which features a pack would have wanted.");
+
+        define(builder, WOOD_CUTTING,
+            "The woodcutter: a saw bench that cuts planks into stairs and slabs, at the same ratios",
+            "a stonecutter already cuts stone. One plank per stair, where a crafting bench charges",
+            "one and a half, and one plank per two slabs, which is what the bench charges anyway.",
+            "The game has a cutter for stone and none for wood.",
+            "",
+            "Off removes the block from the creative tab, its recipe, and every cut. A woodcutter",
+            "already placed stays where it is and can still be broken and picked up, but it has",
+            "nothing left to offer until this is turned back on - unlike the other switches here,",
+            "which leave placed blocks fully working.");
 
         builder.pop();
         SPEC = builder.build();
@@ -255,6 +281,10 @@ public final class FTConfig {
 
     public static boolean enchantedGoldenApple() {
         return enabled(ENCHANTED_GOLDEN_APPLE);
+    }
+
+    public static boolean woodCutting() {
+        return enabled(WOOD_CUTTING);
     }
 
     public static boolean armoredElytra() {

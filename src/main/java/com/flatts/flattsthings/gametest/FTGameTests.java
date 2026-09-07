@@ -93,6 +93,8 @@ public final class FTGameTests {
         BlessedAppleTests.register();
         ArmoredElytraTests.register();
         ToggleAutoSwapPayloadTests.register();
+        WoodCuttingTests.register();
+        WoodcutterMenuTests.register();
         CauldronTransformTests.register();
         ConfigGateTests.register();
         RegistryCompletenessTests.register();

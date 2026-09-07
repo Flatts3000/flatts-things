@@ -101,6 +101,7 @@ class RecipeGateTest {
         Map<String, String> expected = Map.of(
             "enchantment/blessing.json", FTConfig.ENCHANTED_GOLDEN_APPLE,
             "recipe/flint_from_gravel.json", FTConfig.GRAVEL_TO_FLINT,
+            "recipe/woodcutter.json", FTConfig.WOOD_CUTTING,
             "loot_modifiers/silk_touch_budding_amethyst.json",
             FTConfig.SILK_TOUCH_BUDDING_AMETHYST);
 
@@ -114,6 +115,18 @@ class RecipeGateTest {
                     // The fourteen plate recipes are generated from one template, so they cannot
                     // drift from each other the way a hand-copied file can. tools/ checks those.
                     if (key.endsWith("_player_pressure_plate.json")) {
+                        continue;
+                    }
+                    // The wood cutting recipes are generated the same way, from one template per
+                    // shape, so listing twenty-four names would be a copy of the generator rather
+                    // than a check on it. CHECKED AS A FAMILY rather than skipped, though: the
+                    // template's feature is exactly the thing a copy-paste would get wrong, and it
+                    // is one assertion instead of twenty-four lines.
+                    if (key.endsWith("_woodcutting.json")) {
+                        if (!features(file).contains(FTConfig.WOOD_CUTTING)) {
+                            problems.add(key + " should be gated on '" + FTConfig.WOOD_CUTTING
+                                + "' but names " + features(file));
+                        }
                         continue;
                     }
                     String want = expected.get(key);

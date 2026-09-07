@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "flattsthings:block/woodcutter" },
+    "facing=east": { "model": "flattsthings:block/woodcutter", "y": 90 },
+    "facing=south": { "model": "flattsthings:block/woodcutter", "y": 180 },
+    "facing=west": { "model": "flattsthings:block/woodcutter", "y": 270 }
+  }
+}

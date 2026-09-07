@@ -97,6 +97,15 @@ the chestplate, and it stops gliding one durability before it breaks, the way an
 
 This one takes away a choice the game makes you make. Turn it off if you want that choice back.
 
+### The woodcutter
+
+A saw bench for wood. Planks in, stairs or slabs out.
+
+One plank makes one stair, where a crafting bench wants six for four. The game has a cutter for
+stone and nothing for wood.
+
+Craft it from planks and an iron ingot.
+
 ### Every one of these has an off switch
 
 `config/flattsthings-common.toml`, one line each. Off means no recipe and nothing in the creative

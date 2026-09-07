@@ -175,15 +175,28 @@ final class ConfigGateTests {
             try {
                 FTConfig.switchFor(FTConfig.PLAYER_PRESSURE_PLATES).set(false);
                 tab.buildContents(parameters);
-                helper.assertTrue(tab.getDisplayItems().isEmpty(),
-                    "the tab should be empty with the plates switched off, found "
-                        + tab.getDisplayItems().size() + " item(s)");
+                // ASSERTS THE PLATES ARE GONE, NOT THAT THE TAB IS EMPTY. It said empty until the
+                // woodcutter became the second thing in this tab, at which point a test about the
+                // PLATE switch started failing because an unrelated feature existed. The claim worth
+                // making is that this switch removes these items.
+                long platesShown = tab.getDisplayItems().stream()
+                    .filter(shown -> FTItems.PLATES.values().stream()
+                        .anyMatch(plate -> shown.is(plate.get())))
+                    .count();
+                helper.assertTrue(platesShown == 0,
+                    "no plate should be in the tab with the plates switched off, found "
+                        + platesShown);
             } finally {
                 FTConfig.switchFor(FTConfig.PLAYER_PRESSURE_PLATES).set(true);
                 tab.buildContents(parameters);
             }
-            helper.assertTrue(tab.getDisplayItems().size() == FTItems.PLATES.size(),
-                "and hold every plate again once restored, or every later test is running on a lie");
+            long restored = tab.getDisplayItems().stream()
+                .filter(shown -> FTItems.PLATES.values().stream()
+                    .anyMatch(plate -> shown.is(plate.get())))
+                .count();
+            helper.assertTrue(restored == FTItems.PLATES.size(),
+                "and hold every plate again once restored, or every later test is running on a lie;"
+                    + " found " + restored);
             helper.succeed();
         });
 

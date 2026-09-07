@@ -2,6 +2,7 @@ package com.flatts.flattsthings.registry;
 
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.content.block.PlayerPressurePlateBlock;
+import com.flatts.flattsthings.content.woodcutter.WoodcutterBlock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,20 @@ public final class FTBlocks {
 
     public static final DeferredRegister.Blocks BLOCKS =
         DeferredRegister.createBlocks(FlattsThings.MOD_ID);
+
+    /**
+     * The woodcutter: a saw bench for planks.
+     *
+     * <p>Properties copied from the crafting table rather than the stonecutter, and rather than
+     * restated. It is a wooden bench, so it should burn, chop with an axe and sound like wood - all
+     * of which come along with the copy. {@code ofLegacyCopy} rather than {@code ofFullCopy} for the
+     * usual reason: the full copy also carries {@code drops} and {@code descriptionId}, which would
+     * leave this rolling the crafting table's loot table under the crafting table's name.
+     */
+    public static final DeferredBlock<Block> WOODCUTTER = BLOCKS.registerBlock(
+        "woodcutter",
+        WoodcutterBlock::new,
+        () -> BlockBehaviour.Properties.ofLegacyCopy(Blocks.CRAFTING_TABLE));
 
     /**
      * One player-only counterpart to one vanilla pressure plate.

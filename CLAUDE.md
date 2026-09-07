@@ -21,6 +21,7 @@ all of them now in an uploaded build. Last reviewed 2026-09-07.
 | Three gravel to one flint | `gravel_to_flint` | one recipe file, no Java |
 | Cauldron transforms | `cauldron_transforms` | the cauldron section below |
 | Armoured elytra | `armored_elytra` | the components section below |
+| The woodcutter | `wood_cutting` | the woodcutter section below |
 
 **Derive that list from `FTConfig.features()` rather than trusting the table**, which is this file's
 own standing advice about lists that read as complete. The previous banner here said "one family
@@ -207,6 +208,15 @@ here needs a per-world or synced value.
 **"Off" means no NEW ones, and never deletion.** A disabled feature loses its recipe and its creative
 tab entry and stops running. Placed blocks keep working and stored tools stay stored. A switch that
 ate somebody's build would not be reversible by flipping it back.
+
+**One exception, and it is the woodcutter** (2026-09-07). Every other feature here is behaviour
+attached to a block that does something on its own, so "keeps working" and "stops running" do not
+collide. A workstation IS its recipes: switch `wood_cutting` off and a placed woodcutter stays
+placed, stays breakable and gives its item back, but opens a menu with nothing in it. That is the
+honest reading of "the behaviour stops running" for a block whose behaviour is a recipe list, and it
+is written here rather than discovered - a pack author flipping the switch should know that the
+benches in their world go quiet rather than vanish. Nothing is deleted; turning it back on restores
+everything.
 
 **A recipe can only be turned off in data.** There is no runtime call that removes a loaded recipe, so
 hiding the item would leave it craftable, in the recipe book and in JEI. `tools/generate_plates.py`
@@ -814,6 +824,52 @@ the packet, a handler that kept its guard and reported the wrong state passed ev
 
 **The claim that it could not be read survived one probe.** Check before documenting a limit; this
 file has now been wrong about what a test can see more than once.
+
+## A workstation of our own, and what vanilla will not lend you
+
+The woodcutter is a block, a menu, a screen and a recipe type. It was **not** built that way first:
+version one wrote `minecraft:stonecutting` recipes so the vanilla stonecutter would cut wood, which
+works - `StonecutterMenu` has no ingredient restriction at all, it looks up `RecipeType.STONECUTTING`
+and nothing else - and was rejected (owner, 2026-09-07) because a stone saw is the wrong block to be
+cutting planks on. Written down because the cheap version is genuinely tempting and genuinely wrong.
+
+**`RecipeAccess` is not extensible, and that decides the menu's whole design.** Vanilla's cutter
+reads `level.recipeAccess().stonecutterRecipes()` - a prebuilt list the server syncs so the client
+can draw the buttons. That interface declares exactly one `stonecutterRecipes()`, and
+`RecipeManager`'s property sets are a fixed `Map.of`. A custom cutter cannot reuse any of it.
+
+**So the options are real slots.** `WoodcutterMenu` puts each possible result in a container and adds
+it as a display slot that refuses pickup and placement. Menus already sync slot contents, so the
+client learns the options for free, and there is no second recipe-syncing mechanism that can drift
+out of step with the server. The screen turns a click on one into `clickMenuButton`, which is the
+route vanilla's cutter uses anyway.
+
+**The recipe lookup is server-only.** A client has no full recipe manager in 26.1, so `refreshOptions`
+sits behind an `isClientSide` guard; calling it on the client would find nothing and blank the list.
+
+**`StonecutterBlock` cannot be subclassed**, the same codec-invariance trap `PressurePlateBlock` has:
+`codec()` returns `MapCodec<StonecutterBlock>`. There the answer was to extend the abstract parent;
+here there is no abstract cutter, so `WoodcutterBlock` extends `Block` and copies the shape.
+
+**`RecipeBookCategories` is a list of static fields, not a registry**, so a new cutting category is
+not registrable and the recipes borrow the stonecutter's. It decides only which heading the recipe
+book files them under.
+
+**The base is ours, the blade is vanilla's** (owner, 2026-09-07). `tools/generate_woodcutter.py`
+draws the top, side and bottom - boards, a bevel, and a slot down the middle where the saw rises -
+and the model keeps `minecraft:block/stonecutter_saw` for the blade itself. A blade is steel whatever
+bench it is bolted to, and it is the part a player already reads as "this cuts things"; redrawing it
+would invent a difference that is not there.
+
+**Drawn from numbers rather than recoloured from vanilla**, which matters for more than tidiness:
+recolouring Mojang's textures would ship a derivative of their art. Same reason `generate_plates.py`
+exists. Seeded with `zlib.crc32` and never `hash()`, and `tools/test_generate_woodcutter.py` compares
+by PIXEL across a separate process - bytes are the wrong question for a PNG, as the plate generator's
+own test explains at length.
+
+**The screen still ships no art** and still cannot be tested: it blits vanilla's stonecutter
+background and button sprites, and `client/**` is excluded from the coverage gate because nothing
+automated reaches it. It wants a look through devbridge.
 
 ## Events that only fire on one side
 

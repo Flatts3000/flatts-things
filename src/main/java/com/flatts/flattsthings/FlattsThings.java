@@ -7,6 +7,8 @@ import com.flatts.flattsthings.registry.FTBlocks;
 import com.flatts.flattsthings.registry.FTConditions;
 import com.flatts.flattsthings.registry.FTCreativeTabs;
 import com.flatts.flattsthings.registry.FTItems;
+import com.flatts.flattsthings.registry.FTMenus;
+import com.flatts.flattsthings.registry.FTRecipes;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -49,6 +51,8 @@ public final class FlattsThings {
 
         // Blocks before Items (block-items reference their block); creative tab after items.
         FTBlocks.register(modEventBus);
+        FTRecipes.register(modEventBus);
+        FTMenus.register(modEventBus);
         FTItems.register(modEventBus);
         FTCreativeTabs.register(modEventBus);
 
