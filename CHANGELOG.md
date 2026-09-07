@@ -1,17 +1,18 @@
 # Changelog
 
-**Status:** current, reviewed 2026-09-07. **v0.1.0 was uploaded to CurseForge on 2026-09-05 and is
-Under Review.** A new project is not visible to anyone and its files do not synchronize across
-CurseForge until a moderator approves it, so this is uploaded rather than released.
+**Status:** current, reviewed 2026-09-07. **v0.2.0 was uploaded to CurseForge on 2026-09-07 as an
+ALPHA.** v0.1.0 went up on 2026-09-05 and the project is still Under Review: a new project is not
+visible to anyone and its files do not synchronize across CurseForge until a moderator approves it,
+so both of these are uploaded rather than released.
 
-**Everything under Unreleased has therefore never been downloadable by anybody.** Five of the mod's
-six features live there. When the next version ships, that section is the release notes rather than
-a delta on something players have.
+**Alpha is the honest label for the 0.x line**, and the publish task hardcodes it. Six features, one
+of them (the tool slots strip) with a screen no automated test can look at, and none of it has been
+through a long play session by anybody but the author.
 
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## v0.2.0 - 2026-09-07 - "Sleight of Hand"
 
 ### Added
 
