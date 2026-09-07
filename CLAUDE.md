@@ -800,9 +800,15 @@ position changes so that it means "the start of a dig".
 was to say the work had NOT been done. It had to be reopened by hand.
 
 This repo's commit style makes it likelier than usual: bodies here lead with capitalised summary
-phrases, and several natural ones end in a closing keyword - `FIXED`, `CLOSED`, `RESOLVED`. Put the
-number somewhere that cannot be misread (`see #49`, `filed as #49`) or write the issue number without
-the `#`.
+phrases, and several natural ones end in a closing keyword - `FIXED`, `CLOSED`, `RESOLVED`.
+
+**QUOTING THE PHRASE IS ENOUGH TO FIRE IT, and that is not a hypothetical.** The commit that first
+added this section quoted the offending line to explain it, and closed the issue a second time.
+Quotation marks are not an escape, and neither is surrounding prose saying the opposite.
+
+So: when writing about an issue anywhere near a closing keyword, **do not put the hash there at
+all.** Write "issue 49". Reserve `#49` for places where a keyword is nowhere near it, or where
+closing is actually what you want.
 
 ## The commit trailers, and why the first four lack them
 
