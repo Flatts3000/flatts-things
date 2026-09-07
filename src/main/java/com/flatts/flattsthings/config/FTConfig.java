@@ -73,7 +73,9 @@ public final class FTConfig {
      *
      * <p>Off leaves the cauldron doing exactly what vanilla's does, which is the test a switch like
      * this has to pass: a pack that turns it off gets its dye washing and bottle filling back
-     * untouched, because this only ever ADDED entries to the water dispatcher.
+     * untouched. That holds because nothing this mod puts in the tag has a vanilla cauldron use of
+     * its own - NOT because the registration is additive, which it is not. See
+     * {@code CauldronTransforms} for what a tag entry actually does to the item it names.
      */
     public static final String CAULDRON_TRANSFORMS = "cauldron_transforms";
 

@@ -10,9 +10,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
@@ -47,6 +49,20 @@ import net.neoforged.neoforge.event.RegisterCauldronInteractionEvent;
  * contents come from data packs. So a pack adds its item to
  * {@code #flattsthings:cauldron_transformable} and an entry to the {@code cauldron_transform} data
  * map, and it works with nothing registered here.
+ *
+ * <p><b>A tag entry SHADOWS a vanilla item interaction rather than sitting beside it, and the first
+ * version of this file claimed the opposite.</b> {@code Dispatcher.get} walks its tag map first and
+ * returns on the first hit, consulting the per-item map only if no tag matched - so any item in this
+ * tag routes here, and there is no way to hand it back. Declining (no data map entry, or the feature
+ * switched off) returns {@code TRY_WITH_EMPTY_HAND}; it does NOT fall through to whatever vanilla
+ * had registered for that item.
+ *
+ * <p>Nothing shipped is affected: concrete powder and dirt have no vanilla cauldron interaction, so
+ * with this feature off the cauldron behaves exactly as vanilla's does. <b>But a pack must not add an
+ * item that already has one</b> - putting a shulker box or a dyed leather item in this tag would stop
+ * it being washed, and turning the feature off would not give that back. Vanilla registers
+ * {@code #minecraft:cauldron_can_remove_dye} into the same map, and two tags matching one item
+ * resolve out of a {@code HashMap} in no defined order.
  */
 @EventBusSubscriber(modid = FlattsThings.MOD_ID)
 public final class CauldronTransforms {
@@ -96,19 +112,33 @@ public final class CauldronTransforms {
         }
 
         if (!level.isClientSide()) {
+            Item used = itemInHand.getItem();
             if (player.hasInfiniteMaterials()) {
-                // CREATIVE FOLLOWS VANILLA'S RULE HERE, NOT THIS FEATURE'S. Doing the survival thing
-                // would DELETE the stack: Inventory.add reports success for a creative player and
-                // stores nothing, so the powder would vanish and no concrete would arrive. Vanilla's
-                // own ItemUtils.createFilledResult, which its bottle filling uses, does not consume
-                // a creative player's input and only hands over a result they do not already have.
+                // CREATIVE FOLLOWS VANILLA'S RULE HERE, NOT THIS FEATURE'S.
+                // ItemUtils.createFilledResult, which vanilla's own bottle filling uses, does not
+                // consume a creative player's input and hands over a result only if they have none.
+                // Doing the survival thing instead would eat a stack that is supposed to be free,
+                // for no gain: a creative player has the result in the tab already.
+                //
+                // AN EARLIER VERSION OF THIS COMMENT SAID Inventory.add "reports success for a
+                // creative player and stores nothing", and that is not what 26.1 does. It zeroes the
+                // stack and returns true only when the loop made no progress at all - with room it
+                // stores normally through addResource. The branch is right; the reason given for it
+                // was wrong, which is worse than no reason because the next person builds on it.
                 ItemStack single = transform.resultFor(1);
                 if (!player.getInventory().contains(single)) {
                     player.getInventory().add(single);
                 }
             } else {
-                give(player, transform.resultFor(itemInHand.getCount()));
+                // THE HAND IS EMPTIED FIRST, AND THE ORDER IS LOAD-BEARING. Inventory.add looks for a
+                // slot with room and then a free slot; while the input is still sitting in the
+                // selected slot, that slot is neither. A player with a full inventory converting the
+                // stack they are holding would have had the whole result thrown on the floor, into
+                // the one slot it fits in perfectly. Pinned by
+                // a_full_inventory_still_gets_the_result.
+                ItemStack result = transform.resultFor(itemInHand.getCount());
                 itemInHand.setCount(0);
+                give(player, result);
             }
             for (int paid = 0; paid < transform.waterCost(); paid++) {
                 // Re-read: each call rewrites the state, and the last one replaces the block with an
@@ -118,8 +148,20 @@ public final class CauldronTransforms {
                     LayeredCauldronBlock.lowerFillLevel(current, level, pos);
                 }
             }
+            // VANILLA'S STATISTICS, because "Interact with Cauldron" counting every cauldron use
+            // except this one is the sort of parity gap nobody reports and everybody notices.
+            player.awardStat(Stats.USE_CAULDRON);
+            player.awardStat(Stats.ITEM_USED.get(used));
+
             level.playSound(null, pos, SoundEvents.GENERIC_SPLASH, SoundSource.BLOCKS, 1.0F, 1.0F);
-            level.gameEvent(null, GameEvent.FLUID_PLACE, pos);
+            // FLUID_PICKUP, NOT FLUID_PLACE, and vanilla is the authority on which. Its glass bottle
+            // fires PICKUP after lowering the level and its water potion fires PLACE after raising
+            // it. This takes water out, so it is a pickup - and a calibrated sculk sensor tuned from
+            // watching a cauldron get filled should not hear this as the opposite thing.
+            // Only when water actually moved: a pack-defined water_cost of zero moves none.
+            if (transform.waterCost() > 0) {
+                level.gameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
             ((ServerLevel) level).sendParticles(ParticleTypes.SPLASH,
                 pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, 8, 0.2, 0.0, 0.2, 1.0);
         }

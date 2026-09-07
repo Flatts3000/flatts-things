@@ -145,6 +145,31 @@ final class CauldronTransformTests {
             helper.succeed();
         });
 
+        // A FULL INVENTORY STILL GETS THE RESULT, and this is the test whose absence let a
+        // regression through. When give() ran before the hand was emptied, the input still occupied
+        // the selected slot, so Inventory.add saw no slot with room and no free slot and threw the
+        // whole result on the floor - into the one slot it fits in perfectly. The common case for
+        // this feature, since anyone bulk-converting concrete is carrying stacks.
+        //
+        // CLAUDE.md already named a_tool_with_nowhere_to_go_is_dropped_not_eaten as the test that
+        // caught exactly this shape of bug once before. This is its counterpart here.
+        FTGameTests.test("a_full_inventory_still_gets_the_result", 20, helper -> {
+            fillCauldron(helper);
+            ServerPlayer player = holding(helper, new ItemStack(Items.WHITE_CONCRETE_POWDER, 64));
+            for (int index = 0; index < player.getInventory().getContainerSize(); index++) {
+                if (index != player.getInventory().getSelectedSlot()) {
+                    player.getInventory().setItem(index, new ItemStack(Items.DIRT, 64));
+                }
+            }
+
+            rightClick(helper, player);
+
+            helper.assertTrue(countOf(player, Items.WHITE_CONCRETE) == 64,
+                "the result belongs in the slot the input just left, not on the floor; found "
+                    + countOf(player, Items.WHITE_CONCRETE) + " in the inventory");
+            helper.succeed();
+        });
+
         // A CREATIVE PLAYER MUST NOT LOSE THE STACK. Inventory.add reports success for a creative
         // player and stores nothing (hasInfiniteMaterials), so the survival path would have emptied
         // their hand and handed back nothing at all - a silent deletion in the one mode where items

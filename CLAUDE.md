@@ -694,12 +694,34 @@ once at startup, long before data packs load, so a per-item registration would f
 `Dispatcher.get` evaluates `stack.is(tag)` at click time and tag contents ARE data pack material. So
 one tag registration at startup gives packs a seam they can widen later.
 
+**A tag entry SHADOWS a vanilla item interaction rather than sitting beside it**, and the first
+version of this section said the opposite. `Dispatcher.get` walks its tag map first and returns on
+the first hit, consulting the per-item map only if nothing matched - so any item in the tag routes to
+this mod, and declining returns `TRY_WITH_EMPTY_HAND` rather than falling through to whatever vanilla
+registered. Nothing shipped is affected, because concrete powder and dirt have no vanilla cauldron
+interaction, so the config switch really does give a vanilla cauldron back. **But "it only ADDS
+entries" is not true of the mechanism**, and a pack that tags a shulker box or a dyed leather item
+stops it being washable, with the feature's own off switch unable to restore it. Vanilla registers
+`#minecraft:cauldron_can_remove_dye` into the same `HashMap`, and two tags matching one item resolve
+in no defined order.
+
 **Which dispatcher you register to is a gameplay decision.** `registerToAll` is one word away and
 would let an EMPTY cauldron transform things out of nothing.
 `an_empty_cauldron_transforms_nothing` pins the water-only choice - and pins it for that reason
 rather than the one first written on it, which claimed it covered the water-level check. It does not:
 an empty cauldron is a different block on a different dispatcher, so the interaction is never
 consulted and that check is never reached. Found by driving it red.
+
+**Vanilla's statistics and game events are part of parity here.** Every vanilla water-cauldron
+interaction awards `Stats.USE_CAULDRON` and `Stats.ITEM_USED`, and fires `FLUID_PICKUP` when it takes
+water OUT against `FLUID_PLACE` when it puts water in. Getting the event backwards is invisible until
+somebody points a calibrated sculk sensor at a cauldron.
+
+**`Inventory.add` does NOT silently swallow a creative player's stack in general**, and a comment here
+said it did. It zeroes the stack and returns true only when the add loop made no progress at all;
+with room it stores normally. The creative branch in `CauldronTransforms` is still right, on vanilla
+parity grounds (`ItemUtils.createFilledResult` leaves a creative player's input alone), but a right
+branch with a wrong reason attached is worse than no reason, because the next person reasons from it.
 
 **`ItemStack.CODEC` cannot be used in a data map.** Data maps are read before item components are
 populated, so it fails with `Item minecraft:white_concrete does not have components yet`, the whole

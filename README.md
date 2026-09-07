@@ -107,7 +107,8 @@ bottle on dirt, one block at a time. The cauldron is the bulk version of both: a
 right-click, for one of the cauldron's three levels.
 
 Washing dye off leather and filling bottles work exactly as they always did, and turning this off
-gives you a completely ordinary cauldron.
+gives you a completely ordinary cauldron. (A pack widening the tag should avoid items that already
+have a cauldron use of their own, which this would take over.)
 
 Packs extend it without code: which items react is the `#flattsthings:cauldron_transformable` item
 tag, and what each becomes is the `flattsthings:cauldron_transform` data map.
