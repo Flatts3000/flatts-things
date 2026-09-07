@@ -1,7 +1,10 @@
 package com.flatts.flattsthings.gametest;
 
 import com.flatts.flattsthings.content.enchant.BlessedApples;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,7 +19,13 @@ import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.enchantment.EnchantmentInstance;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.block.Blocks;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.AnvilUpdateEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEnchantItemEvent;
 
 /**
  * Enchanting a golden apple at a real table, through the real menu.
@@ -74,6 +83,15 @@ final class BlessedAppleTests {
         menu.getSlot(1).set(new ItemStack(Items.LAPIS_LAZULI, lapis));
         menu.slotsChanged(menu.getSlot(0).container);
         return menu;
+    }
+
+
+    /** A stored-enchantments component holding one level of Blessing. */
+    private static ItemEnchantments blessing(GameTestHelper helper) {
+        ItemEnchantments.Mutable held = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+        held.set(helper.getLevel().registryAccess()
+            .lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(BlessedApples.BLESSING), 1);
+        return held.toImmutable();
     }
 
     static void register() {
@@ -168,6 +186,74 @@ final class BlessedAppleTests {
             helper.assertFalse(helper.getLevel().getServer().getRecipeManager()
                     .getRecipeFor(RecipeType.CRAFTING, input, helper.getLevel()).isPresent(),
                 "eight gold blocks should craft nothing now that enchanting is the route");
+            helper.succeed();
+        });
+
+
+        // THE BOOK ROUTE, WHICH SHIPPED WITH NO TEST AT ALL. A book bypasses supported_items, so the
+        // table can roll Blessing onto one; that book was a paid-for dead end until an anvil handler
+        // made it work. Coverage said 0 of 32 lines on that handler - a path a player spends thirty
+        // levels to reach.
+        FTGameTests.test("a_blessing_book_turns_an_apple_on_an_anvil", 20, helper -> {
+            ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
+            book.set(DataComponents.STORED_ENCHANTMENTS, blessing(helper));
+
+            AnvilUpdateEvent event = new AnvilUpdateEvent(
+                new ItemStack(Items.GOLDEN_APPLE), book, null, ItemStack.EMPTY, 0, 0,
+                helper.makeMockServerPlayerInLevel());
+            NeoForge.EVENT_BUS.post(event);
+
+            helper.assertTrue(event.getOutput().is(Items.ENCHANTED_GOLDEN_APPLE),
+                "a Blessing book on a golden apple should give an enchanted golden apple, gave "
+                    + event.getOutput().getItem());
+            helper.assertTrue(event.getMaterialCost() == 1, "it should consume the book");
+            helper.succeed();
+        });
+
+        // AND IT MUST NOT FIRE ON ANYTHING ELSE. Without this, a handler that ignored its inputs
+        // would pass the test above while turning every anvil recipe into golden apples.
+        FTGameTests.test("the_anvil_handler_leaves_other_combinations_alone", 20, helper -> {
+            ItemStack blessingBook = new ItemStack(Items.ENCHANTED_BOOK);
+            blessingBook.set(DataComponents.STORED_ENCHANTMENTS, blessing(helper));
+            ItemStack otherBook = new ItemStack(Items.ENCHANTED_BOOK);
+
+            record Case(String what, ItemStack left, ItemStack right) {}
+            List<Case> cases = List.of(
+                new Case("a plain book on an apple", new ItemStack(Items.GOLDEN_APPLE), otherBook),
+                new Case("a Blessing book on a pickaxe",
+                    new ItemStack(Items.DIAMOND_PICKAXE), blessingBook),
+                new Case("a Blessing book on an already-enchanted apple",
+                    new ItemStack(Items.ENCHANTED_GOLDEN_APPLE), blessingBook));
+
+            List<String> wrong = new ArrayList<>();
+            for (Case each : cases) {
+                AnvilUpdateEvent event = new AnvilUpdateEvent(each.left(), each.right(), null,
+                    ItemStack.EMPTY, 0, 0, helper.makeMockServerPlayerInLevel());
+                NeoForge.EVENT_BUS.post(event);
+                if (event.getOutput().is(Items.ENCHANTED_GOLDEN_APPLE)) {
+                    wrong.add(each.what());
+                }
+            }
+            helper.assertTrue(wrong.isEmpty(),
+                "the anvil handler fired on combinations it should ignore: " + wrong);
+            helper.succeed();
+        });
+
+        // THE GUARD THAT KEEPS THIS MOD OUT OF OTHER MODS' BUSINESS. The swap is conditioned on the
+        // enchantment rather than the item, so somebody else making golden apples enchantable does
+        // not get their result quietly replaced.
+        FTGameTests.test("another_mods_enchantment_on_an_apple_is_left_alone", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ItemStack apple = new ItemStack(Items.GOLDEN_APPLE);
+            player.getInventory().setItem(0, apple);
+
+            NeoForge.EVENT_BUS.post(new PlayerEnchantItemEvent(player, apple, List.of(
+                new EnchantmentInstance(helper.getLevel().registryAccess()
+                    .lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.UNBREAKING), 1))));
+
+            helper.assertTrue(player.getInventory().getItem(0).is(Items.GOLDEN_APPLE),
+                "an apple enchanted with something else must stay a golden apple, became "
+                    + player.getInventory().getItem(0).getItem());
             helper.succeed();
         });
 

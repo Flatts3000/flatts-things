@@ -7,12 +7,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 /**
  * The auto-swap, and above all the promise that nothing is lost doing it.
@@ -168,12 +171,17 @@ final class ToolSwapTests {
                 player.level().getMaxY(), 0);
 
             // ASSERTS THE OUTCOME, NOT THE MECHANISM, which is what makes this test survive the
-            // hook moving. The timing is the proof: a netherite pickaxe clears stone in about five
-            // ticks, and cobblestone against stone needs roughly a hundred and fifty. If the block
-            // is gone inside forty, the swap happened and the dig ran to completion afterwards.
-            // Both halves matter, and neither is observable from the swap code itself.
-            // Asserted a tick later, because BreakSpeed fires from the game mode's tick loop rather
-            // than synchronously inside handleBlockBreakAction.
+            // hook moving: vanilla's own break path was driven, and a pickaxe ended up in the hand.
+            //
+            // THE COMMENT HERE USED TO CLAIM MORE THAN THE TEST DOES, and the correction is the
+            // point. It said the block being gone inside forty ticks proved the dig also ran to
+            // completion. The block is never gone - probed, and it is still stone at tick twenty.
+            // A mock player has no connection, so ServerPlayerGameMode.tick never runs, so destroy
+            // progress never accrues; START_DESTROY_BLOCK posts BreakSpeed and nothing more. So
+            // "the swap does not reset destroy progress every tick" is NOT pinned here and is not
+            // pinned anywhere - it is the reason the hook is shaped this way and it remains a
+            // client-side observation. Left as a known gap rather than a sentence that reads as
+            // covered.
             helper.runAfterDelay(20, () -> {
                 helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
                     "vanilla's own break path should have triggered a swap");
@@ -383,6 +391,248 @@ final class ToolSwapTests {
             helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_SHOVEL),
                 "and should still hold the shovel, found " + player.getMainHandItem().getItem());
             ToolSwapper.swapOut(player);
+            helper.succeed();
+        });
+
+
+        // A BREAKSPEED WITH NO POSITION MUST NOT STRAND A LIVE SWAP. Vanilla's deprecated one-argument
+        // getDestroySpeed passes a null position, and anything calling it while a player is mid-dig
+        // would otherwise let the dig record go stale until the backstop fired and took the tool out
+        // of their hand. The handler treats it as "still swinging" and refreshes the record instead;
+        // coverage showed that whole branch had never run.
+        FTGameTests.test("a_break_speed_with_no_position_keeps_the_swap", 60, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            BlockPos target = helper.absolutePos(TARGET);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            player.getDestroySpeed(Blocks.STONE.defaultBlockState(), target);
+            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "premise: the swap should be live");
+
+            // The positionless overload, which is what a mod or a vanilla path without a block
+            // reference calls.
+            player.getDestroySpeed(Blocks.STONE.defaultBlockState());
+
+            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "a positionless BreakSpeed must not end the swap");
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                "and the pickaxe should still be in hand, found "
+                    + player.getMainHandItem().getItem());
+            ToolSwapper.swapOut(player);
+            helper.succeed();
+        });
+
+        // A LIVE SWAP WITH NO DIG ON RECORD IS STRANDED BY DEFINITION, and unwinding it is the only
+        // thing standing between a crash mid-swing and a player's item disappearing. swapIn leaves no
+        // record, so this reaches the branch the ordinary paths never do.
+        FTGameTests.test("a_swap_with_no_dig_on_record_is_unwound", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            ToolSwapper.swapIn(player, Blocks.STONE.defaultBlockState());
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                "premise: the swap is live and left no dig on record");
+
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player));
+
+            helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "a swap with no dig recorded must be unwound rather than left holding the tool");
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "and the player's own item comes back, found " + player.getMainHandItem().getItem());
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_PICKAXE) == 1,
+                "with exactly one pickaxe, found " + countEverywhere(player, Items.NETHERITE_PICKAXE));
+            helper.succeed();
+        });
+
+        // swapOut is called from BreakBlockEvent, whose player can be null - an explosion or another
+        // mod breaking a block. A null there would be a crash in a path nothing else exercises.
+        FTGameTests.test("unwinding_a_null_player_is_harmless", 20, helper -> {
+            ToolSwapper.swapOut(null);
+            helper.succeed();
+        });
+
+
+        // BREAKING THE BLOCK PUTS THE TOOL AWAY, through BreakBlockEvent - the handler that ends
+        // an ordinary successful dig, and the one path in this class that nothing reached. It is
+        // driven through ServerPlayerGameMode.destroyBlock, which is where 26.1 posts the event
+        // from (CommonHooks.fireBlockBreak, read in the patched sources rather than assumed).
+        //
+        // Worth saying why the sibling test above does not already cover it: a mock player has no
+        // connection, so ServerPlayerGameMode.tick never runs, so destroy progress never accrues and
+        // START_DESTROY_BLOCK alone never finishes a block off. Nothing in this suite breaks a block
+        // by digging it; this one asks the game to break it.
+        FTGameTests.test("breaking_the_block_puts_the_tool_away", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            BlockPos target = helper.absolutePos(TARGET);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            player.getDestroySpeed(stone, target);
+            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "premise: the dig should have swapped a pickaxe in");
+
+            player.gameMode.destroyBlock(target);
+
+            helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "breaking the block should have ended the swap");
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "and given the player their own item back, found "
+                    + player.getMainHandItem().getItem());
+            helper.assertTrue(ToolSlots.get(player, 0).is(Items.NETHERITE_PICKAXE),
+                "with the pickaxe back in its slot");
+            helper.succeed();
+        });
+
+        // THE STRANDED BACKSTOP IS THE ONLY UNWIND FOR LETTING GO OF THE MOUSE, because the events
+        // that would say so are client-only in 26.1. It had no test at all: coverage showed the
+        // branch that fires it never went true, which means the five-tick timeout - the thing
+        // standing between a player who tapped a block and a pickaxe they never chose - was
+        // load-bearing and unproven.
+        //
+        // Time is real here rather than simulated. tickCount advances for a mock player, because the
+        // LEVEL ticks the entity, even though PlayerTickEvent.Post does not fire for one - that
+        // comes from ServerGamePacketListenerImpl#tick and this player has no connection. So the
+        // elapsed count is genuine and only the delivery is by hand, which is the same split
+        // ConfigGateTests sets out at length for the mid-swing test.
+        FTGameTests.test("letting_go_puts_the_tool_away_after_the_backstop", 60, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            BlockPos target = helper.absolutePos(TARGET);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            player.getDestroySpeed(stone, target);
+            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "premise: the dig should have swapped a pickaxe in");
+
+            // One tick in, well inside the timeout, the swap must still be there - otherwise this
+            // test would pass just as green against a backstop that fires immediately, which is the
+            // bug that makes mining unusable rather than the one it guards against.
+            helper.runAfterDelay(1, () -> {
+                NeoForge.EVENT_BUS.post(new PlayerTickEvent.Post(player));
+                helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                    "a swap must survive the tick right after a dig");
+
+                helper.runAfterDelay(15, () -> {
+                    NeoForge.EVENT_BUS.post(new PlayerTickEvent.Post(player));
+                    helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                        "a dig that stopped should have been unwound by the backstop");
+                    helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                        "and the player's own item put back, found "
+                            + player.getMainHandItem().getItem());
+                    helper.assertTrue(countEverywhere(player, Items.NETHERITE_PICKAXE) == 1,
+                        "with exactly one pickaxe, found "
+                            + countEverywhere(player, Items.NETHERITE_PICKAXE));
+                    helper.succeed();
+                });
+            });
+        });
+
+        // A TOOL WITH NOWHERE TO GO IS DROPPED, NEVER DELETED. This is the last branch of swapOut
+        // and the only one whose failure is silent: the slot it came from is taken, every inventory
+        // slot is full, and the alternative to dropping is the item ceasing to exist while the
+        // player watches their own stack come back. Nothing exercised it.
+        FTGameTests.test("a_tool_with_nowhere_to_go_is_dropped_not_eaten", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+
+            // TWO THINGS HAD TO BE ARRANGED BEFORE THIS TEST COULD SEE ANYTHING, and both looked
+            // at first like the mod losing the item.
+            //
+            // SURVIVAL, EXPLICITLY. Inventory.add returns TRUE for a creative player whatever the
+            // state of the inventory - hasInfiniteMaterials sets the stack to zero and reports
+            // success - so swapOut took the "it went in the inventory" branch, the pickaxe ceased to
+            // exist, and the drop under test never ran. A full inventory is not a thing a creative
+            // player can have. That is the third time the creative mock player has hidden a check in
+            // this repo.
+            //
+            // AND THE PLAYER HAS TO BE MOVED INTO THE PLOT. makeMockServerPlayerInLevel leaves the
+            // player at the world ORIGIN, not in the test structure, so a dropped item lands in a
+            // chunk nothing has loaded and getEntitiesOfClass does not index it. The item existed
+            // the whole time - drop returned it - and the query answered empty, which reads exactly
+            // like the deletion this test is here to rule out.
+            player.setGameMode(GameType.SURVIVAL);
+            helper.setBlock(FLOOR, Blocks.STONE);
+            BlockPos floor = helper.absolutePos(FLOOR);
+            player.snapTo(floor.getX() + 0.5, floor.getY() + 1.0, floor.getZ() + 0.5, 0F, 0F);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 1));
+
+            ToolSwapper.swapIn(player, stone);
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                "premise: the pickaxe should be in hand");
+
+            // Both ways home are closed while the tool is out: something else takes the slot it came
+            // from, and every inventory slot is occupied.
+            ToolSlots.set(player, 0, new ItemStack(Items.IRON_AXE));
+            for (int index = 0; index < player.getInventory().getContainerSize(); index++) {
+                if (index != player.getInventory().getSelectedSlot()) {
+                    player.getInventory().setItem(index, new ItemStack(Items.DIRT, 64));
+                }
+            }
+
+            ToolSwapper.swapOut(player);
+
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "the player's own item still comes back first, found "
+                    + player.getMainHandItem().getItem());
+            helper.assertTrue(countEverywhere(player, Items.NETHERITE_PICKAXE) == 0,
+                "the pickaxe cannot have gone back into a full inventory");
+            helper.assertFalse(
+                player.level().getEntitiesOfClass(ItemEntity.class,
+                    player.getBoundingBox().inflate(8.0),
+                    entity -> entity.getItem().is(Items.NETHERITE_PICKAXE)).isEmpty(),
+                "so it must be on the ground beside the player, and it is nowhere");
+            helper.succeed();
+        });
+
+        // A TOOL THAT BROKE WHILE IT WAS OUT COSTS THE PLAYER NOTHING ELSE. Vanilla empties the hand
+        // when the last point of durability goes, so a swap can be unwound with nothing to put back;
+        // what must still happen is that the player's own item returns and the slot is left in a
+        // state they can use.
+        //
+        // THIS DOES NOT PIN THE `inHand.isEmpty()` GUARD IN swapOut, and the difference was measured
+        // rather than assumed: deleting that guard leaves this test green. An empty stack fails
+        // ToolSlots.isValid, Inventory.add refuses it, and drop returns null for it, so every path
+        // below the guard is already a no-op on nothing. The guard is an early exit, not a
+        // behaviour, and no test can tell it from its own absence. Coverage counts the line either
+        // way, which is exactly the sort of green worth distrusting.
+        FTGameTests.test("a_tool_that_broke_while_out_costs_nothing_else", 40, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            ToolSlots.set(player, 0, new ItemStack(Items.WOODEN_PICKAXE));
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.COBBLESTONE, 3));
+
+            ToolSwapper.swapIn(player, stone);
+            helper.assertTrue(player.getMainHandItem().is(Items.WOODEN_PICKAXE),
+                "premise: the pickaxe should be in hand");
+
+            // What vanilla leaves behind when the last point of durability goes.
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(), ItemStack.EMPTY);
+
+            ToolSwapper.swapOut(player);
+
+            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
+                "the player's own item comes back regardless, found "
+                    + player.getMainHandItem().getItem());
+            helper.assertTrue(ToolSlots.get(player, 0).isEmpty(),
+                "and the slot the broken tool came from stays empty, found "
+                    + ToolSlots.get(player, 0));
             helper.succeed();
         });
 

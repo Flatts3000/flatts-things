@@ -74,6 +74,12 @@ merged line rate at the 80 percent floor.
 
 So run it as one invocation: `./gradlew test runGameTestServer -PgameTestCoverage coverageReport`.
 
+**`InventoryMenuMixin` reads as 0 percent and is not uncovered.** A mixin's code executes inside
+`InventoryMenu`, so JaCoCo attributes it to a vanilla class the report does not measure and the
+mixin's own class shows nothing. What proves it ran is `ToolSlotTests`, which pins the menu's slot
+count at 51: without the mixin it is 46 and that test fails. Do not chase this number, and do not
+read it as a gap.
+
 **The report and the gate measure different sets on purpose.** `client/**` never loads on the server
 the tests run on, so no GameTest and no JUnit test can reach a line of it. The report counts it
 anyway, because hiding it would make the headline look better while removing the evidence that those
@@ -262,9 +268,19 @@ through its "a live swap with no dig on record is stranded" branch and **the tes
 config gate deleted**. It now swaps in through `player.getDestroySpeed`, the call vanilla itself makes
 while a block is being broken.
 
-**The unit layer cannot answer any of this.** No config is loaded there, so `FTConfig` returns the
-shipped default whatever a switch says. `FTConfigTest` covers the feature ids, the argument checking
-and the recipe condition's parsing, and deliberately asserts nothing about a feature being on.
+**The unit layer CAN answer some of it, and this file said otherwise for a while.** It claimed no
+config is loaded in JUnit. moddev's JUnit integration boots a mod context and `SPEC.isLoaded()` is
+true there - measured with a probe after coverage showed the unloaded branch of `enabled` was never
+executed by either suite. The test built on that belief asserted nothing at all for every feature on
+every run.
+
+**`ConfigGateTests` is still the right home for the gates**, for a different reason than the one
+first written down: flipping a switch in JUnit would prove `FTConfig` reads its own map, not that the
+code consulting it stops doing anything. That second claim is the one worth making and it needs a
+running server.
+
+**The unloaded fallback in `enabled` is therefore unreachable from either suite** and is left
+uncovered on purpose. It exists for a context neither suite creates.
 
 ## Testing conventions that are not optional here
 
@@ -440,6 +456,26 @@ The `else` branch registers a task that explains what to set.
   player into a GameTest.** It comes up in CREATIVE, not survival - set the game mode explicitly if
   anything under test reads it. `makeMockPlayer()` is never added to the level, so an entity query
   will not find it.
+
+  **Three more things about that player, each of which has now cost a debugging session.**
+
+  **It stands at the world ORIGIN, not in your plot.** `helper.absolutePos` gives you the structure;
+  the player is at 0, 0 until you `snapTo` it. Anything it drops lands in a chunk nothing loaded, and
+  `getEntitiesOfClass` does not index entities there - so the item is real, the query answers empty,
+  and it reads exactly like the mod deleting it. `a_tool_with_nowhere_to_go_is_dropped_not_eaten`
+  spent a session on that.
+
+  **It is never ticked as a PLAYER, but its `tickCount` still advances.** `PlayerTickEvent.Post`
+  comes from `ServerGamePacketListenerImpl#tick` and this player has no connection, so the event
+  never fires and `ServerPlayerGameMode.tick` never runs either - which is why no test in this repo
+  finishes a block by digging it, and why `handleBlockBreakAction` posts `BreakSpeed` and then
+  nothing. The LEVEL still ticks the entity, though, so elapsed-time logic can be tested for real:
+  post the tick event by hand after a genuine delay rather than faking the clock.
+
+  **Creative hides item accounting completely.** `Inventory.add` returns TRUE for a creative player
+  whatever the state of the inventory - `hasInfiniteMaterials` sets the stack to zero and reports
+  success - so a full inventory is not a state a creative player can be in, and any "where did this
+  item go" branch is unreachable. Same shape as the game-mode trap above, one layer down.
 - **A block's tags** come from `BuiltInRegistries.BLOCK.wrapAsHolder(block).tags()`; there is no
   `getTags()` on `BlockBehaviour`.
 
