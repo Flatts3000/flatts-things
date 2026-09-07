@@ -176,10 +176,16 @@ final class ToolSwapTests {
             // THE COMMENT HERE USED TO CLAIM MORE THAN THE TEST DOES, and the correction is the
             // point. It said the block being gone inside forty ticks proved the dig also ran to
             // completion. The block is never gone - probed, and it is still stone at tick twenty.
-            // A mock player has no connection, so ServerPlayerGameMode.tick never runs, so destroy
-            // progress never accrues; START_DESTROY_BLOCK posts BreakSpeed and nothing more. So
-            // "the swap does not reset destroy progress every tick" is NOT pinned here and is not
-            // pinned anywhere - it is the reason the hook is shaped this way and it remains a
+            //
+            // The mechanism was then explained wrongly TWICE, which is worth more than the fix. The
+            // real reason is not that the game mode never ticks: ServerPlayer.tick calls
+            // gameMode.tick every tick, and the level ticks this player. It is that
+            // ServerPlayerGameMode.tick only ever calls incrementDestroyProgress while
+            // isDestroyingBlock; the call that actually removes the block needs hasDelayedDestroy,
+            // which STOP_DESTROY_BLOCK sets, or an insta-mine. START alone digs forever.
+            //
+            // So "the swap does not reset destroy progress every tick" is NOT pinned here and is not
+            // pinned anywhere. It is the reason the hook is shaped this way and it remains a
             // client-side observation. Left as a known gap rather than a sentence that reads as
             // covered.
             helper.runAfterDelay(20, () -> {
@@ -414,17 +420,30 @@ final class ToolSwapTests {
             helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
                 "premise: the swap should be live");
 
-            // The positionless overload, which is what a mod or a vanilla path without a block
-            // reference calls.
-            player.getDestroySpeed(Blocks.STONE.defaultBlockState());
+            // THE ELAPSED TIME IS THE TEST, and the first version of this did not have it. It called
+            // the positionless overload once and asserted the swap was still live, which nothing on
+            // that path could have changed - deleting the computeIfPresent under test left it green.
+            // Covering the line without pinning the behaviour is the exact green this suite keeps
+            // catching elsewhere.
+            //
+            // So: let more than the backstop's window pass with ONLY positionless calls, which is a
+            // player still swinging as far as the mod can tell, and then tick. If the record is not
+            // being refreshed, the backstop unwinds and this fails.
+            helper.runAfterDelay(10, () -> {
+                // The positionless overload, which is what a mod or a vanilla path without a block
+                // reference calls. Deprecated in 26.1 and still reachable.
+                player.getDestroySpeed(Blocks.STONE.defaultBlockState());
+                NeoForge.EVENT_BUS.post(new PlayerTickEvent.Post(player));
 
-            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
-                "a positionless BreakSpeed must not end the swap");
-            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
-                "and the pickaxe should still be in hand, found "
-                    + player.getMainHandItem().getItem());
-            ToolSwapper.swapOut(player);
-            helper.succeed();
+                helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                    "a positionless BreakSpeed must keep the dig record alive; the backstop took"
+                        + " the tool out of a player who was still swinging");
+                helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                    "and the pickaxe should still be in hand, found "
+                        + player.getMainHandItem().getItem());
+                ToolSwapper.swapOut(player);
+                helper.succeed();
+            });
         });
 
         // A LIVE SWAP WITH NO DIG ON RECORD IS STRANDED BY DEFINITION, and unwinding it is the only
@@ -452,24 +471,29 @@ final class ToolSwapTests {
             helper.succeed();
         });
 
-        // swapOut is called from BreakBlockEvent, whose player can be null - an explosion or another
-        // mod breaking a block. A null there would be a crash in a path nothing else exercises.
+        // A NULL PLAYER IS HARMLESS, and the reason first written here was wrong. It said
+        // BreakBlockEvent can carry a null player from an explosion; it cannot. That event is built
+        // only in CommonHooks.fireBlockBreak, which dereferences the player before constructing it,
+        // and this mod no longer listens to it anyway.
+        //
+        // The guard stays because swapOut is public and is called from the config gate, the key
+        // handler and the tick handler, and because a null-safe unwind costs one comparison. Kept
+        // with an honest reason rather than deleted with a wrong one.
         FTGameTests.test("unwinding_a_null_player_is_harmless", 20, helper -> {
             ToolSwapper.swapOut(null);
             helper.succeed();
         });
 
 
-        // BREAKING THE BLOCK PUTS THE TOOL AWAY, through BreakBlockEvent - the handler that ends
-        // an ordinary successful dig, and the one path in this class that nothing reached. It is
-        // driven through ServerPlayerGameMode.destroyBlock, which is where 26.1 posts the event
-        // from (CommonHooks.fireBlockBreak, read in the patched sources rather than assumed).
+        // BREAKING A BLOCK KEEPS THE TOOL, so the next block gets it too. This test pinned the
+        // opposite until a review found that the BreakBlockEvent handler it was pinning ate the
+        // drops (see the test below, and the long note in ToolSwapper). With that handler gone, the
+        // rule is one rule: the tool goes back five ticks after you STOP digging.
         //
-        // Worth saying why the sibling test above does not already cover it: a mock player has no
-        // connection, so ServerPlayerGameMode.tick never runs, so destroy progress never accrues and
-        // START_DESTROY_BLOCK alone never finishes a block off. Nothing in this suite breaks a block
-        // by digging it; this one asks the game to break it.
-        FTGameTests.test("breaking_the_block_puts_the_tool_away", 40, helper -> {
+        // The half worth pinning is the first half. If the swap ended the instant a block broke,
+        // chain-mining would put the player's own item back in their hand between every pair of
+        // blocks, and the next dig would start with the wrong thing held.
+        FTGameTests.test("breaking_a_block_keeps_the_tool_for_the_next_one", 60, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
             helper.setBlock(FLOOR, Blocks.STONE);
             helper.setBlock(TARGET, Blocks.STONE);
@@ -485,14 +509,82 @@ final class ToolSwapTests {
 
             player.gameMode.destroyBlock(target);
 
-            helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
-                "breaking the block should have ended the swap");
-            helper.assertTrue(player.getMainHandItem().is(Items.COBBLESTONE),
-                "and given the player their own item back, found "
-                    + player.getMainHandItem().getItem());
-            helper.assertTrue(ToolSlots.get(player, 0).is(Items.NETHERITE_PICKAXE),
-                "with the pickaxe back in its slot");
-            helper.succeed();
+            helper.assertTrue(player.getData(FTAttachments.TOOL_SWAP).active(),
+                "the swap must survive the block breaking, or chain-mining hands the player their"
+                    + " own item back between every block");
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                "with the pickaxe still in hand, found " + player.getMainHandItem().getItem());
+
+            // And it still ends, by the one rule that ends it.
+            helper.runAfterDelay(10, () -> {
+                NeoForge.EVENT_BUS.post(new PlayerTickEvent.Post(player));
+                helper.assertFalse(player.getData(FTAttachments.TOOL_SWAP).active(),
+                    "and the backstop should still put it away once digging stops");
+                helper.assertTrue(countEverywhere(player, Items.NETHERITE_PICKAXE) == 1,
+                    "with exactly one pickaxe, found "
+                        + countEverywhere(player, Items.NETHERITE_PICKAXE));
+                helper.succeed();
+            });
+        });
+
+        // THE SWAP MUST NOT EAT THE BLOCK'S DROPS, which is what it did until a review of the test
+        // above asked what else BreakBlockEvent is next to.
+        //
+        // NeoForge posts that event from CommonHooks.fireBlockBreak, which ServerPlayerGameMode
+        // .destroyBlock calls on its FIRST line - before it reads getMainHandItem, before
+        // canHarvestBlock decides whether the block drops anything, and before mineBlock applies
+        // durability. Unwinding the swap there put the player's own item back in their hand and then
+        // let vanilla ask that item whether it could harvest stone. It could not. So the mod swapped
+        // a pickaxe in, mined the stone with it, and dropped nothing, while the pickaxe took no wear.
+        //
+        // Every earlier test in this suite missed it because none of them finished a block: this is
+        // the first one that breaks anything, so it is the first that could see the drops.
+        FTGameTests.test("breaking_a_block_still_drops_it_and_wears_the_tool", 60, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(TARGET, Blocks.STONE);
+            BlockPos target = helper.absolutePos(TARGET);
+            player.setGameMode(GameType.SURVIVAL);
+            ToolSlots.set(player, 0, new ItemStack(Items.NETHERITE_PICKAXE));
+            // DIRT rather than cobblestone, so the drop under test cannot be confused with the item
+            // the player was already carrying.
+            player.getInventory().setItem(player.getInventory().getSelectedSlot(),
+                new ItemStack(Items.DIRT, 1));
+
+            player.getDestroySpeed(stone, target);
+            helper.assertTrue(player.getMainHandItem().is(Items.NETHERITE_PICKAXE),
+                "premise: the dig should have swapped a pickaxe in");
+
+            player.gameMode.destroyBlock(target);
+
+            helper.assertFalse(
+                player.level().getEntitiesOfClass(ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(target).inflate(4.0),
+                    entity -> entity.getItem().is(Items.COBBLESTONE)).isEmpty(),
+                "stone mined with a swapped-in pickaxe must drop cobblestone; the swap unwound"
+                    + " before vanilla checked what was in the player's hand");
+
+            // The other half of the same bug: the tool that did the work has to be the one that wears
+            // out. A pickaxe that mines for free is a pickaxe that never breaks.
+            //
+            // Read after the backstop, because with the BreakBlockEvent handler gone that is what
+            // ends the swap. Ten ticks and a hand-posted tick event, for the reason spelled out on
+            // the backstop test below: the level ticks this player but nothing calls doTick on it.
+            helper.runAfterDelay(10, () -> {
+                NeoForge.EVENT_BUS.post(new PlayerTickEvent.Post(player));
+                ItemStack pickaxe = ToolSlots.get(player, 0).is(Items.NETHERITE_PICKAXE)
+                    ? ToolSlots.get(player, 0)
+                    : player.getMainHandItem();
+                helper.assertTrue(pickaxe.is(Items.NETHERITE_PICKAXE),
+                    "the pickaxe should have come back, found " + pickaxe.getItem());
+                helper.assertTrue(pickaxe.getDamageValue() > 0,
+                    "and it should have taken durability for the block it broke, damage was "
+                        + pickaxe.getDamageValue());
+                helper.assertTrue(player.getMainHandItem().is(Items.DIRT),
+                    "with the player's own item back in hand, found "
+                        + player.getMainHandItem().getItem());
+                helper.succeed();
+            });
         });
 
         // THE STRANDED BACKSTOP IS THE ONLY UNWIND FOR LETTING GO OF THE MOUSE, because the events

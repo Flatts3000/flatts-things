@@ -465,12 +465,26 @@ The `else` branch registers a task that explains what to set.
   and it reads exactly like the mod deleting it. `a_tool_with_nowhere_to_go_is_dropped_not_eaten`
   spent a session on that.
 
-  **It is never ticked as a PLAYER, but its `tickCount` still advances.** `PlayerTickEvent.Post`
-  comes from `ServerGamePacketListenerImpl#tick` and this player has no connection, so the event
-  never fires and `ServerPlayerGameMode.tick` never runs either - which is why no test in this repo
-  finishes a block by digging it, and why `handleBlockBreakAction` posts `BreakSpeed` and then
-  nothing. The LEVEL still ticks the entity, though, so elapsed-time logic can be tested for real:
-  post the tick event by hand after a genuine delay rather than faking the clock.
+  **`PlayerTickEvent` does not fire for it, and the reason is narrower than it looks.** The event is
+  posted from the head and tail of `Player#tick()`, and `ServerPlayer` does NOT call `super.tick()`
+  from its own `tick()` - only from `doTick()`, which is called from
+  `ServerGamePacketListenerImpl#tick`. The mock player *has* a `Connection` and an `EmbeddedChannel`
+  and is placed through `placeNewPlayer`; what it lacks is a listener the server ticks. So post the
+  event by hand when testing a tick handler, and say that is what you are doing.
+
+  **What DOES run is `ServerPlayerGameMode.tick()`,** from `ServerPlayer.tick()` via the level's
+  ordinary entity ticking, and `tickCount` advances with it. Two consequences, both of which were
+  written down backwards here first:
+
+  - Elapsed-time logic can be tested for real. Let ticks pass, then post the tick event; do not fake
+    the clock.
+  - After a `START_DESTROY_BLOCK`, the game mode posts `BreakSpeed` **every tick**, so a dig record
+    is refreshed by the server rather than going stale.
+
+  **A dig still never finishes**, which is a third thing again: `ServerPlayerGameMode.tick` only
+  calls `incrementDestroyProgress` while `isDestroyingBlock`. Removing the block needs
+  `hasDelayedDestroy`, which `STOP_DESTROY_BLOCK` sets, or an insta-mine. To break a block in a test,
+  call `gameMode.destroyBlock(pos)`.
 
   **Creative hides item accounting completely.** `Inventory.add` returns TRUE for a creative player
   whatever the state of the inventory - `hasInfiniteMaterials` sets the stack to zero and reports

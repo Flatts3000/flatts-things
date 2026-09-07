@@ -57,14 +57,6 @@ class FTConfigTest {
     }
 
     /**
-     * The documented fallback, asserted rather than assumed.
-     *
-     * <p>Reading an unloaded config answers with the shipped default. This test exists because that
-     * is the behaviour every other test in this file depends on without saying so, and because the
-     * two alternatives - throwing, or answering false - are both silently catastrophic in a context
-     * that has no config file.
-     */
-    /**
      * A fresh config agrees with the declared defaults, for every feature.
      *
      * <p><b>This replaces a test that could not fail.</b> The old one read
@@ -79,6 +71,11 @@ class FTConfigTest {
      * <p><b>The unloaded fallback in {@code enabled} is unreachable from either suite</b> - the
      * config is loaded in both - so it is deliberately not covered rather than covered by a test
      * that pretends. It exists for contexts neither suite creates, and coverage says so plainly.
+     *
+     * <p><b>"Fresh" is doing work in that name that it cannot do.</b> The config this reads is a
+     * real file under {@code build/}, written on first run and kept afterwards, so a developer who
+     * edits it to try something out fails this test and is told their defaults are wrong. The
+     * message says so rather than the test pretending the file is not there.
      */
     @Test
     void aFreshConfigMatchesTheDeclaredDefaults() {
@@ -88,8 +85,11 @@ class FTConfigTest {
         for (String feature : FTConfig.features()) {
             assertEquals(FTConfig.defaultOf(feature), FTConfig.enabled(feature),
                 feature + " reads as " + FTConfig.enabled(feature)
-                    + " from a fresh config, but is declared to default to "
-                    + FTConfig.defaultOf(feature));
+                    + " but is declared to default to " + FTConfig.defaultOf(feature)
+                    + ". NOTE: this reads the real file at"
+                    + " build/minecraft-junit/config/flattsthings-common.toml, which SURVIVES"
+                    + " between runs - if you flipped a switch there by hand, that is this failure"
+                    + " and not a code defect. ./gradlew clean, or set it back.");
         }
     }
 

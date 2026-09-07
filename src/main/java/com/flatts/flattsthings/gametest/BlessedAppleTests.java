@@ -207,6 +207,8 @@ final class BlessedAppleTests {
                 "a Blessing book on a golden apple should give an enchanted golden apple, gave "
                     + event.getOutput().getItem());
             helper.assertTrue(event.getMaterialCost() == 1, "it should consume the book");
+            helper.assertTrue(event.getOutput().getCount() == 1,
+                "and give exactly one apple, gave " + event.getOutput().getCount());
             helper.succeed();
         });
 
@@ -223,7 +225,13 @@ final class BlessedAppleTests {
                 new Case("a Blessing book on a pickaxe",
                     new ItemStack(Items.DIAMOND_PICKAXE), blessingBook),
                 new Case("a Blessing book on an already-enchanted apple",
-                    new ItemStack(Items.ENCHANTED_GOLDEN_APPLE), blessingBook));
+                    new ItemStack(Items.ENCHANTED_GOLDEN_APPLE), blessingBook),
+                // THE ONE THAT WAS A DUPLICATION BUG. The handler used to take the output count from
+                // the left stack while charging for one book, so this case returned sixty-four
+                // enchanted golden apples. Nothing enumerated it, because every other case here is
+                // about the wrong ITEMS and this one is about the wrong COUNT.
+                new Case("a Blessing book on a whole stack of apples",
+                    new ItemStack(Items.GOLDEN_APPLE, 64), blessingBook));
 
             List<String> wrong = new ArrayList<>();
             for (Case each : cases) {
