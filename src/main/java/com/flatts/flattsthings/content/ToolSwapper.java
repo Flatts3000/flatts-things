@@ -13,7 +13,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 /**
@@ -142,10 +141,26 @@ public final class ToolSwapper {
         return elapsed < 0 || elapsed > DIG_GAP_TICKS;
     }
 
-    @SubscribeEvent
-    public static void onBreakBlock(BreakBlockEvent event) {
-        swapOut(event.getPlayer());
-    }
+    // THERE IS DELIBERATELY NO BreakBlockEvent HANDLER, AND THERE USED TO BE ONE. It called swapOut
+    // the moment a block broke, which read as the obvious way to end a swap promptly and silently
+    // destroyed the drops.
+    //
+    // NeoForge posts that event from CommonHooks.fireBlockBreak, and ServerPlayerGameMode
+    // .destroyBlock calls it on its FIRST line - before it reads getMainHandItem, before
+    // canHarvestBlock decides whether the block drops anything at all, and before mineBlock applies
+    // durability. So unwinding there handed the player's own item back and then let vanilla ask THAT
+    // item whether it could harvest stone. Mining stone with a swapped-in netherite pickaxe dropped
+    // nothing and wore the pickaxe not at all. Ores, the case where it costs most, behaved the same.
+    //
+    // Deferring the unwind by a tick was the first fix and was rejected: a player chain-mining starts
+    // the next dig in the same tick, so a queued swapOut lands after the NEXT tool has been swapped
+    // in and takes it away mid-swing. That is a worse bug wearing the first one's clothes.
+    //
+    // So the stranded backstop is now the only unwind, which is what it already was for letting go of
+    // the mouse. One rule instead of two: the tool goes back five ticks after you stop digging,
+    // whether you stopped because the block broke or because you let go. Chain-mining refreshes the
+    // dig record through onBreakSpeed and never reaches it.
+    // Pinned by breaking_a_block_still_drops_it_and_wears_the_tool.
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {

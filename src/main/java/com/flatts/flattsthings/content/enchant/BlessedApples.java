@@ -142,11 +142,24 @@ public final class BlessedApples {
         if (!event.getLeft().is(Items.GOLDEN_APPLE) || !event.getRight().is(Items.ENCHANTED_BOOK)) {
             return;
         }
+        // ONE APPLE AT A TIME, AND THIS IS NOT A NICETY. The first version set the output count from
+        // the left stack while charging one book and one level, so a stack of sixty-four golden
+        // apples came back as sixty-four ENCHANTED golden apples for a single book - an item the
+        // recipe this feature replaced priced at eight gold blocks each, and which the enchanting
+        // table hands out one at a time.
+        //
+        // Offering nothing is the right refusal rather than outputting one, because AnvilMenu.onTake
+        // empties input slot 0 wholesale whatever the output count is: a single-apple output would
+        // have destroyed the other sixty-three. With no output the slots are never consumed at all,
+        // which is also how vanilla declines a combination it does not understand.
+        if (event.getLeft().getCount() != 1) {
+            return;
+        }
         ItemEnchantments carried = event.getRight().get(DataComponents.STORED_ENCHANTMENTS);
         if (carried == null || carried.keySet().stream().noneMatch(held -> held.is(BLESSING))) {
             return;
         }
-        event.setOutput(new ItemStack(Items.ENCHANTED_GOLDEN_APPLE, event.getLeft().getCount()));
+        event.setOutput(new ItemStack(Items.ENCHANTED_GOLDEN_APPLE));
         // Vanilla's own book-application cost. The levels went on the book at the table; this is the
         // anvil's fee for putting it on, not a second price for the apple.
         event.setXpCost(ANVIL_COST);
