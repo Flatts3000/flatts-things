@@ -100,7 +100,7 @@ public final class ToolSlot extends Slot {
      */
     @Override
     public boolean isActive() {
-        return FTConfig.toolSlots();
+        return FTConfig.toolSlots() && ToolSlotDisplay.shown();
     }
 
     /**

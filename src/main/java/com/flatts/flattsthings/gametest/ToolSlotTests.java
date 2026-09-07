@@ -1,5 +1,6 @@
 package com.flatts.flattsthings.gametest;
 
+import com.flatts.flattsthings.content.ToolSlotDisplay;
 import com.flatts.flattsthings.content.ToolSlots;
 import com.flatts.flattsthings.content.ToolSlotsContainer;
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -58,6 +60,39 @@ final class ToolSlotTests {
     }
 
     static void register() {
+        // A SLOT ON A SCREEN NOBODY LAID OUT MUST BE INERT. This is the half that was missing when
+        // the tool slots turned up on the creative inventory's hotbar row: ToolSlotStrip already
+        // refused to PAINT there, but the slots stayed active, and the creative screen positions
+        // every InventoryMenu slot from its index - ours are 46 to 50, so they landed at y=112 with
+        // their silhouettes drawn over hotbar slots one to five, live to clicks, with no panel.
+        //
+        // Slot.x and Slot.y are final in 26.1, so moving them is not available; vanilla parks its own
+        // crafting slots off-screen by constructing wrappers at -2000, which only the screen building
+        // the list can do. isActive is what is left, and the game consults it for drawing the slot,
+        // for its empty-slot icon, and in findSlot - so false is invisible and unclickable wherever
+        // somebody else has put it.
+        //
+        // The client sets the flag from the render hook, which no headless test can run. What IS
+        // testable is the rule underneath: a slot nobody has laid out does not answer for itself.
+        FTGameTests.test("a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out", 20, helper -> {
+            ServerPlayer player = helper.makeMockServerPlayerInLevel();
+            AbstractContainerMenu menu = player.inventoryMenu;
+            Slot tool = menu.getSlot(VANILLA_INVENTORY_SLOTS);
+
+            try {
+                ToolSlotDisplay.setShown(true);
+                helper.assertTrue(tool.isActive(),
+                    "premise: on a screen that laid them out, the slots are live");
+
+                ToolSlotDisplay.setShown(false);
+                helper.assertFalse(tool.isActive(),
+                    "on any other screen the slot must not draw and must not take a click");
+            } finally {
+                ToolSlotDisplay.setShown(true);
+            }
+            helper.succeed();
+        });
+
         FTGameTests.test("tool_slots_start_empty", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
             helper.assertTrue(ToolSlots.of(player).isEmpty(),
