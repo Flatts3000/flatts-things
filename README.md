@@ -113,6 +113,18 @@ have a cauldron use of their own, which this would take over.)
 Packs extend it without code: which items react is the `#flattsthings:cauldron_transformable` item
 tag, and what each becomes is the `flattsthings:cauldron_transform` data map.
 
+### Armoured elytra
+
+Put a chestplate and an elytra on an anvil. The chestplate comes back gliding, keeping its armour,
+its enchantments, its trim and its name. One chest slot does both jobs.
+
+The elytra is consumed, and flight wears the **chestplate** from then on - so the thing being used up
+is the armour keeping you alive, and it stops gliding one durability before it breaks, exactly as a
+vanilla elytra does.
+
+**This one changes the game rather than filling a gap in it.** The chestplate-or-elytra choice is a
+cost Mojang has kept deliberately for years, and this removes it. Off puts that choice back.
+
 ## Every feature has a switch
 
 `config/flattsthings-common.toml` carries one boolean per feature, all on by default.

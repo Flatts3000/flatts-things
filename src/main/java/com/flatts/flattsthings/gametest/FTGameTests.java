@@ -91,6 +91,7 @@ public final class FTGameTests {
         BuddingAmethystTests.register();
         GravelToFlintTests.register();
         BlessedAppleTests.register();
+        ArmoredElytraTests.register();
         CauldronTransformTests.register();
         ConfigGateTests.register();
         RegistryCompletenessTests.register();
