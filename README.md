@@ -141,8 +141,10 @@ wood, and that is not a principle - it is where Mojang stopped.
 It is a block of its own rather than a new trick for the stonecutter, which was tried first and
 rejected: a spinning stone blade is the wrong thing to be cutting planks on.
 
-**It currently borrows the stonecutter's shape and vanilla's textures** - plank sides, a log body, a
-saw blade - so it ships no art of its own. Recognisable, and not yet distinctive.
+**Its body is drawn for it; the blade is the game's own.** The bench is generated wood - boards, a
+bevelled edge, and a slot cut down the middle where the blade rises - and the saw itself is vanilla's,
+because a blade is steel whatever bench it is bolted to and that is the part you already recognise as
+"this block cuts things".
 
 ## Every feature has a switch
 

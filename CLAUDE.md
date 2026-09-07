@@ -846,10 +846,21 @@ here there is no abstract cutter, so `WoodcutterBlock` extends `Block` and copie
 not registrable and the recipes borrow the stonecutter's. It decides only which heading the recipe
 book files them under.
 
-**Known gap: it ships no art.** The block model parents `minecraft:block/stonecutter` and swaps in
-vanilla plank, log and saw textures; the screen blits vanilla's stonecutter background and button
-sprites. Nothing is stranded if a resource pack changes those, and nothing here is distinctive
-either. A texture set of its own is the obvious follow-up.
+**The base is ours, the blade is vanilla's** (owner, 2026-09-07). `tools/generate_woodcutter.py`
+draws the top, side and bottom - boards, a bevel, and a slot down the middle where the saw rises -
+and the model keeps `minecraft:block/stonecutter_saw` for the blade itself. A blade is steel whatever
+bench it is bolted to, and it is the part a player already reads as "this cuts things"; redrawing it
+would invent a difference that is not there.
+
+**Drawn from numbers rather than recoloured from vanilla**, which matters for more than tidiness:
+recolouring Mojang's textures would ship a derivative of their art. Same reason `generate_plates.py`
+exists. Seeded with `zlib.crc32` and never `hash()`, and `tools/test_generate_woodcutter.py` compares
+by PIXEL across a separate process - bytes are the wrong question for a PNG, as the plate generator's
+own test explains at length.
+
+**The screen still ships no art** and still cannot be tested: it blits vanilla's stonecutter
+background and button sprites, and `client/**` is excluded from the coverage gate because nothing
+automated reaches it. It wants a look through devbridge.
 
 ## Events that only fire on one side
 
