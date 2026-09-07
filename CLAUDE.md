@@ -783,11 +783,18 @@ you can set on the thing you already have.** The wrong design was the plausible 
 The server side of the Z key had zero coverage for a while, because the only caller is the network
 layer delivering a packet and a headless test has no client to send one. It is now covered by a fake.
 
-**`IPayloadContext` has SEVEN abstract methods**; everything else on it is a default. The issue that
-filed this guessed nineteen and deferred the work on that basis, which is a good argument for
-counting before estimating. `gametest/FakePayloadContext` is thirty lines: it returns the player,
-runs `enqueueWork` inline, and **throws for everything else** rather than returning null, so a
-handler reaching for something the fake does not model fails by name instead of somewhere downstream.
+**`IPayloadContext` has SEVEN abstract methods** in 26.1.2.76; everything else on it is a default.
+The issue that filed this guessed nineteen and deferred the work on that basis, which is the argument
+for counting before estimating - and then the PR making that argument asserted a line count nobody
+had counted either, and a review caught it. The lesson does not exempt the person stating it.
+
+`gametest/FakePayloadContext` returns the player, runs `enqueueWork` inline, and **throws for
+everything else** rather than returning null, so a handler reaching for something the fake does not
+model fails by name instead of somewhere downstream.
+
+**That seven has an expiry date.** `IPayloadContext` is `@ApiStatus.NonExtendable`, so NeoForge may
+add to it in a patch release; a bump that does will break `compileJava` on the fake. Loud, one place,
+one line to fix, and worth knowing before it happens.
 
 **`FTPayloads.onToggleAutoSwap` is public purely so a test can call it**, the same trade
 `FTConfig.switchFor` makes. Package-private would be tighter and was rejected for a specific reason:

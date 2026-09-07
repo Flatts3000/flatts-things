@@ -15,8 +15,14 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * <p>The server side of the auto-swap keybind had no coverage at all, because the only thing that
  * calls it is the network layer delivering a packet and a headless test has no client to send one.
  * The issue that filed this guessed the fake would need nineteen members; the interface has
- * <b>seven</b> abstract methods and the rest are defaults, which is why this is thirty lines rather
- * than a refactor.
+ * <b>seven</b> abstract methods, counted, and the rest are defaults - which is why this was an
+ * afternoon rather than the refactor the estimate implied.
+ *
+ * <p><b>Seven is pinned to NeoForge 26.1.2.76.</b> {@code IPayloadContext} is annotated
+ * {@code @ApiStatus.NonExtendable}, which is NeoForge reserving the right to add to it in a patch
+ * release. If a version bump adds an abstract method this class stops compiling - loudly, in one
+ * place, on a class no runtime path touches. That is an acceptable trade for the coverage, but it is
+ * a fact with an expiry date rather than a permanent one.
  *
  * <p><b>Everything not needed throws rather than returning null.</b> A fake that quietly answers
  * nothing turns "the handler reached for something it should not have" into a passing test with a
