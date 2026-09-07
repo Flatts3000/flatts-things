@@ -11,6 +11,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **The enchanted golden apple can be crafted again** (#33), eight gold blocks around an apple,
+  exactly as it was before 1.9. Not a rebalance and not an invention: vanilla had this recipe and
+  deleted it, leaving an item that exists and can only be found. Off by config leaves it loot-only.
+
 - **A key to turn the auto-swap off and on, bound to Z by default, under its own Flatts's Things
   category in Key Binds.** The config switch is the pack
   author's and applies to everybody; this is yours, and the moment you want it is while standing in
