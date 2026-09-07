@@ -12,9 +12,10 @@ All notable changes to this project are documented here. Format follows
 ### Added
 
 - **Three gravel crafts one flint** (#41). Vanilla drops flint one time in ten, so getting a few
-  means mining gravel until the dice cooperate - repetition with no decision in it. Three sits
-  between that and Fortune III, which already gets flint from every gravel, so it gives an
-  unenchanted player a floor without beating the enchantment built for the job.
+  means mining gravel until the dice cooperate - repetition with no decision in it. Gravel that does
+  not roll flint drops as gravel, so with any Fortune shovel you can re-place and re-break until
+  every one has become flint; this buys that loop out at three to one. Worse than any Fortune level
+  in yield, better than digging unenchanted.
 
 - **Silk touch picks up budding amethyst** (#38), which vanilla never drops with any tool. Note this
   is a deliberate vanilla restriction rather than an oversight: a budding block you cannot take is

@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -28,6 +30,9 @@ import org.junit.jupiter.api.Test;
  * invisible to it. The failure mode this catches is the next recipe, not this one.
  */
 class RecipeGateTest {
+
+    /** Built rather than inlined, so a heredoc cannot eat the escape. */
+    private static final String NEWLINE_INDENT = System.lineSeparator() + "  ";
 
     private static final Path DATA = Path.of(
         System.getProperty("flattsthings.projectDir", "."),
@@ -65,33 +70,71 @@ class RecipeGateTest {
     }
 
     /**
-     * The budding amethyst modifier is gated on ITS OWN feature, not merely on some feature.
+     * Every hand-written gated file names the feature it is supposed to name.
      *
-     * <p>The sweep above proves every gated file names a feature that exists. It would stay green if
-     * this modifier were gated on {@code tool_slots} - the switch would work, on the wrong switch,
-     * and the silk touch tests would pass because they run with everything on.
+     * <p>The sweep above proves a gated file names a feature that EXISTS. That is not enough on its
+     * own: each of these was written by copying the last one, and a {@code feature} field left
+     * unchanged in the copy gives a file gated on a real switch - the wrong one. Everything stays
+     * green, because every in-world test runs with all features on, while one switch does nothing
+     * and another turns off two features.
      *
-     * <p><b>Why this is a file assertion rather than a runtime one.</b> The gate is read when the
-     * data pack loads, so flipping the switch in a running server changes nothing until a reload;
-     * there is no in-world state to assert against. What can be checked is the chain: this file
-     * names this feature, {@code the_recipe_condition_follows_the_switch} proves the condition
-     * follows that switch, and the drop tests prove the modifier works when it loads.
+     * <p>The table is deliberately hand-kept and deliberately complete: a new gated file that is not
+     * listed here fails, so adding one forces a decision about which switch owns it.
+     *
+     * <p><b>Why a file assertion rather than a runtime one.</b> These gates are read when the data
+     * pack loads, so flipping a switch in a running server changes nothing until a reload and there
+     * is no in-world state to assert against. The chain is: this file names this feature, the
+     * GameTest {@code the_recipe_condition_follows_the_switch} proves the condition follows that
+     * switch, and the feature's own tests prove it works when it loads.
      */
     @Test
-    void theBuddingAmethystModifierIsGatedOnItsOwnFeature() throws IOException {
-        Path file = DATA.resolve("loot_modifiers").resolve("silk_touch_budding_amethyst.json");
-        assertTrue(Files.isRegularFile(file), file + " is missing");
-        JsonObject modifier = JsonParser
+    void everyHandWrittenGatedFileNamesTheFeatureItShould() throws IOException {
+        Map<String, String> expected = Map.of(
+            "recipe/enchanted_golden_apple.json", FTConfig.ENCHANTED_GOLDEN_APPLE,
+            "recipe/flint_from_gravel.json", FTConfig.GRAVEL_TO_FLINT,
+            "loot_modifiers/silk_touch_budding_amethyst.json",
+            FTConfig.SILK_TOUCH_BUDDING_AMETHYST);
+
+        List<String> problems = new ArrayList<>();
+        for (String folder : GATED) {
+            Path root = DATA.resolve(folder);
+            try (Stream<Path> files = Files.walk(root)) {
+                for (Path file : files.filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith(".json")).toList()) {
+                    String key = folder + "/" + root.relativize(file).toString().replace(File.separatorChar, '/');
+                    // The fourteen plate recipes are generated from one template, so they cannot
+                    // drift from each other the way a hand-copied file can. tools/ checks those.
+                    if (key.endsWith("_player_pressure_plate.json")) {
+                        continue;
+                    }
+                    String want = expected.get(key);
+                    if (want == null) {
+                        problems.add(key + " is gated but not listed here; say which switch owns it");
+                        continue;
+                    }
+                    if (!features(file).contains(want)) {
+                        problems.add(key + " should be gated on '" + want + "' but names "
+                            + features(file));
+                    }
+                }
+            }
+        }
+        assertTrue(problems.isEmpty(), String.join(NEWLINE_INDENT, problems));
+    }
+
+    /** Every feature named by a feature_enabled condition in one file. */
+    private static List<String> features(Path file) throws IOException {
+        JsonObject json = JsonParser
             .parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
-        JsonArray conditions = modifier.getAsJsonArray("neoforge:conditions");
-        boolean named = false;
+        List<String> named = new ArrayList<>();
+        JsonArray conditions = json.getAsJsonArray("neoforge:conditions");
         for (int index = 0; index < conditions.size(); index++) {
             JsonObject condition = conditions.get(index).getAsJsonObject();
-            named |= "flattsthings:feature_enabled".equals(condition.get("type").getAsString())
-                && FTConfig.SILK_TOUCH_BUDDING_AMETHYST.equals(condition.get("feature").getAsString());
+            if ("flattsthings:feature_enabled".equals(condition.get("type").getAsString())) {
+                named.add(condition.get("feature").getAsString());
+            }
         }
-        assertTrue(named, file.getFileName() + " is not gated on "
-            + FTConfig.SILK_TOUCH_BUDDING_AMETHYST + ", so its switch does nothing");
+        return named;
     }
 
     private static List<String> check(Path file) throws IOException {

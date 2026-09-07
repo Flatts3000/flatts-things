@@ -123,9 +123,10 @@ public final class FTConfig {
             "vanilla's restriction.");
 
         define(builder, GRAVEL_TO_FLINT,
-            "Craft one flint from three gravel. Vanilla drops flint from gravel one time in ten,",
-            "so this is a floor for a player without a Fortune shovel - and deliberately worse than",
-            "Fortune III, which already gets flint from every gravel.");
+            "Craft one flint from three gravel. Vanilla drops flint one time in ten, and gravel",
+            "that does not roll flint drops as gravel - so with any Fortune shovel you can",
+            "re-place and re-break until every gravel has become flint. This buys that loop out at",
+            "three to one: worse than any Fortune level in yield, better than digging unenchanted.");
 
         builder.pop();
         SPEC = builder.build();
