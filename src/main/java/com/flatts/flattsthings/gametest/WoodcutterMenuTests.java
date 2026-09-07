@@ -119,6 +119,25 @@ final class WoodcutterMenuTests {
             helper.succeed();
         });
 
+        // CLOSING IT GIVES THE PLANKS BACK. This is the accounting invariant the rest of this repo
+        // pins everywhere it can: an input slot is not storage, so whatever is sitting in it when
+        // the screen closes has to come back to the player rather than quietly staying in a menu
+        // that no longer exists. Nothing else here would notice the loss.
+        FTGameTests.test("closing_the_woodcutter_gives_the_planks_back", 20, helper -> {
+            ServerPlayer player = survivalPlayer(helper);
+            WoodcutterMenu menu = openWith(helper, player, new ItemStack(Items.OAK_PLANKS, 5));
+            helper.assertTrue(countOf(player, Items.OAK_PLANKS) == 0,
+                "premise: the planks are in the menu, not the inventory");
+
+            menu.removed(player);
+
+            helper.assertTrue(countOf(player, Items.OAK_PLANKS) == 5,
+                "every plank should have come back, found " + countOf(player, Items.OAK_PLANKS));
+            helper.assertTrue(menu.inputContainer.getItem(0).isEmpty(),
+                "and the input slot should be empty");
+            helper.succeed();
+        });
+
         // AND IT CUTS ONLY WHAT IT HAS A RECIPE FOR. Without this, a menu that ignored its input
         // would pass everything above.
         FTGameTests.test("a_woodcutter_offers_nothing_for_stone", 20, helper -> {
@@ -131,6 +150,17 @@ final class WoodcutterMenuTests {
             helper.assertFalse(menu.hasInput(), "and the menu should not think it has work to do");
             helper.succeed();
         });
+    }
+
+    private static int countOf(ServerPlayer player, net.minecraft.world.item.Item item) {
+        int total = 0;
+        for (int index = 0; index < player.getInventory().getContainerSize(); index++) {
+            ItemStack stack = player.getInventory().getItem(index);
+            if (stack.is(item)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
     }
 
     /** Which offered option produces {@code item}, or -1. */
