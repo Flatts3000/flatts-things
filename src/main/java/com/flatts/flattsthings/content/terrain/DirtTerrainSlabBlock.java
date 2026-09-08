@@ -57,12 +57,21 @@ public class DirtTerrainSlabBlock extends TerrainSlabBlock {
         // The same gate the source side uses, asked here instead: grass needs light to spread INTO
         // a place, and this is the place.
         if (level.getMaxLocalRawBrightness(pos.above()) < 9
-                || !SpreadingTerrainSlabBlock.canPropagate(state, level, pos)) {
+                || !SpreadingTerrainSlabBlock.canPropagate(level, pos)) {
             return;
         }
 
         for (int attempt = 0; attempt < 4; attempt++) {
-            BlockPos testPos = pos.offset(random.nextInt(3) - 1, random.nextInt(5) - 3,
+            // MINUS ONE, NOT MINUS THREE, and copying vanilla's number here was wrong.
+            //
+            // Vanilla picks a TARGET at source.offset(dx, nextInt(5) - 3, dz), so a target sits
+            // between three below its source and one above. This searches for a SOURCE from the
+            // target, which is the same relationship read backwards - so it needs the mirrored
+            // range, between one below and three above. Reusing vanilla's offset verbatim gave the
+            // reflected box: a dirt slab at the bottom of a three-deep pit with grass on the rim
+            // never greened, while one on a ledge three blocks ABOVE a grass block did, which
+            // vanilla grass could never reach.
+            BlockPos testPos = pos.offset(random.nextInt(3) - 1, random.nextInt(5) - 1,
                 random.nextInt(3) - 1);
             Block became = slabFor(level.getBlockState(testPos));
             if (became != null) {

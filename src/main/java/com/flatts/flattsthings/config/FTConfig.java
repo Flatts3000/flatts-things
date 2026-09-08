@@ -249,7 +249,10 @@ public final class FTConfig {
             "and clay yields two clay balls. Flint comes only from a DOUBLE gravel slab, which is a",
             "whole block's worth, so cutting gravel into slabs and recombining it is neutral.",
             "",
-
+            "Flowers, saplings and grass grow on the soil families - dirt, grass, mycelium, coarse",
+            "dirt, rooted dirt, podzol and mud - on a TOP or double slab. A bottom slab refuses,",
+            "because its surface is half way up its own block and a plant would sprout floating.",
+            "",
             "Off removes them from the creative tab and drops their recipes. Slabs already placed",
             "keep working exactly as they did.");
 

@@ -25,6 +25,11 @@ All notable changes to this project are documented here. Format follows
   own, because its grass looks for a dirt BLOCK and will never see a slab. Running it backwards from
   the dirt slab covers that with no second mixin.
 
+  **Plants grow on them**, on the seven soil families and on a top or double slab only - a bottom
+  slab's surface is half way up its own block, so a flower on one would sprout floating. That needed
+  saying in two places at once: which families is a tag question, which halves is a blockstate
+  question, and a tag cannot answer the second.
+
   **The sides show the surface spilling over the edge.** Grass, podzol and mycelium paint their
   fringe across the top of their side texture, so a slab takes the top half of it whichever half of
   the block it is - otherwise a bottom grass slab would be dirt on all four sides with the green

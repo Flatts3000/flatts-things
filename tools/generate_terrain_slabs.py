@@ -382,6 +382,15 @@ def write_tags() -> None:
     ids = [f"{NS}:{v.block_id}" for v in VARIANTS]
     write_json(VANILLA_DATA / "tags/block/mineable/shovel.json", {"values": ids})
     write_json(VANILLA_DATA / "tags/block/slabs.json", {"values": ids})
+    # WHAT CAN HOLD A PLANT. Without this nothing grows on any terrain slab at all:
+    # VegetationBlock.canSurvive asks the soil's canSustainPlant and then this tag, and a modded
+    # block that answers neither supports nothing. Bone meal on a grass slab was accepted, consumed
+    # and placed nothing, because every plant it tried to put down failed canSurvive on the way in.
+    #
+    # WHICH HALVES is not expressible here and is vetoed in Java instead - a bottom slab's surface
+    # is mid-block, so a plant on it would float. See TerrainSlabBlock.canSustainPlant.
+    write_json(VANILLA_DATA / "tags/block/supports_vegetation.json",
+               {"values": [f"{NS}:{v.block_id}" for v in VARIANTS if v.soil]})
     write_json(VANILLA_DATA / "tags/item/slabs.json", {"values": ids})
 
 

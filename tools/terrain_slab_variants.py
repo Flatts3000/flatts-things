@@ -55,6 +55,12 @@ class Variant(NamedTuple):
     A column was tried first and failed for exactly this reason, which is worth knowing before
     someone tries it again.
 
+    `soil` says a plant can grow on it, and mirrors whether the vanilla block this is half of sits
+    in `#minecraft:supports_vegetation` - which is `#dirt` plus `#mud` plus `#moss_blocks` plus
+    `#grass_blocks` plus farmland. Stated per row rather than derived, because the generator has no
+    way to read a vanilla tag; `a_terrain_slab_supports_plants_exactly_when_its_block_does` is the
+    GameTest that stops this column drifting from the tag it mirrors.
+
     `tinted` says the top face and the side overlay take the biome grass colour, and `overlay` names
     the tinted side texture drawn over `side`. Only the grass block has either, and they are why it
     cannot use vanilla's `block/slab` parent like everything else - that parent has no way to express
@@ -74,6 +80,7 @@ class Variant(NamedTuple):
     bottom: str
     snowy: bool = False
     batch_recipe: bool = False
+    soil: bool = False
     tinted: bool = False
     overlay: str | None = None
 
@@ -97,33 +104,40 @@ def _plain(family: str, display: str, texture: str) -> Variant:
     return Variant(family, display, texture, texture, texture)
 
 
+def _soil(family: str, display: str, texture: str) -> Variant:
+    """A uniform family that a plant can grow on."""
+    return Variant(family, display, texture, texture, texture, soil=True)
+
+
 # Ordered as the ruling listed them, which is also creative-tab order: the dirts, then the two that
 # spread, then the loose ones that fall, then the odd solids.
 VARIANTS: list[Variant] = [
-    _plain("dirt", "Dirt", "minecraft:block/dirt"),
+    _soil("dirt", "Dirt", "minecraft:block/dirt"),
     Variant(
         "grass_block", "Grass Block",
         "minecraft:block/grass_block_top", "minecraft:block/grass_block_side",
         "minecraft:block/dirt",
-        snowy=True, tinted=True, overlay="minecraft:block/grass_block_side_overlay",
+        snowy=True, soil=True, tinted=True,
+        overlay="minecraft:block/grass_block_side_overlay",
     ),
     Variant(
         "mycelium", "Mycelium",
         "minecraft:block/mycelium_top", "minecraft:block/mycelium_side", "minecraft:block/dirt",
-        snowy=True,
+        snowy=True, soil=True,
     ),
-    _plain("coarse_dirt", "Coarse Dirt", "minecraft:block/coarse_dirt"),
+    _soil("coarse_dirt", "Coarse Dirt", "minecraft:block/coarse_dirt"),
     Variant(
         "rooted_dirt", "Rooted Dirt",
         "minecraft:block/rooted_dirt", "minecraft:block/rooted_dirt",
         "minecraft:block/rooted_dirt",
+        soil=True,
     ),
     Variant(
         "podzol", "Podzol",
         "minecraft:block/podzol_top", "minecraft:block/podzol_side", "minecraft:block/dirt",
-        snowy=True,
+        snowy=True, soil=True,
     ),
-    _plain("mud", "Mud", "minecraft:block/mud"),
+    _soil("mud", "Mud", "minecraft:block/mud"),
     _plain("clay", "Clay", "minecraft:block/clay"),
     Variant("gravel", "Gravel", "minecraft:block/gravel", "minecraft:block/gravel",
             "minecraft:block/gravel", batch_recipe=True),

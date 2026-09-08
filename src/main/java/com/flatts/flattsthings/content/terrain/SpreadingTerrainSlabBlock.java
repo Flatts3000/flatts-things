@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LevelReader;
@@ -72,8 +73,12 @@ public class SpreadingTerrainSlabBlock extends SnowyTerrainSlabBlock {
      * <p>Dirt is the stand-in because it is opaque, takes the shortcut path, and is what both
      * families revert to anyway. What is being measured is what the block ABOVE does, which is what
      * vanilla measures too.
+     *
+     * <p><b>It therefore takes no state, and vanilla's version does.</b> Dropping the parameter is
+     * deliberate rather than tidying: a signature that still accepted one would say the answer
+     * depends on which slab is asking, and the whole point of the fix is that it must not.
      */
-    static boolean canStayAlive(BlockState state, LevelReader level, BlockPos pos) {
+    static boolean canStayAlive(LevelReader level, BlockPos pos) {
         BlockPos above = pos.above();
         BlockState aboveState = level.getBlockState(above);
         if (aboveState.is(Blocks.SNOW) && aboveState.getValue(SnowLayerBlock.LAYERS) == 1) {
@@ -88,8 +93,8 @@ public class SpreadingTerrainSlabBlock extends SnowyTerrainSlabBlock {
         return dampening < 15;
     }
 
-    static boolean canPropagate(BlockState state, LevelReader level, BlockPos pos) {
-        return canStayAlive(state, level, pos)
+    static boolean canPropagate(LevelReader level, BlockPos pos) {
+        return canStayAlive(level, pos)
             && !level.getFluidState(pos.above()).is(FluidTags.WATER);
     }
 
@@ -102,7 +107,7 @@ public class SpreadingTerrainSlabBlock extends SnowyTerrainSlabBlock {
     @Override
     protected void randomTick(BlockState state, ServerLevel level, BlockPos pos,
                               RandomSource random) {
-        if (!canStayAlive(state, level, pos)) {
+        if (!canStayAlive(level, pos)) {
             if (!level.isAreaLoaded(pos, 1)) {
                 return;
             }
@@ -122,21 +127,41 @@ public class SpreadingTerrainSlabBlock extends SnowyTerrainSlabBlock {
             if (target.is(Blocks.DIRT)) {
                 // A full block of dirt becomes a full block of this family, not a slab. The slab is
                 // the SOURCE here; what it is spreading onto keeps its own shape.
-                Block full = fullBlock();
-                if (full != null && canPropagate(full.defaultBlockState(), level, testPos)) {
-                    level.setBlockAndUpdate(testPos, full.defaultBlockState());
+                if (canPropagate(level, testPos)) {
+                    level.setBlockAndUpdate(testPos, withSnowy(fullBlock().defaultBlockState(),
+                        level, testPos));
                 }
             } else if (target.is(FTBlocks.terrainSlab("dirt").get())
                     && target.getValue(TYPE) == state.getValue(TYPE)) {
                 // MATCHING HALVES ONLY. A bottom grass slab has no business turning a top dirt slab
                 // green: they do not touch, and the result would be grass growing on a surface
                 // nothing is resting on.
-                BlockState grown = TerrainSlabs.sameShape(this, target);
-                if (canPropagate(grown, level, testPos)) {
-                    level.setBlockAndUpdate(testPos, grown);
+                if (canPropagate(level, testPos)) {
+                    level.setBlockAndUpdate(testPos,
+                        withSnowy(TerrainSlabs.sameShape(this, target), level, testPos));
                 }
             }
         }
+    }
+
+    /**
+     * Set SNOWY from what is above, because nothing else will.
+     *
+     * <p>Vanilla does this explicitly when it spreads, and the first version here left it to the
+     * default on the stated grounds that {@code setBlockAndUpdate} would recompute it. **That
+     * reasoning was wrong.** {@code updateNeighbourShapes} runs {@code updateShape} on the
+     * NEIGHBOURS of the block just written, not on the block itself, so nothing ever asked the new
+     * grass slab what was above it.
+     *
+     * <p>Visible where {@code canStayAlive} explicitly allows it: a slab under a single layer of
+     * snow, greened by a neighbour, drew the plain side texture instead of the snowy one until some
+     * unrelated update happened to touch the block above it.
+     */
+    private static BlockState withSnowy(BlockState state, LevelReader level, BlockPos pos) {
+        if (!state.hasProperty(SNOWY)) {
+            return state;
+        }
+        return state.setValue(SNOWY, level.getBlockState(pos.above()).is(BlockTags.SNOW));
     }
 
     /** The full vanilla block this slab is half of, used when spreading onto a full block of dirt. */

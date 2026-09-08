@@ -123,7 +123,7 @@ public final class FTBlocks {
         GRASS,
         /** Falls when unsupported, and lands the right way up. Gravel and the two sands. */
         FALLING,
-        /** Carries the snowy blockstate. Podzol is the only one of the ten. */
+        /** Carries the snowy blockstate and nothing more. Podzol; grass and mycelium have it too, through SPREADING. */
         SNOWY,
         /** Grows hanging roots below when bonemealed. Rooted dirt. */
         ROOTED,
