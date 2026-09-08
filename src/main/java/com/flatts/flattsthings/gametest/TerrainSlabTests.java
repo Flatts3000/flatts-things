@@ -48,6 +48,37 @@ final class TerrainSlabTests {
     private TerrainSlabTests() {
     }
 
+    /**
+     * A lamp beside the scene, because skylight is not reliably there yet when a test runs.
+     *
+     * <p>Spreading needs {@code getMaxLocalRawBrightness(pos.above()) >= 9}, and in a freshly placed
+     * GameTest structure the light engine has not always finished propagating skylight by the time
+     * the body executes. That made two spreading tests FLAKY - they passed locally and in one CI run
+     * and failed in another, on the same commit, which is the worst way for a test to be wrong.
+     *
+     * <p>Placed to the SIDE rather than above. Anything directly over a grass slab covers it, and a
+     * covered grass slab dies back to dirt - which would have turned a light fix into a different
+     * false failure.
+     */
+    private static void lightTheScene(GameTestHelper helper) {
+        helper.setBlock(new BlockPos(0, 2, 1), Blocks.GLOWSTONE);
+    }
+
+    /**
+     * Assert the scene is actually lit before concluding anything about spreading.
+     *
+     * <p>Without this, a dark scene and broken spreading fail identically - "the slab stayed dirt" -
+     * and the flaky version of these tests reported exactly that while the code was fine. Checking
+     * the precondition separately means a future failure names which of the two it was.
+     */
+    private static void requireLit(GameTestHelper helper, BlockPos pos) {
+        int light = helper.getLevel().getMaxLocalRawBrightness(helper.absolutePos(pos).above());
+        if (light < 9) {
+            helper.fail("the scene is too dark to spread (light " + light + " above " + pos
+                + "), so this test cannot say anything about spreading");
+        }
+    }
+
     private static Block slab(String family) {
         return FTBlocks.terrainSlab(family).get();
     }
@@ -324,6 +355,10 @@ final class TerrainSlabTests {
         // of these asserts both: the block ticks, and what it does when it does.
         FTGameTests.test("a_dirt_slab_greens_itself_beside_a_vanilla_grass_block", 40, helper -> {
             helper.setBlock(FLOOR, Blocks.STONE);
+            lightTheScene(helper);
+            requireLit(helper, SLAB);
+            requireLit(helper, SLAB);
+            requireLit(helper, SLAB);
             helper.setBlock(SLAB, slab("dirt"));
             helper.setBlock(new BlockPos(2, 1, 1), Blocks.GRASS_BLOCK);
 
@@ -341,6 +376,7 @@ final class TerrainSlabTests {
 
         FTGameTests.test("a_grass_slab_spreads_to_a_dirt_slab_of_the_same_half", 40, helper -> {
             helper.setBlock(FLOOR, Blocks.STONE);
+            lightTheScene(helper);
             helper.setBlock(SLAB, slab("grass_block"));
             helper.setBlock(new BlockPos(2, 1, 1), slab("dirt"));
             if (!tickUntil(helper, SLAB, new BlockPos(2, 1, 1), slab("grass_block"))) {
@@ -354,6 +390,7 @@ final class TerrainSlabTests {
         // nothing rests on.
         FTGameTests.test("a_grass_slab_does_not_green_a_dirt_slab_of_the_other_half", 40, helper -> {
             helper.setBlock(FLOOR, Blocks.STONE);
+            lightTheScene(helper);
             helper.setBlock(SLAB, slab("grass_block").defaultBlockState()
                 .setValue(SlabBlock.TYPE, SlabType.BOTTOM));
             BlockPos other = new BlockPos(2, 1, 1);
