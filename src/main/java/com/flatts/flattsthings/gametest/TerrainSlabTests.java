@@ -1,5 +1,6 @@
 package com.flatts.flattsthings.gametest;
 
+import com.flatts.flattsthings.content.terrain.SnowyTerrainSlabBlock;
 import com.flatts.flattsthings.registry.FTBlocks;
 import com.flatts.flattsthings.registry.FTBlocks.TerrainSlabVariant;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -245,8 +247,35 @@ final class TerrainSlabTests {
             helper.setBlock(SLAB, slab("podzol"));
             helper.setBlock(ABOVE, Blocks.SNOW_BLOCK);
             if (helper.getBlockState(SLAB).getValue(
-                    com.flatts.flattsthings.content.terrain.SnowyTerrainSlabBlock.SNOWY)) {
+                    SnowyTerrainSlabBlock.SNOWY)) {
                 helper.fail("a bottom podzol slab went snowy under snow it does not touch");
+            }
+            helper.succeed();
+        });
+
+        // THE SNOWY OVERRIDE MUST NOT SWALLOW THE SLAB'S OWN UPDATE. Vanilla's SnowyBlock returns
+        // early for the UP direction without calling super, which is free for it because its
+        // superclass is Block. Copying that shape here skips SlabBlock.updateShape, which schedules
+        // the water tick for a waterlogged slab - so a waterlogged podzol slab stops ticking its own
+        // fluid whenever the block above it changes, and nothing reports it.
+        //
+        // THE FIRST VERSION OF THIS TEST ASSERTED THE WRONG THING and would have passed against the
+        // bug: it checked that WATERLOGGED survived the update, and `state.setValue(SNOWY, ...)`
+        // preserves every other property, so the early return kept the water too. What the early
+        // return loses is the SCHEDULED TICK, and that is what has to be asserted.
+        FTGameTests.test("a_waterlogged_podzol_slab_still_schedules_its_water_tick", 20, helper -> {
+            helper.setBlock(SLAB, slab("podzol").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.TOP)
+                .setValue(BlockStateProperties.WATERLOGGED, true));
+            helper.setBlock(ABOVE, Blocks.SNOW_BLOCK);
+
+            BlockPos abs = helper.absolutePos(SLAB);
+            if (!helper.getLevel().getFluidTicks().hasScheduledTick(abs, Fluids.WATER)) {
+                helper.fail("changing the block above a waterlogged podzol slab left no scheduled"
+                    + " water tick, so its fluid has stopped keeping up with the world");
+            }
+            if (!helper.getBlockState(SLAB).getValue(SnowyTerrainSlabBlock.SNOWY)) {
+                helper.fail("and it should still have gone snowy");
             }
             helper.succeed();
         });
@@ -256,7 +285,7 @@ final class TerrainSlabTests {
                 .setValue(SlabBlock.TYPE, SlabType.TOP));
             helper.setBlock(ABOVE, Blocks.SNOW_BLOCK);
             if (!helper.getBlockState(SLAB).getValue(
-                    com.flatts.flattsthings.content.terrain.SnowyTerrainSlabBlock.SNOWY)) {
+                    SnowyTerrainSlabBlock.SNOWY)) {
                 helper.fail("a top podzol slab should be snowy: snow rests directly on it");
             }
             helper.succeed();

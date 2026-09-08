@@ -54,16 +54,30 @@ public class SnowyTerrainSlabBlock extends TerrainSlabBlock {
         builder.add(SNOWY);
     }
 
+    /**
+     * Snow above changes the side texture. Everything else is the slab's business.
+     *
+     * <p><b>super is called on EVERY path, including the UP one, and copying vanilla's shape here
+     * would have been a bug.</b> {@code SnowyBlock.updateShape} returns early for {@code UP} without
+     * calling super, which is free for it because its superclass is {@code Block} and that method
+     * does nothing. This class sits on {@code SlabBlock}, whose {@code updateShape} schedules the
+     * water tick for a waterlogged slab - so returning early here would silently stop a waterlogged
+     * podzol slab from ticking its own fluid whenever the block ABOVE it changed.
+     *
+     * <p>Nothing would report that. The slab looks right, the snowy state is right, and the water
+     * inside it just stops keeping up with the world.
+     */
     @Override
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
                                      BlockPos pos, Direction directionToNeighbour,
                                      BlockPos neighbourPos, BlockState neighbourState,
                                      RandomSource random) {
-        if (directionToNeighbour == Direction.UP) {
-            return state.setValue(SNOWY, snowyOn(state, neighbourState));
+        BlockState updated = super.updateShape(state, level, ticks, pos, directionToNeighbour,
+            neighbourPos, neighbourState, random);
+        if (directionToNeighbour == Direction.UP && updated.hasProperty(SNOWY)) {
+            updated = updated.setValue(SNOWY, snowyOn(updated, neighbourState));
         }
-        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos,
-            neighbourState, random);
+        return updated;
     }
 
     @Override
