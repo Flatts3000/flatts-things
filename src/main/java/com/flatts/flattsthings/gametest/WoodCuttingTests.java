@@ -47,6 +47,10 @@ final class WoodCuttingTests {
             .toList();
     }
 
+    private static Item itemOf(String path) {
+        return BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace(path));
+    }
+
     /** The log-ish block a family is cut from, or null if it has none under a known name. */
     private static Item logFor(String wood) {
         for (String suffix : new String[] {"_log", "_stem", "_block"}) {
@@ -157,19 +161,38 @@ final class WoodCuttingTests {
         // bench would come out proportionally cheaper - a door twice, a trapdoor three times, a
         // fence gate five. Only planks, sticks, buttons, slabs and stairs cost a plank or less, and
         // this fails the moment something dearer appears.
-        FTGameTests.test("cutting_planks_makes_only_the_audited_set", 20, helper -> {
-            ItemStack planks = new ItemStack(Items.OAK_PLANKS);
-            List<String> unexpected = new ArrayList<>();
-            for (RecipeHolder<WoodCuttingRecipe> holder : cuttingFor(helper, planks)) {
-                ItemStack result = holder.value()
-                    .assemble(new SingleRecipeInput(planks));
-                if (!result.is(Items.OAK_STAIRS) && !result.is(Items.OAK_SLAB)
-                        && !result.is(Items.OAK_BUTTON) && !result.is(Items.STICK)) {
-                    unexpected.add(result.getItem().toString());
+        FTGameTests.test("cutting_planks_makes_only_the_audited_set", 40, helper -> {
+            // EVERY FAMILY, NOT JUST OAK. This looked at oak alone, which was defensible while every
+            // recipe came out of one uniform loop. log_cuts now branches per family - bamboo has no
+            // bark form and a different plank rate - so a mistake in crimson, warped or bamboo had
+            // nothing looking at it.
+            List<String> wrong = new ArrayList<>();
+            for (String wood : woodFamilies()) {
+                ItemStack planks = new ItemStack(BuiltInRegistries.ITEM.getValue(
+                    Identifier.withDefaultNamespace(wood + "_planks")));
+                List<Item> allowed = List.of(
+                    itemOf(wood + "_stairs"), itemOf(wood + "_slab"),
+                    itemOf(wood + "_button"), Items.STICK);
+
+                List<Item> offered = cuttingFor(helper, planks).stream()
+                    .map(holder -> holder.value().assemble(new SingleRecipeInput(planks)).getItem())
+                    .toList();
+
+                for (Item result : offered) {
+                    if (!allowed.contains(result)) {
+                        wrong.add(wood + " planks -> " + result);
+                    }
+                }
+                // AND EXACTLY THOSE FOUR. Listing what is allowed only catches something dearer
+                // sneaking in; it says nothing about one of the four going missing.
+                for (Item want : allowed) {
+                    if (!offered.contains(want)) {
+                        wrong.add(wood + " planks no longer cut " + want);
+                    }
                 }
             }
-            helper.assertTrue(unexpected.isEmpty(),
-                "oak planks offered something outside the audited set: " + unexpected);
+            helper.assertTrue(wrong.isEmpty(),
+                "planks must cut into exactly stairs, a slab, a button and sticks: " + wrong);
             helper.succeed();
         });
 
@@ -198,9 +221,15 @@ final class WoodCuttingTests {
         // cut that log into planks, at vanilla's own rate.
         FTGameTests.test("every_log_cuts_into_its_planks", 40, helper -> {
             List<String> missing = new ArrayList<>();
+            List<String> unnamed = new ArrayList<>();
             for (String wood : woodFamilies()) {
                 Item logItem = logFor(wood);
                 if (logItem == null) {
+                    // NOT A SKIP. This used to `continue`, which made the sweep claim more than it
+                    // checked: a family whose source block is named by some fourth convention - the
+                    // way pale oak arrived - would be quietly passed over while the woodcutter
+                    // refused its log, which is the exact failure this test exists to catch.
+                    unnamed.add(wood);
                     continue;
                 }
                 ItemStack log = new ItemStack(logItem);
@@ -212,6 +241,9 @@ final class WoodCuttingTests {
                     missing.add(wood);
                 }
             }
+            helper.assertTrue(unnamed.isEmpty(),
+                "no log-ish block found for these families under _log, _stem or _block, so this"
+                    + " sweep cannot speak for them and logFor needs the new name: " + unnamed);
             helper.assertTrue(missing.isEmpty(),
                 "these logs could not be cut into their planks: " + missing);
             helper.succeed();

@@ -22,8 +22,9 @@ import net.minecraft.world.item.ItemStack;
  * vanilla's own slot sprite.
  *
  * <p><b>No scroll bar, deliberately.</b> Vanilla's cutter needs one because stone has dozens of
- * shapes; wood has two, and the menu caps the list at {@link WoodcutterMenu#MAX_OPTIONS}. A scroller
- * that can never scroll is a control that lies about what it does.
+ * shapes; the most any wooden input offers is four, and the menu caps the list at
+ * {@link WoodcutterMenu#MAX_OPTIONS} - which is eight, one grid row more than anything needs. A
+ * scroller that can never scroll is a control that lies about what it does.
  *
  * <p><b>This class cannot be tested.</b> No GameTest and no JUnit test reaches a line of it, which is
  * why {@code client/**} is excluded from the coverage gate. It is verified by looking at it, through
@@ -106,9 +107,9 @@ public class WoodcutterScreen extends AbstractContainerScreen<WoodcutterMenu> {
     /**
      * The name of whatever the cursor is over.
      *
-     * <p>Without this an option is a picture with no label, and the two oak options differ only by
-     * being a stair or a slab - which is exactly the pair a player would want confirmed before
-     * spending a plank.
+     * <p>Without this an option is a picture with no label, and several of them are small wooden
+     * shapes at sixteen pixels - a button, a slab and a stair are exactly the set a player would
+     * want confirmed before spending a plank.
      */
     @Override
     protected void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {

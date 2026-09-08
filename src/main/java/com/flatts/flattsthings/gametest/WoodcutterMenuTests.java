@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -60,20 +61,20 @@ final class WoodcutterMenuTests {
             WoodcutterMenu menu = openWith(helper, player, new ItemStack(Items.OAK_PLANKS, 8));
 
             List<ItemStack> offered = menu.visibleOptions();
-            // THE AUDITED SET, not a count. This asserted "exactly two" until an audit of what a
-            // bench makes from planks added sticks and buttons, at which point a test about the menu
-            // started failing because the recipe list grew. Naming the members says what is meant
-            // and survives the next addition; the count is pinned separately by the option cap.
-            helper.assertTrue(offered.stream().anyMatch(o -> o.is(Items.OAK_STAIRS)),
-                "oak planks should offer stairs, offered " + offered);
-            helper.assertTrue(offered.stream().anyMatch(o -> o.is(Items.OAK_SLAB)),
-                "and a slab, offered " + offered);
-            helper.assertTrue(offered.stream().anyMatch(o -> o.is(Items.STICK)),
-                "and sticks, offered " + offered);
-            helper.assertTrue(offered.stream().anyMatch(o -> o.is(Items.OAK_BUTTON)),
-                "and a button, offered " + offered);
-            helper.assertTrue(offered.size() <= WoodcutterMenu.MAX_OPTIONS,
-                "and never more than the menu can draw, offered " + offered.size());
+            // EXACTLY THE AUDITED SET. This asserted "exactly two" until sticks and buttons were
+            // added, and the first repair replaced the count with `size() <= MAX_OPTIONS` - which is
+            // four against eight and pins nothing at all. A fifth unintended cut would have sailed
+            // through the very assertion added to replace the one that would have caught it.
+            List<Item> want = List.of(Items.OAK_STAIRS, Items.OAK_SLAB, Items.OAK_BUTTON,
+                Items.STICK);
+            helper.assertTrue(offered.size() == want.size(),
+                "oak planks should offer exactly " + want.size() + " cuts, offered "
+                    + offered.stream().map(o -> o.getItem().toString()).toList());
+            for (Item expected : want) {
+                helper.assertTrue(offered.stream().anyMatch(o -> o.is(expected)),
+                    "and one of them should be " + expected + ", offered "
+                        + offered.stream().map(o -> o.getItem().toString()).toList());
+            }
             helper.assertTrue(menu.hasInput(), "and the menu should know it has something to cut");
             helper.succeed();
         });

@@ -89,7 +89,11 @@ public final class FTConfig {
     public static final String ARMORED_ELYTRA = "armored_elytra";
 
     /**
-     * The woodcutter: a saw bench that cuts planks into stairs and slabs.
+     * The woodcutter: a saw bench for wood.
+     *
+     * <p>Logs, bark blocks and their stripped forms cut into planks; a log strips or barks; a
+     * stripped log becomes a shelf; planks become stairs, slabs, buttons or sticks. Every rate is a
+     * crafting bench's own, except stairs, which are a third cheaper the way a stonecutter's are.
      *
      * <p>Off removes the block from the creative tab, its crafting recipe, and all the cuts. Because
      * those are recipes rather than behaviour, the switch has to act in data - there is no runtime
@@ -185,10 +189,17 @@ public final class FTConfig {
             "guessing which features a pack would have wanted.");
 
         define(builder, WOOD_CUTTING,
-            "The woodcutter: a saw bench that cuts planks into stairs and slabs, at the same ratios",
-            "a stonecutter already cuts stone. One plank per stair, where a crafting bench charges",
-            "one and a half, and one plank per two slabs, which is what the bench charges anyway.",
-            "The game has a cutter for stone and none for wood.",
+            "The woodcutter: a saw bench for wood. The game has a cutter for stone and none for",
+            "wood.",
+            "",
+            "Logs, bark blocks and their stripped forms cut into planks. A log strips, or turns to",
+            "bark. A stripped log becomes a shelf. Planks become stairs, slabs, buttons or sticks.",
+            "Every rate is the crafting bench's own, except stairs, which are a third cheaper - the",
+            "same saving a stonecutter already gives on stone stairs.",
+            "",
+            "Doors, trapdoors, fences, signs and boats are deliberately NOT on it: a cut takes one",
+            "item, so anything costing more than a plank on a bench would come out two to five",
+            "times cheaper here.",
             "",
             "Off removes the block from the creative tab, its recipe, and every cut. A woodcutter",
             "already placed stays where it is and can still be broken and picked up, but it has",

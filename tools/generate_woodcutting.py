@@ -48,7 +48,8 @@ SHELVES_PER_STRIPPED_LOG = 1
 # A LOG BELONGS ON A SAW BENCH, and the first version did not take one - reported with a screenshot
 # of a log sitting in the input offering nothing.
 #
-# Each family is (planks, planks per log, log, bark, stripped log, stripped bark). The forms are not
+# Each row is (family, planks per log, log, bark) and the stripped forms are derived - a row is FOUR
+# fields, whatever an earlier version of this comment said. The forms are not
 # uniform and the names are the whole reason this is a table: the nine ordinary woods have
 # log/wood/stripped, the two nether ones have stem/hyphae, and BAMBOO has neither a bark form nor
 # vanilla's four-planks rate - a bamboo block yields two.

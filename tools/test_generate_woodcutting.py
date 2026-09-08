@@ -26,13 +26,25 @@ TARGETS = (
 
 
 def main():
-    # Two files per recipe: the recipe and the advancement that unlocks it. Derived from the
-    # generator rather than recomputed from the tables, because the shape of those tables is no
-    # longer uniform - bamboo has no bark form and a different plank rate, so any arithmetic here
-    # would be a second, worse copy of log_cuts().
     cuts = list(generate_woodcutting.recipes())
+
+    # COUNTED FROM THE TABLES, NOT FROM recipes(). An earlier version compared len(TARGETS) against
+    # len(cuts) * 2 - and TARGETS is built FROM recipes() twice, so that was true by construction and
+    # could never fail. The check it replaced could. Deriving the expectation from the tables
+    # independently is what catches log_cuts() quietly skipping a family, which produces no files and
+    # no orphans and would otherwise sail through.
+    per_plank = len(generate_woodcutting.SHAPES) + 1          # the shapes, plus sticks
+    expected = len(generate_woodcutting.WOODS) * per_plank
+    for _family, _per_log, _log, bark in generate_woodcutting.LOG_FAMILIES:
+        forms = 4 if bark else 2          # log and stripped, plus bark and stripped bark
+        chain = 3 if bark else 0          # log->bark, bark->stripped, stripped log->stripped bark
+        expected += forms + 1 + 1 + chain  # planks per form, a shelf, the strip, then the chain
+    if len(cuts) != expected:
+        print("FAIL: the tables describe {} cuts but the generator yielded {}".format(
+            expected, len(cuts)))
+        return 1
     if len(TARGETS) != len(cuts) * 2:
-        print("FAIL: expected two files per cut ({}), got {}".format(len(cuts) * 2, len(TARGETS)))
+        print("FAIL: expected a recipe and an advancement per cut")
         return 1
 
     # Every cut has to be reachable from something the player can hold, and every name unique.

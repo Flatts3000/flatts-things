@@ -99,8 +99,8 @@ This one takes away a choice the game makes you make. Turn it off if you want th
 
 ### The woodcutter
 
-A saw bench for wood. Logs in, planks out - or a stripped log, a bark block, or a shelf. Planks in,
-stairs, slabs, sticks or buttons out.
+A saw bench for wood. A log cuts into planks, or strips, or turns to bark. A stripped log makes a
+shelf. Planks make stairs, slabs, buttons or sticks.
 
 Everything comes out at the rate a crafting table would give you. Doors and fences stay on the
 crafting table, where they cost what they should.
