@@ -43,7 +43,7 @@ class FTConfigTest {
             List.of("player_pressure_plates", "tool_slots", "tool_auto_swap",
                 "enchanted_golden_apple", "silk_touch_budding_amethyst",
                 "gravel_to_flint", "cauldron_transforms", "armored_elytra", "wood_cutting",
-                "terrain_slabs"),
+                "copper_powered_rails", "terrain_slabs"),
             List.copyOf(FTConfig.features()),
             "a feature id changed; every generated recipe and every pack's config names these");
     }

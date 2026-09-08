@@ -124,6 +124,30 @@ public final class FTConfig {
      */
     public static final String TERRAIN_SLABS = "terrain_slabs";
 
+    /**
+     * Powered rails from copper: the same recipe with copper where the gold goes, for half as many.
+     *
+     * <p><b>One recipe file and nothing else</b> (owner, 2026-09-08). The issue proposed a copper
+     * rail BLOCK that oxidised through four stages and pushed a cart less as it weathered, which
+     * would have meant a new block class - {@code PoweredRailBlock} hardcodes its chaining distance
+     * and applies its boost in its own logic, so a rail with different strength cannot be data. The
+     * ruling cut all of it: no new block, no oxidation, no weaker push. Vanilla's powered rail, made
+     * out of copper.
+     *
+     * <p><b>No accessor, deliberately.</b> Nothing in Java asks about this feature: the switch acts
+     * entirely in data, through the {@code flattsthings:feature_enabled} condition on the recipe,
+     * which resolves the id as a string. {@code gravel_to_flint} and {@code silk_touch_budding_amethyst}
+     * are the same shape and ship none either. A method nobody calls would also be an uncovered line
+     * in a package the merged coverage gate measures.
+     *
+     * <p><b>Three rails rather than six, and that number is the whole balance of it.</b> A straight
+     * substitution would leave the gold recipe with nothing to offer - copper is the metal vanilla
+     * gives players tonnes of - so the cheaper ingredient buys fewer rails and gold stays the
+     * efficient route for anybody who has it. The owner delegated the number; it is one digit in one
+     * file if it wants changing.
+     */
+    public static final String COPPER_POWERED_RAILS = "copper_powered_rails";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -222,6 +246,24 @@ public final class FTConfig {
             "already placed stays where it is and can still be broken and picked up, but it has",
             "nothing left to offer until this is turned back on - unlike the other switches here,",
             "which leave placed blocks fully working.");
+
+        define(builder, COPPER_POWERED_RAILS,
+            "Powered rails from copper: the same recipe as the gold one, with copper where the gold",
+            "goes, for three rails instead of six.",
+            "",
+            "Vanilla gates the only rail that accelerates behind six gold per six rails, which is",
+            "why early rail travel is mostly pushing. Copper is the metal the game gives you tonnes",
+            "of and almost nothing to do with.",
+            "",
+            "Half the yield is the point rather than an oversight: a straight swap would leave the",
+            "gold recipe with nothing to offer at all. This way copper buys rails early and gold",
+            "stays worth using once you have it.",
+            "",
+            "It makes the ORDINARY powered rail. There is no copper rail block, nothing oxidises,",
+            "and a rail made this way is indistinguishable from one made with gold.",
+            "",
+            "Off removes the recipe. Rails already crafted are ordinary powered rails and are",
+            "untouched.");
 
         define(builder, TERRAIN_SLABS,
             "Terrain slabs: half blocks of the ground rather than of the things you build with.",

@@ -14,6 +14,23 @@ with all 144 tests passing, and was found by looking at it.
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+
+- **Powered rails from copper.** The same recipe as the gold one, with copper where the gold goes,
+  for three rails instead of six. Vanilla gates the only rail that accelerates behind six gold per
+  six rails, which is why early rail travel is mostly pushing; copper is the metal the game gives you
+  tonnes of and almost nothing to do with.
+
+  **Half the yield is the point rather than an oversight.** A straight swap would leave the gold
+  recipe with nothing to offer at all. This way copper buys rails early and gold stays worth using
+  once you have it.
+
+  It makes the **ordinary** powered rail. There is no copper rail block, nothing oxidises, and a rail
+  made this way is indistinguishable from one made with gold - which is a deliberate narrowing of
+  what was originally proposed, since a rail with a different push strength cannot be data.
+
 ## v0.4.0 - 2026-09-08 - "Common Ground"
 
 ### Added
