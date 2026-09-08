@@ -74,24 +74,31 @@ final class ToolSlotTests {
         //
         // The client sets the flag from the render hook, which no headless test can run. What IS
         // testable is the rule underneath: a slot nobody has laid out does not answer for itself.
-        FTGameTests.test("a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out", 20, helper -> {
-            ServerPlayer player = helper.makeMockServerPlayerInLevel();
-            AbstractContainerMenu menu = player.inventoryMenu;
-            Slot tool = menu.getSlot(VANILLA_INVENTORY_SLOTS);
+        // AN ENVIRONMENT OF ITS OWN, because ToolSlotDisplay is one global value and tests in one
+        // environment run at the same time. Nothing in the default environment reads isActive today,
+        // so this would pass either way - which is exactly how the config switch caused two
+        // unreproducible failures before each config test was given an environment. A test that
+        // flips a global belongs alone, whether or not anything is currently beside it.
+        FTGameTests.test("a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out", 20,
+            FTGameTests.aloneIn("a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out"),
+            helper -> {
+                ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                AbstractContainerMenu menu = player.inventoryMenu;
+                Slot tool = menu.getSlot(VANILLA_INVENTORY_SLOTS);
 
-            try {
-                ToolSlotDisplay.setShown(true);
-                helper.assertTrue(tool.isActive(),
-                    "premise: on a screen that laid them out, the slots are live");
+                try {
+                    ToolSlotDisplay.setShown(true);
+                    helper.assertTrue(tool.isActive(),
+                        "premise: on a screen that laid them out, the slots are live");
 
-                ToolSlotDisplay.setShown(false);
-                helper.assertFalse(tool.isActive(),
-                    "on any other screen the slot must not draw and must not take a click");
-            } finally {
-                ToolSlotDisplay.setShown(true);
-            }
-            helper.succeed();
-        });
+                    ToolSlotDisplay.setShown(false);
+                    helper.assertFalse(tool.isActive(),
+                        "on any other screen the slot must not draw and must not take a click");
+                } finally {
+                    ToolSlotDisplay.setShown(true);
+                }
+                helper.succeed();
+            });
 
         FTGameTests.test("tool_slots_start_empty", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
