@@ -943,6 +943,22 @@ none; growing them would consume the bonemeal for roots that immediately pop off
 FULL BLOCK for its support and visual shapes, which is true of a mud block and false of a mud slab.
 Restating it would tell the game a half block is a whole one. Only the COLLISION shape is short.
 
+**What a falling slab does when it lands on another slab, which devbridge was used to answer.** It
+pops as an ITEM rather than stacking or merging, and that is vanilla's behaviour rather than a defect
+here. An entity resting on a half-height slab has its feet at y+0.5, so `blockPosition()` floors to
+the slab's OWN position; `FallingBlockEntity` then asks that block whether it may be replaced,
+passing a `DirectionalPlaceContext` holding `ItemStack.EMPTY`. `SlabBlock` allows the merge only when
+the held item matches, nothing is held, so it declines and the entity takes the drop-as-item branch.
+
+**A merge into a double would be nicer and is not available.** Reaching it means overriding
+`canBeReplaced` to accept an empty stack, and an empty stack carries no information about what is
+falling - so the same override would let an anvil or a pointed dripstone delete the slab instead of
+landing on it. Losing a block to a falling anvil is a worse bug than making somebody pick an item up.
+
+`a_falling_slab_landing_on_its_own_kind_is_not_destroyed` pins the only outcome that would be a real
+defect, which is the slab silently vanishing - no error, no log line, no drop, and nothing else in
+the suite would see it.
+
 ### The recipe collision, and why a file-existence test would have shipped it
 
 `every_terrain_slab_has_a_recipe_that_actually_crafts` resolves each recipe through the real crafting

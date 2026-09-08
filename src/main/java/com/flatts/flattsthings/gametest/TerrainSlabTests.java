@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.BoneMealItem;
@@ -145,6 +147,67 @@ final class TerrainSlabTests {
                 if (landed.getValue(SlabBlock.TYPE) != SlabType.BOTTOM) {
                     helper.fail("a top slab landed as " + landed.getValue(SlabBlock.TYPE)
                         + ", which leaves it floating with a gap underneath");
+                }
+            });
+        });
+
+        // WHAT HAPPENS WHEN IT LANDS ON ITS OWN KIND, which is the case a player creates within a
+        // minute of being handed a gravel slab: build a shelf, break the support, watch it come
+        // down onto the slab below.
+        //
+        // IT POPS AS AN ITEM, and that is vanilla's behaviour rather than a defect. The entity
+        // resting on a half-height slab has its feet at y+0.5, so blockPosition() floors to the
+        // slab's OWN position; FallingBlockEntity then asks that block whether it may be replaced,
+        // passing a DirectionalPlaceContext holding ItemStack.EMPTY. SlabBlock only allows the
+        // merge when the held item matches, and nothing is held, so it declines and the entity
+        // takes the drop-as-item branch - exactly what a falling gravel block does when it lands
+        // somewhere it cannot place.
+        //
+        // A MERGE INTO A DOUBLE WOULD BE NICER AND IS NOT AVAILABLE. Reaching it means overriding
+        // canBeReplaced to accept an empty stack, and the empty stack carries no information about
+        // what is falling - so the same override would let an anvil or a pointed dripstone delete
+        // the slab instead of landing on it. Losing the block to a falling anvil is a worse bug
+        // than making the player pick one item up.
+        //
+        // What this pins is the only outcome that would be a real defect: the slab silently
+        // vanishing. Nothing else would notice that - no error, no log line, no drop.
+        FTGameTests.test("a_falling_slab_landing_on_its_own_kind_is_not_destroyed", 100, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(SLAB, slab("gravel").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.BOTTOM));
+            helper.setBlock(ABOVE, Blocks.AIR);
+            helper.setBlock(HIGH, slab("gravel"));
+            helper.succeedWhen(() -> {
+                helper.assertBlockPresent(Blocks.AIR, HIGH);
+                helper.assertBlockPresent(slab("gravel"), SLAB);
+
+                boolean recovered = helper.getBlockState(ABOVE).is(slab("gravel"))
+                    || helper.getEntities(EntityType.ITEM).stream()
+                        .anyMatch(item -> item instanceof ItemEntity dropped
+                            && dropped.getItem().is(slab("gravel").asItem()));
+                if (!recovered) {
+                    helper.fail("the falling gravel slab is gone: it neither came to rest nor"
+                        + " dropped as an item, so the player simply lost it");
+                }
+            });
+        });
+
+        // A DOUBLE IS A WHOLE BLOCK and must land as one. The normalisation in tick() only rewrites
+        // TOP, and a switch that caught DOUBLE too would quietly turn a full block of gravel into
+        // half of one every time a support was broken - a silent halving of the player's material
+        // that no error would report.
+        FTGameTests.test("a_falling_double_slab_stays_a_double", 80, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(SLAB, Blocks.AIR);
+            helper.setBlock(ABOVE, Blocks.AIR);
+            helper.setBlock(HIGH, slab("gravel").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.DOUBLE));
+            helper.succeedWhen(() -> {
+                helper.assertBlockPresent(slab("gravel"), SLAB);
+                BlockState landed = helper.getBlockState(SLAB);
+                if (landed.getValue(SlabBlock.TYPE) != SlabType.DOUBLE) {
+                    helper.fail("a double gravel slab landed as " + landed.getValue(SlabBlock.TYPE)
+                        + ", which is half the block the player had");
                 }
             });
         });
