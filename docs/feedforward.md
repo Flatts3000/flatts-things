@@ -224,6 +224,13 @@ later discovered and misread as an oversight.
 third-party mods already in that space compute placement state without handling
 `DataComponents.BLOCK_STATE`, which means they ship false feedforward for those stacks.
 
+**It was closed unbuilt on 2026-09-07, and the reason is worth keeping.** Not because the feature was
+wrong, but because a generic client-side previewer already covers those blocks for free, so building
+another would have competed with it rather than composed. The research outlived the feature that
+prompted it, which is the only reason this file exists at all. **A named failure mode is worth having
+even when you decide not to fix it**: knowing that an inaccurate preview is false feedforward is what
+made the decision legible rather than a shrug.
+
 ## What is NOT established
 
 This mod's house rule is that a confident wrong document is worse than a stale one. These were
