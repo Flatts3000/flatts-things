@@ -1024,6 +1024,17 @@ So: when writing about an issue anywhere near a closing keyword, **do not put th
 all.** Write "issue 49". Reserve `#49` for places where a keyword is nowhere near it, or where
 closing is actually what you want.
 
+**IT HAS NOW HAPPENED A THIRD TIME, in a PR body rather than a commit, and after this section was
+written.** The terrain slab PR carried the sentence "This does NOT close #31" - written deliberately,
+to tell a human reader the work was partial - and merging it closed issue 31. The negation is
+invisible to GitHub, which reads only the word before the reference. **A PR body is subject to the
+same rule as a commit message**, and this section did not say so; it does now. The reopened issue
+carries the note.
+
+The pattern across all three is the same and is worth naming: every one was written by somebody who
+was thinking ABOUT the closing behaviour at the time. Explaining the trap, quoting the trap, and
+denying the trap all fire it.
+
 ## The commit trailers, and why the first four lack them
 
 Every commit from `f084abb` onward carries `Co-Authored-By` and `Claude-Session`. The first four do
