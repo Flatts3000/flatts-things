@@ -130,9 +130,12 @@ cost Mojang has kept deliberately for years, and this removes it. Off puts that 
 
 A saw bench for wood. Put planks in, pick a shape, take it out.
 
-Stairs and slabs, at the rates a stonecutter already charges for stone: one plank per stair, where a
-crafting bench wants one and a half, and one plank per two slabs, which is what the bench wants
-anyway. Twelve wood families. Craft it from planks and an iron ingot.
+**Logs go in too.** A log cuts into its planks at exactly the rate a bench gives - four, or two for
+bamboo - and into a stripped log or a bark block one for one. Then planks cut into stairs and slabs,
+at the rates a stonecutter already charges for stone: one plank per stair, where a bench wants one and
+a half, and one plank per two slabs, which is what the bench wants anyway.
+
+Twelve wood families, bark and stripped forms included. Craft it from planks and an iron ingot.
 
 The saving is small and only on stairs. The point is making a single stair without laying six planks
 out in a grid, and changing your mind with one click. Vanilla has a cutter for stone and nothing for

@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "wood_cutting"
+    }
+  ],
+  "type": "flattsthings:wood_cutting",
+  "ingredient": "minecraft:stripped_bamboo_block",
+  "result": {
+    "id": "minecraft:bamboo_planks",
+    "count": 2
+  }
+}

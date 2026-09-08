@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "wood_cutting"
+    }
+  ],
+  "type": "flattsthings:wood_cutting",
+  "ingredient": "minecraft:stripped_oak_wood",
+  "result": {
+    "id": "minecraft:oak_planks",
+    "count": 4
+  }
+}

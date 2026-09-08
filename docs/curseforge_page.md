@@ -99,7 +99,8 @@ This one takes away a choice the game makes you make. Turn it off if you want th
 
 ### The woodcutter
 
-A saw bench for wood. Planks in, stairs or slabs out.
+A saw bench for wood. Logs in, planks out - or a stripped log, or a bark block. Planks in, stairs or
+slabs out.
 
 One plank makes one stair, where a crafting bench wants six for four. The game has a cutter for
 stone and nothing for wood.

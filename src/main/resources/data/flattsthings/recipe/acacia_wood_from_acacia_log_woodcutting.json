@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "wood_cutting"
+    }
+  ],
+  "type": "flattsthings:wood_cutting",
+  "ingredient": "minecraft:acacia_log",
+  "result": {
+    "id": "minecraft:acacia_wood",
+    "count": 1
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "wood_cutting"
+    }
+  ],
+  "type": "flattsthings:wood_cutting",
+  "ingredient": "minecraft:jungle_log",
+  "result": {
+    "id": "minecraft:stripped_jungle_log",
+    "count": 1
+  }
+}

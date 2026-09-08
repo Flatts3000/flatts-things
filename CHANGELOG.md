@@ -12,6 +12,18 @@ look at, and none of it has been through a long play session by anybody but the 
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+
+- **The woodcutter takes logs.** It only took planks, so a log put in the input offered nothing at
+  all. A log now cuts into its planks at exactly the rate a crafting bench gives - four, or two for
+  bamboo, which is the one family that breaks the pattern - and into a stripped log or a bark block
+  one for one. Bark and stripped forms are accepted as inputs too, so anything in a wood family can
+  go on the bench. Stripping costs an axe its durability in vanilla and costs the saw nothing; bark
+  is a quarter cheaper than the bench, which is the same size of saving the stonecutter already
+  grants on stairs.
+
 ## v0.3.0 - 2026-09-07 - "Against the Grain"
 
 ### Added

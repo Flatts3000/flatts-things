@@ -26,11 +26,22 @@ TARGETS = (
 
 
 def main():
-    # Two files per recipe: the recipe and the advancement that unlocks it.
-    expected = len(generate_woodcutting.WOODS) * len(generate_woodcutting.SHAPES) * 2
-    if len(TARGETS) != expected:
-        print("FAIL: expected one file per wood per shape ({}), got {}".format(
-            expected, len(TARGETS)))
+    # Two files per recipe: the recipe and the advancement that unlocks it. Derived from the
+    # generator rather than recomputed from the tables, because the shape of those tables is no
+    # longer uniform - bamboo has no bark form and a different plank rate, so any arithmetic here
+    # would be a second, worse copy of log_cuts().
+    cuts = list(generate_woodcutting.recipes())
+    if len(TARGETS) != len(cuts) * 2:
+        print("FAIL: expected two files per cut ({}), got {}".format(len(cuts) * 2, len(TARGETS)))
+        return 1
+
+    # Every cut has to be reachable from something the player can hold, and every name unique.
+    names = [name for name, _, _ in cuts]
+    if len(set(names)) != len(names):
+        duplicates = sorted({n for n in names if names.count(n) > 1})
+        print("FAIL: two cuts share a file name, so one silently overwrites the other:")
+        for name in duplicates:
+            print("   ", name)
         return 1
 
     before = {}
