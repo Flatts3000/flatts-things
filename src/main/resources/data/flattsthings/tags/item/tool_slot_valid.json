@@ -4,6 +4,11 @@
     "#minecraft:axes",
     "#minecraft:shovels",
     "#minecraft:hoes",
-    "minecraft:shears"
+    "minecraft:shears",
+    { "id": "#recompile:sledgehammer", "required": false },
+    { "id": "recompile:cutting_torch", "required": false },
+    { "id": "recompile:scrap_knife", "required": false },
+    { "id": "recompile:prybar", "required": false },
+    { "id": "recompile:junk_shovel", "required": false }
   ]
 }

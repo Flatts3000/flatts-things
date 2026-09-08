@@ -221,6 +221,72 @@ class RecipeGateTest {
         assertTrue(problems.isEmpty(), String.join(NEWLINE_INDENT, problems));
     }
 
+    /**
+     * Every entry naming ANOTHER MOD, in a tag this mod owns, is optional.
+     *
+     * <p>The sibling test above guards the tags this mod adds to and does not own. This one guards
+     * the opposite direction and the hole between them, which #66 opened:
+     * {@code #flattsthings:tool_slot_valid} is ours, so nothing above looks at it, and it now names
+     * five things from recompile - a mod that is not a dependency and is absent from CI.
+     *
+     * <p><b>The consequence of getting it wrong is worse here than in a vanilla tag.</b>
+     * {@code TagLoader.tryBuildTag} discards an entire tag when a required entry is missing, so one
+     * plain-string {@code recompile:prybar} would delete {@code tool_slot_valid} on every install
+     * without recompile - which is nearly all of them. {@code ToolSlots.mayPlace} would then answer
+     * false for everything and the tool slots would accept no item at all, with nothing louder than
+     * one line in a log to say why.
+     *
+     * <p><b>Namespace, not mod list.</b> This deliberately does not enumerate which foreign mods are
+     * allowed: anything outside {@code minecraft} and {@code flattsthings} can fail to load, so the
+     * rule is about where an entry comes from rather than which mod it is. A future compat entry for
+     * some other mod is covered the day it is written.
+     */
+    @Test
+    void everyForeignEntryInOurOwnTagsIsOptional() throws IOException {
+        Path ourTags = Path.of(System.getProperty("flattsthings.projectDir", "."),
+            "src", "main", "resources", "data", "flattsthings", "tags");
+        assertTrue(Files.isDirectory(ourTags), ourTags + " is missing");
+
+        List<String> problems = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(ourTags)) {
+            for (Path file : files.filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".json")).toList()) {
+                JsonObject tag = JsonParser
+                    .parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
+                JsonArray values = tag.getAsJsonArray("values");
+                for (int index = 0; index < values.size(); index++) {
+                    // A plain string is a REQUIRED entry. An object may or may not be, so the
+                    // namespace check has to run on both shapes and only the object can pass.
+                    boolean required = true;
+                    String entry;
+                    if (values.get(index).isJsonPrimitive()) {
+                        entry = values.get(index).getAsString();
+                    } else {
+                        JsonObject object = values.get(index).getAsJsonObject();
+                        entry = object.get("id").getAsString();
+                        required = !object.has("required") || object.get("required").getAsBoolean();
+                    }
+                    if (foreign(entry) && required) {
+                        problems.add(ourTags.relativize(file) + " requires " + entry
+                            + ", which comes from a mod that need not be installed - a missing"
+                            + " required entry makes TagLoader discard the WHOLE tag, so this would"
+                            + " silently empty the tag on every install without that mod");
+                    }
+                }
+            }
+        }
+        assertTrue(problems.isEmpty(), String.join(NEWLINE_INDENT, problems));
+    }
+
+    /** Whether a tag entry names something neither vanilla nor this mod registers. */
+    private static boolean foreign(String entry) {
+        String id = entry.startsWith("#") ? entry.substring(1) : entry;
+        int colon = id.indexOf(':');
+        // No namespace at all means minecraft, which is always present.
+        String namespace = colon < 0 ? "minecraft" : id.substring(0, colon);
+        return !namespace.equals("minecraft") && !namespace.equals("flattsthings");
+    }
+
     /** Things this mod loads from data behind a condition, so they can fail to exist. */
     private static final List<String> CONDITIONAL = List.of("flattsthings:blessing");
 

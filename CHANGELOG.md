@@ -31,6 +31,20 @@ All notable changes to this project are documented here. Format follows
   made this way is indistinguishable from one made with gold - which is a deliberate narrowing of
   what was originally proposed, since a rail with a different push strength cannot be data.
 
+- **Recompile's tools fit the tool slots.** The Scrap Knife, Prybar, Junk Shovel, all four
+  Sledgehammers and the Cutting Torch can be stored in a tool slot and are picked up by the
+  auto-swap, which matters more there than in vanilla: recompile's teardown loop switches tools
+  constantly and every one of them used to cost a hotbar slot.
+
+  **Recompile is not a dependency and nothing changes without it.** The entries are optional, so on
+  an install without it they simply are not there. Nothing to configure, no version check.
+
+  **The Garbage Vacuums are deliberately not included.** They break no blocks, so the auto-swap could
+  never pick one and storing one would be using the tool slots as pocket storage - a different
+  feature from the one that shipped. That rule is now pinned by a test, alongside the older one that
+  keeps weapons out: a thing belongs in a tool slot when it breaks blocks and breaking blocks is its
+  job.
+
 ## v0.4.0 - 2026-09-08 - "Common Ground"
 
 ### Added
