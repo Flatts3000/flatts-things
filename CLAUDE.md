@@ -996,6 +996,51 @@ ABOVE does and is what vanilla is actually measuring. **Nothing in the suite saw
 other spreading test happened to use a bottom slab; it surfaced only when a NEGATIVE test refused to
 fail during a red drive. A test that cannot fail is worth chasing down even when everything is green.
 
+### A tintindex names a tint slot; something has to fill it
+
+**The grass slab shipped rendering flat white-grey next to a green vanilla grass block.** Its model
+carried `tintindex: 0` on the top face and the side overlay, copied faithfully from vanilla's own
+`block/grass_block`. What it did not carry, because a model cannot, is anything that FILLS that slot.
+Vanilla fills the grass block's from `BlockTintSources.grassBlock()` in `BlockColors`; a modded block
+gets nothing by default, so the raw `block/grass_block_top` texture rendered as drawn, which is
+greyscale.
+
+`client/TerrainSlabColors` registers the same source vanilla does, through
+`RegisterColorHandlersEvent.BlockTintSources`. Verified against `BlockColors.java:27`, which is
+`colors.register(List.of(BlockTintSources.grassBlock()), Blocks.GRASS_BLOCK)` - the identical call.
+That is what makes biome colour and cross-biome blending right by construction rather than by
+coincidence: `grassBlock().colorInWorld` resolves `BiomeColors.getAverageGrassColor(level, pos)` per
+position. The same grep confirms vanilla registers NO tint for mycelium or podzol, which paint their
+colour into the texture, so only grass is registered here.
+
+**The ITEM needs its own tint, and in 26.1 that is data rather than code.** A block tint source
+colours the block in the world and does nothing for the icon in a hand. Vanilla's own
+`items/grass_block.json` carries a `tints` entry with a fixed temperature and downfall for the
+neutral out-of-world green, and the generator writes the same.
+
+**No test in this repo could have caught any of it.** Tint is applied during chunk baking on the
+client, so the server has no opinion and every GameTest passes either way - which is precisely why
+`client/**` is excluded from the coverage gate. It was found by putting a slab next to its block in a
+dev client and looking at the two. `test_generate_terrain_slabs` now closes the DATA half (a tinted
+model must have a tinted item); the Java registration is still only checkable by eye.
+
+**Two false starts worth knowing about**, because both wasted a screenshot each. `TaskStop` on the
+gradle wrapper does NOT kill the spawned client, so two were running and `gamebridge` was talking to
+the stale one - the fix made no visible difference twice in a row while being correct on disk. And
+`fillbiome` does not repaint a chunk the client has already baked, so a biome comparison shot shows
+the old colours however many biomes you set.
+
+### The sides of a layered slab use the TOP half of the texture
+
+**(owner, 2026-09-08)** Grass, podzol and mycelium paint a fringe of the surface material across the
+top of their side texture. Vanilla's `block/slab` parent crops a bottom slab's sides to the BOTTOM
+half of the texture, which is right for a uniform texture and wrong for these: a bottom grass slab
+would show nothing but dirt on all four sides, with the green stopping dead at the top face.
+
+Taking the top half whichever half of the block it is makes the surface read as spilling over the
+edge. Vanilla has no layered slab to copy, so there is no precedent either way and this is a call.
+It is also why those three families need element geometry at all - that parent hardcodes its UVs.
+
 ### The recipe collision, and why a file-existence test would have shipped it
 
 `every_terrain_slab_has_a_recipe_that_actually_crafts` resolves each recipe through the real crafting

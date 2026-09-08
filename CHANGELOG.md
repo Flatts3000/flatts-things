@@ -25,6 +25,11 @@ All notable changes to this project are documented here. Format follows
   own, because its grass looks for a dirt BLOCK and will never see a slab. Running it backwards from
   the dirt slab covers that with no second mixin.
 
+  **The sides show the surface spilling over the edge.** Grass, podzol and mycelium paint their
+  fringe across the top of their side texture, so a slab takes the top half of it whichever half of
+  the block it is - otherwise a bottom grass slab would be dirt on all four sides with the green
+  stopping dead at the top face.
+
   Spreading only crosses between **matching halves**: a bottom grass slab does not green a top dirt
   slab, because they do not touch. Bonemeal works on a grass slab except as a bottom one, where the
   plants would sprout floating half a block above it. Mycelium is not bonemealable, because vanilla

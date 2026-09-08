@@ -77,8 +77,8 @@
             16
           ],
           "texture": "#top",
-          "tintindex": 0,
-          "cullface": "up"
+          "cullface": "up",
+          "tintindex": 0
         }
       }
     },

@@ -81,6 +81,16 @@ class Variant(NamedTuple):
     def block_id(self) -> str:
         return f"{self.family}_slab"
 
+    @property
+    def layered(self) -> bool:
+        """Whether the side texture has a band at the top rather than being uniform.
+
+        Grass, podzol and mycelium all paint a fringe of the surface material across the top of
+        their side texture. Derived rather than declared, because "the top is not the side" is
+        exactly what being layered means and a separate flag could disagree with the textures.
+        """
+        return self.top != self.side
+
 
 def _plain(family: str, display: str, texture: str) -> Variant:
     """A family whose six faces are all the same texture, which is most of them."""

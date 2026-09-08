@@ -127,6 +127,38 @@ def test_drops_covers_the_table_exactly() -> None:
     print(f"ok: DROPS covers exactly the {len(FAMILIES)} families in the table")
 
 
+def test_every_tinted_model_has_something_to_fill_the_tint() -> None:
+    """A `tintindex` in a model names a tint slot. Something has to fill it, or the block renders in
+    the raw greyscale the texture is drawn in.
+
+    That shipped once: the grass slab had tintindex on its top and overlay, no block tint source was
+    registered in Java, and it rendered flat white-grey next to a green vanilla grass block. No test
+    in this repo could have caught it - tint is applied during chunk baking on the client, so the
+    server has no opinion and `client/**` is outside the coverage gate. It was found by looking.
+
+    This closes the DATA half of that gap: a model asking for a tint must have the item JSON asking
+    for one too. The Java registration is still only checkable by eye, and
+    `client/TerrainSlabColors` says so.
+    """
+    problems: list[str] = []
+    for v in VARIANTS:
+        model = json.loads((ROOT / "src/main/resources/assets/flattsthings/models/block"
+                            / f"{v.block_id}.json").read_text("utf-8"))
+        wants_tint = "tintindex" in json.dumps(model)
+        item = json.loads((ROOT / "src/main/resources/assets/flattsthings/items"
+                           / f"{v.block_id}.json").read_text("utf-8"))
+        has_item_tint = "tints" in item.get("model", {})
+
+        if wants_tint != v.tinted:
+            problems.append(f"{v.block_id}: model tintindex={wants_tint} but table says {v.tinted}")
+        if wants_tint and not has_item_tint:
+            problems.append(f"{v.block_id}: the block model is tinted and the ITEM is not, so it"
+                            " renders grey in a hand and green in the world")
+    if problems:
+        raise AssertionError("tint mismatches: " + "; ".join(problems))
+    print("ok: every tinted model has an item tint to match")
+
+
 def test_lang_has_a_name_for_every_slab() -> None:
     lang = json.loads(
         (ROOT / "src/main/resources/assets/flattsthings/lang/en_us.json").read_text("utf-8"))
@@ -140,5 +172,6 @@ if __name__ == "__main__":
     test_committed_tree_matches_a_fresh_generation()
     test_no_orphan_files()
     test_drops_covers_the_table_exactly()
+    test_every_tinted_model_has_something_to_fill_the_tint()
     test_lang_has_a_name_for_every_slab()
     print("terrain slab generator: all checks passed")
