@@ -24,6 +24,7 @@ players yet. **Ten features on `main`**, all of them in an uploaded build. Last 
 | Armoured elytra | `armored_elytra` | the components section below |
 | The woodcutter | `wood_cutting` | the woodcutter section below |
 | Terrain slabs | `terrain_slabs` | the terrain slab section below |
+| Powered rails from copper | `copper_powered_rails` | one recipe file, no Java |
 
 **Derive that list from `FTConfig.features()` rather than trusting the table**, which is this file's
 own standing advice about lists that read as complete. The previous banner here said "one family

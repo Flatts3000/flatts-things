@@ -180,6 +180,16 @@ a bigger batch, because three gravel is already the flint recipe.
 grass block greens itself - the direction vanilla cannot manage on its own, since its grass looks for
 a dirt block and never sees a slab. Spreading only crosses between matching halves.
 
+### Powered rails from copper
+
+The same recipe as the gold one, with copper where the gold goes, for three rails instead of six.
+Vanilla puts the only rail that accelerates behind six gold, which is why early rail travel is mostly
+pushing.
+
+Half the yield is the point: a straight swap would leave the gold recipe with nothing to offer.
+Copper buys rails early, gold stays worth using once you have it. It makes the ordinary powered rail
+- there is no copper rail block and nothing oxidises.
+
 ## Every feature has a switch
 
 `config/flattsthings-common.toml` carries one boolean per feature, all on by default.

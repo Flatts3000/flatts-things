@@ -101,6 +101,7 @@ class RecipeGateTest {
         Map<String, String> expected = Map.of(
             "enchantment/blessing.json", FTConfig.ENCHANTED_GOLDEN_APPLE,
             "recipe/flint_from_gravel.json", FTConfig.GRAVEL_TO_FLINT,
+            "recipe/powered_rail_from_copper.json", FTConfig.COPPER_POWERED_RAILS,
             "recipe/woodcutter.json", FTConfig.WOOD_CUTTING,
             "loot_modifiers/silk_touch_budding_amethyst.json",
             FTConfig.SILK_TOUCH_BUDDING_AMETHYST);
