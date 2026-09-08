@@ -36,7 +36,14 @@ WOODS = [
 
 # (suffix, count). Deliberately only the two shapes nobody argues about: a door or a sign has its own
 # material cost and is not obviously "cutting".
-SHAPES = [("stairs", 1), ("slab", 2)]
+SHAPES = [("stairs", 1), ("slab", 2), ("button", 1)]
+
+# A STICK IS WHAT CUTTING WOOD MAKES, and leaving it out was the most obviously missing thing on the
+# bench. Two per plank is exactly the bench rate (two planks give four).
+STICKS_PER_PLANK = 2
+
+# A shelf comes off a STRIPPED log, six for six, so one for one is exact parity. New in 26.1.
+SHELVES_PER_STRIPPED_LOG = 1
 
 # A LOG BELONGS ON A SAW BENCH, and the first version did not take one - reported with a screenshot
 # of a log sitting in the input offering nothing.
@@ -97,6 +104,9 @@ def log_cuts():
         for form in forms:
             yield cut(form, planks, per_log)
 
+        # A shelf is cut from a stripped log, which is what vanilla asks for too.
+        yield cut(stripped_log, family + "_shelf", SHELVES_PER_STRIPPED_LOG)
+
         # And one step along the chain, where there is one to take. A stripped bark block is the end
         # of it: there is nothing left to take off.
         yield cut(log, stripped_log, 1)
@@ -111,6 +121,8 @@ def recipes():
     for wood in WOODS:
         for suffix, count in SHAPES:
             yield cut(wood + "_planks", "{}_{}".format(wood, suffix), count)
+        # The one output with no family of its own. A stick is a stick whatever it was cut from.
+        yield cut(wood + "_planks", "stick", STICKS_PER_PLANK)
     yield from log_cuts()
 
 

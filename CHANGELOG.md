@@ -24,6 +24,16 @@ All notable changes to this project are documented here. Format follows
   is a quarter cheaper than the bench, which is the same size of saving the stonecutter already
   grants on stairs.
 
+- **Sticks, buttons and shelves** on the woodcutter, from an audit of everything a crafting bench
+  makes out of wood alone. Two sticks per plank, one button per plank, one shelf per stripped log -
+  every one of them the bench's own rate.
+
+  **What is deliberately absent is the more interesting half.** A cut consumes exactly one item, so
+  anything costing more than a plank on a bench would come out proportionally cheaper: a door or a
+  pressure plate twice, a trapdoor three times, a fence gate or a boat five. Doors, trapdoors,
+  pressure plates, fences, fence gates, signs and boats are all left on the crafting table for that
+  reason - the same reason vanilla's stonecutter cuts nothing costing more than one stone.
+
 ## v0.3.0 - 2026-09-07 - "Against the Grain"
 
 ### Added

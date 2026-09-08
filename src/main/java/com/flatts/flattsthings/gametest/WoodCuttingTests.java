@@ -58,17 +58,21 @@ final class WoodCuttingTests {
         return null;
     }
 
-    /** How many {@code planks} one {@code log} cuts into, or 0 if it does not. */
-    private static int plankYield(net.minecraft.gametest.framework.GameTestHelper helper,
-                                  Item log, Item planks) {
-        ItemStack input = new ItemStack(log);
+    /** How many {@code want} one {@code input} cuts into, or 0 if that cut is not offered. */
+    private static int yieldOf(net.minecraft.gametest.framework.GameTestHelper helper,
+                               ItemStack input, Item want) {
         for (RecipeHolder<WoodCuttingRecipe> holder : cuttingFor(helper, input)) {
             ItemStack result = holder.value().assemble(new SingleRecipeInput(input));
-            if (result.is(planks)) {
+            if (result.is(want)) {
                 return result.getCount();
             }
         }
         return 0;
+    }
+
+    private static int plankYield(net.minecraft.gametest.framework.GameTestHelper helper,
+                                  Item log, Item planks) {
+        return yieldOf(helper, new ItemStack(log), planks);
     }
 
     /**
@@ -148,21 +152,43 @@ final class WoodCuttingTests {
             helper.succeed();
         });
 
-        // AND IT MUST NOT HAVE TAUGHT THE STONECUTTER ANYTHING ELSE. Adding recipes to a vanilla
-        // recipe type is a wide door: the negative here is that a plank does not become a door, a
-        // sign or somebody else's block, which is what a typo in the generator would produce.
-        FTGameTests.test("cutting_planks_makes_only_stairs_and_slabs", 20, helper -> {
+        // THE AUDITED SET AND NOTHING MORE, which is the negative that keeps the balance argument
+        // honest. A cut consumes exactly ONE input, so anything costing more than one plank on a
+        // bench would come out proportionally cheaper - a door twice, a trapdoor three times, a
+        // fence gate five. Only planks, sticks, buttons, slabs and stairs cost a plank or less, and
+        // this fails the moment something dearer appears.
+        FTGameTests.test("cutting_planks_makes_only_the_audited_set", 20, helper -> {
             ItemStack planks = new ItemStack(Items.OAK_PLANKS);
             List<String> unexpected = new ArrayList<>();
             for (RecipeHolder<WoodCuttingRecipe> holder : cuttingFor(helper, planks)) {
                 ItemStack result = holder.value()
                     .assemble(new SingleRecipeInput(planks));
-                if (!result.is(Items.OAK_STAIRS) && !result.is(Items.OAK_SLAB)) {
+                if (!result.is(Items.OAK_STAIRS) && !result.is(Items.OAK_SLAB)
+                        && !result.is(Items.OAK_BUTTON) && !result.is(Items.STICK)) {
                     unexpected.add(result.getItem().toString());
                 }
             }
             helper.assertTrue(unexpected.isEmpty(),
-                "a stonecutter offered more from oak planks than stairs and a slab: " + unexpected);
+                "oak planks offered something outside the audited set: " + unexpected);
+            helper.succeed();
+        });
+
+        // THE THREE THE AUDIT ADDED, each at exactly the bench rate. A stick is what cutting wood
+        // makes and was the most obviously missing thing on the bench; a button is one plank either
+        // way; a shelf is six stripped logs for six, so one for one.
+        FTGameTests.test("planks_and_logs_cut_the_things_a_bench_makes_from_them", 20, helper -> {
+            ItemStack planks = new ItemStack(Items.OAK_PLANKS);
+            helper.assertTrue(yieldOf(helper, planks, Items.STICK) == 2,
+                "two planks make four sticks on a bench, so one plank should cut two; cut "
+                    + yieldOf(helper, planks, Items.STICK));
+            helper.assertTrue(yieldOf(helper, planks, Items.OAK_BUTTON) == 1,
+                "a button is one plank either way; cut "
+                    + yieldOf(helper, planks, Items.OAK_BUTTON));
+
+            ItemStack stripped = new ItemStack(Items.STRIPPED_OAK_LOG);
+            helper.assertTrue(yieldOf(helper, stripped, Items.OAK_SHELF) == 1,
+                "six stripped logs make six shelves, so one should cut one; cut "
+                    + yieldOf(helper, stripped, Items.OAK_SHELF));
             helper.succeed();
         });
 
