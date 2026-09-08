@@ -160,6 +160,11 @@ jobs:
       - name: Test the cauldron generator
         run: python tools/test_generate_cauldron.py
 
+      # Byte comparison is valid here and is not for the plates: this generator writes only JSON.
+      # Also catches orphan files, which every other check in the repo passes straight over.
+      - name: Test the terrain slab generator
+        run: python tools/test_generate_terrain_slabs.py
+
       # Pixel comparison, not bytes: PNGs compress differently across platforms, which is the
       # same trap the plate generator's test documents at length.
       - name: Test the woodcutter textures

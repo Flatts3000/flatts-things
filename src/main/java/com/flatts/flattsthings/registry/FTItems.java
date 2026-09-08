@@ -2,6 +2,7 @@ package com.flatts.flattsthings.registry;
 
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.registry.FTBlocks.PlateVariant;
+import com.flatts.flattsthings.registry.FTBlocks.TerrainSlabVariant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import net.minecraft.world.item.BlockItem;
@@ -22,6 +23,16 @@ public final class FTItems {
         for (PlateVariant variant : FTBlocks.VARIANTS) {
             PLATES.put(variant.material(),
                 ITEMS.registerSimpleBlockItem(variant.blockId(), FTBlocks.plate(variant.material())));
+        }
+    }
+
+    /** Block-items for the terrain slabs, keyed by family, in {@link FTBlocks#TERRAIN_SLABS} order. */
+    public static final Map<String, DeferredItem<BlockItem>> TERRAIN = new LinkedHashMap<>();
+
+    static {
+        for (TerrainSlabVariant variant : FTBlocks.TERRAIN_SLABS) {
+            TERRAIN.put(variant.family(), ITEMS.registerSimpleBlockItem(
+                variant.blockId(), FTBlocks.terrainSlab(variant.family())));
         }
     }
 

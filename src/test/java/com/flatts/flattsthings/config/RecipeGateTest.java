@@ -129,6 +129,18 @@ class RecipeGateTest {
                         }
                         continue;
                     }
+                    // The terrain slabs are generated from one template too, and are checked as a
+                    // family for the same reason as the wood cuts: naming nine files here would
+                    // copy the generator rather than check it, while the template's feature field
+                    // is exactly what a copy-paste gets wrong. Covers the recipe and its unlock
+                    // advancement, which are written by the same function and can drift together.
+                    if (key.endsWith("_slab.json")) {
+                        if (!features(file).contains(FTConfig.TERRAIN_SLABS)) {
+                            problems.add(key + " should be gated on '" + FTConfig.TERRAIN_SLABS
+                                + "' but names " + features(file));
+                        }
+                        continue;
+                    }
                     String want = expected.get(key);
                     if (want == null) {
                         problems.add(key + " is gated but not listed here; say which switch owns it");

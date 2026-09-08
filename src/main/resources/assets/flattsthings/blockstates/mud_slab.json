@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "flattsthings:block/mud_slab"
+    },
+    "type=top": {
+      "model": "flattsthings:block/mud_slab_top"
+    },
+    "type=double": {
+      "model": "minecraft:block/mud"
+    }
+  }
+}

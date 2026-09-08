@@ -107,6 +107,23 @@ public final class FTConfig {
      */
     public static final String WOOD_CUTTING = "wood_cutting";
 
+    /**
+     * Terrain slabs: half blocks of dirt, gravel, sand and the rest of the ground you walk on.
+     *
+     * <p>Vanilla gives slabs to the things you build WITH and none to the things you build ON, which
+     * is less a principle than where Mojang stopped. Nine families are covered.
+     *
+     * <p><b>They behave, rather than merely looking right.</b> Gravel and sand fall and land the
+     * right way up, podzol takes the snowy side under a snow layer, rooted dirt grows hanging roots
+     * when bonemealed, and mud is two pixels short so you sink into it. Mining one gives half of
+     * what the whole block gives: a podzol slab yields a dirt slab and clay yields two clay balls.
+     *
+     * <p>Off removes the blocks from the creative tab and their recipes. Placed slabs keep working,
+     * which is the ordinary reading of this switch rather than the woodcutter's exception: a slab's
+     * behaviour is its own rather than a recipe list, so nothing goes quiet.
+     */
+    public static final String TERRAIN_SLABS = "terrain_slabs";
+
     /** Insertion-ordered, because it is also the order the switches appear in the file. */
     private static final Map<String, ModConfigSpec.BooleanValue> FEATURES = new LinkedHashMap<>();
 
@@ -206,6 +223,32 @@ public final class FTConfig {
             "nothing left to offer until this is turned back on - unlike the other switches here,",
             "which leave placed blocks fully working.");
 
+        define(builder, TERRAIN_SLABS,
+            "Terrain slabs: half blocks of the ground rather than of the things you build with.",
+            "Vanilla gives stairs and slabs to bricks and planks and none to dirt, gravel or sand.",
+            "",
+            "Nine families: dirt, coarse dirt, rooted dirt, podzol, mud, clay, gravel, sand and",
+            "red sand. Three blocks in a row give six slabs, which is vanilla's own rate for every",
+            "slab it ships. Gravel is the one exception, at six for twelve: three gravel in a row is",
+            "already this pack's flint recipe, and that recipe is shapeless, so it matches any",
+            "arrangement of three and no three-gravel slab recipe could coexist with it.",
+            "",
+            "They behave rather than only looking right. Gravel and sand fall, and a top slab lands",
+            "as a bottom one instead of floating. Podzol takes the snowy side under snow. Rooted",
+            "dirt grows hanging roots when bonemealed, except as a top slab, where they would have",
+            "nothing to hang from. Mud is two pixels short, so you sink into it.",
+            "",
+            "Mining one gives half of what the whole block gives: a podzol slab yields a dirt slab",
+            "and clay yields two clay balls. Flint comes only from a DOUBLE gravel slab, which is a",
+            "whole block's worth, so cutting gravel into slabs and recombining it is neutral.",
+            "",
+            "Grass and mycelium are deliberately NOT here yet. They spread, die back and take the",
+            "snowy state, and none of that has an obvious reading on a half block. They will arrive",
+            "with that behaviour rather than as models that only look like grass.",
+            "",
+            "Off removes them from the creative tab and drops their recipes. Slabs already placed",
+            "keep working exactly as they did.");
+
         builder.pop();
         SPEC = builder.build();
     }
@@ -292,6 +335,10 @@ public final class FTConfig {
 
     public static boolean enchantedGoldenApple() {
         return enabled(ENCHANTED_GOLDEN_APPLE);
+    }
+
+    public static boolean terrainSlabs() {
+        return enabled(TERRAIN_SLABS);
     }
 
     public static boolean woodCutting() {
