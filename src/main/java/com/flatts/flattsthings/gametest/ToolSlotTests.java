@@ -1,5 +1,6 @@
 package com.flatts.flattsthings.gametest;
 
+import com.flatts.flattsthings.content.ToolSlotDisplay;
 import com.flatts.flattsthings.content.ToolSlots;
 import com.flatts.flattsthings.content.ToolSlotsContainer;
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -57,7 +59,105 @@ final class ToolSlotTests {
         helper.succeed();
     }
 
+    /** How many of {@code item} the player is carrying, anywhere in the ordinary inventory. */
+    private static int countInInventory(ServerPlayer player, Item item) {
+        int total = 0;
+        for (int index = 0; index < player.getInventory().getContainerSize(); index++) {
+            if (player.getInventory().getItem(index).is(item)) {
+                total += player.getInventory().getItem(index).getCount();
+            }
+        }
+        return total;
+    }
+
     static void register() {
+        // A SLOT ON A SCREEN NOBODY LAID OUT MUST BE INERT. This is the half that was missing when
+        // the tool slots turned up on the creative inventory's hotbar row: ToolSlotStrip already
+        // refused to PAINT there, but the slots stayed active, and the creative screen positions
+        // every InventoryMenu slot from its index - ours are 46 to 50, so they landed at y=112 with
+        // their silhouettes drawn over hotbar slots one to five, with no panel. (Drawing only: a
+        // click went to the hotbar wrapper, which sits at the same coordinates earlier in the list.)
+        //
+        // Slot.x and Slot.y are final in 26.1, so moving them is not available; vanilla parks its own
+        // crafting slots off-screen by constructing wrappers at -2000, which only the screen building
+        // the list can do. isActive is what is left, and the game consults it for drawing the slot,
+        // for its empty-slot icon, and in findSlot - so false is invisible and unclickable wherever
+        // somebody else has put it.
+        //
+        // The client sets the flag from the render hook, which no headless test can run. What IS
+        // testable is the rule underneath: a slot nobody has laid out does not answer for itself.
+        // AN ENVIRONMENT OF ITS OWN, because ToolSlotDisplay is one global value and tests in one
+        // environment run at the same time. Nothing in the default environment reads isActive today,
+        // so this would pass either way - which is exactly how the config switch caused two
+        // unreproducible failures before each config test was given an environment. A test that
+        // flips a global belongs alone, whether or not anything is currently beside it.
+        FTGameTests.test("a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out", 20,
+            FTGameTests.aloneIn("a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out"),
+            helper -> {
+                ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                AbstractContainerMenu menu = player.inventoryMenu;
+                Slot tool = menu.getSlot(VANILLA_INVENTORY_SLOTS);
+
+                try {
+                    ToolSlotDisplay.setShown(true);
+                    helper.assertTrue(tool.isActive(),
+                        "premise: on a screen that laid them out, the slots are live");
+
+                    ToolSlotDisplay.setShown(false);
+                    helper.assertFalse(tool.isActive(),
+                        "on any other screen the slot must not draw and must not take a click");
+                } finally {
+                    ToolSlotDisplay.setShown(true);
+                }
+                helper.succeed();
+            });
+
+        // AND NOTHING MAY BE FILED INTO A SLOT THAT IS NOT BEING SHOWN. Hiding a slot is
+        // presentation - moveItemStackTo consults mayPlace and never isActive - so the quick-move
+        // injection has to read the same flag or shift-clicking a tool on a screen that hides them
+        // sends it somewhere the player cannot see. That is worse than the bug it came from: the
+        // item leaves the visible inventory and arrives nowhere.
+        //
+        // Creative reaches this exact path: slotClicked forwards to
+        // player.inventoryMenu.clicked(index, button, QUICK_MOVE, player).
+        FTGameTests.test("a_hidden_tool_slot_refuses_a_shift_click", 20,
+            FTGameTests.aloneIn("a_hidden_tool_slot_refuses_a_shift_click"),
+            helper -> {
+                ServerPlayer player = helper.makeMockServerPlayerInLevel();
+                AbstractContainerMenu menu = player.inventoryMenu;
+                int source = InventoryMenu.INV_SLOT_START;
+                menu.getSlot(source).set(new ItemStack(Items.DIAMOND_PICKAXE));
+
+                try {
+                    ToolSlotDisplay.setShown(false);
+                    menu.quickMoveStack(player, source);
+
+                    // VANILLA STILL GETS ITS TURN, and the source slot emptying is that rather than
+                    // a loss: declining the injection lets InventoryMenu.quickMoveStack do its own
+                    // thing, which for a main-inventory slot is "send it to the hotbar". The claim
+                    // is not that nothing moves - it is that nothing lands where nobody can see it.
+                    helper.assertTrue(ToolSlots.get(player, 0).isEmpty(),
+                        "nothing may be filed into a slot nothing draws, found "
+                            + ToolSlots.get(player, 0).getItem());
+                    helper.assertTrue(countInInventory(player, Items.DIAMOND_PICKAXE) == 1,
+                        "and the pickaxe must still be somewhere the player can reach, found "
+                            + countInInventory(player, Items.DIAMOND_PICKAXE));
+
+                    // And the ordinary path still works, so this is a gate rather than a break.
+                    ToolSlotDisplay.setShown(true);
+                    int hotbar = InventoryMenu.USE_ROW_SLOT_START;
+                    menu.getSlot(hotbar).set(new ItemStack(Items.DIAMOND_PICKAXE));
+                    menu.getSlot(source).set(new ItemStack(Items.DIAMOND_SHOVEL));
+                    menu.quickMoveStack(player, source);
+                    helper.assertTrue(ToolSlots.get(player, 0).is(Items.DIAMOND_SHOVEL),
+                        "shown again, the same shift-click should file it as it always did, slot"
+                            + " held " + ToolSlots.get(player, 0).getItem());
+                } finally {
+                    ToolSlotDisplay.setShown(true);
+                }
+                helper.succeed();
+            });
+
         FTGameTests.test("tool_slots_start_empty", 20, helper -> {
             ServerPlayer player = helper.makeMockServerPlayerInLevel();
             helper.assertTrue(ToolSlots.of(player).isEmpty(),

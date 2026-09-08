@@ -2,6 +2,7 @@ package com.flatts.flattsthings.mixin;
 
 import com.flatts.flattsthings.config.FTConfig;
 import com.flatts.flattsthings.content.ToolSlot;
+import com.flatts.flattsthings.content.ToolSlotDisplay;
 import com.flatts.flattsthings.content.ToolSlots;
 import com.flatts.flattsthings.content.ToolSlotsContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -94,7 +95,19 @@ abstract class InventoryMenuMixin extends AbstractContainerMenu {
     @Inject(method = "quickMoveStack", at = @At("HEAD"), cancellable = true)
     private void flattsthings$quickMoveIntoToolSlots(Player player, int index,
                                                      CallbackInfoReturnable<ItemStack> callback) {
+        // ToolSlotDisplay TOO, AND LEAVING IT OUT WAS A REGRESSION. Hiding the slots is a
+        // presentation change: moveItemStackTo consults mayPlace and never isActive, and the
+        // creative inventory forwards a shift-click straight into this menu
+        // (CreativeModeInventoryScreen.slotClicked -> player.inventoryMenu.clicked with QUICK_MOVE).
+        // So with the slots hidden but this ungated, shift-clicking a tool on the creative screen
+        // filed it into a slot nothing draws - it left the visible inventory and arrived nowhere the
+        // player could see, recoverable only by switching to survival. Before the slots were hidden
+        // it at least landed somewhere visible, so the hiding made this strictly worse.
+        //
+        // The rule is that a screen gets the panel AND the slots or neither; this is the second half
+        // of it.
         if (!FTConfig.toolSlots()
+            || !ToolSlotDisplay.shown()
             || index < InventoryMenu.INV_SLOT_START
             || index >= InventoryMenu.INV_SLOT_END) {
             return;

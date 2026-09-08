@@ -630,21 +630,61 @@ player's business. `a_weapon_does_not_belong_in_a_tool_slot` pins the shipped de
 no sword outline for the same reason - an outline promising one would be an invitation the slot then
 refuses. The fifth slot has no outline at all, because it is the free one.
 
-**The creative inventory has no strip, and that is a ruling rather than a gap (2026-09-07, #51).**
-`CreativeModeInventoryScreen` has its own menu rather than `InventoryMenu`, so the mixin does not
-reach it and a creative player cannot see their tools on the inventory tab. Stored tools are
-untouched and come back in survival.
+### The tool slots are shown only on a screen that laid them out
 
-It was filed as a gap and closed as intended. Reaching the creative screen means a SECOND mixin, on a
-different class with its own hardcoded index ranges, and the argument that justifies the first one
-does not transfer: `InventoryMenu` is rebuilt on join, respawn and dimension change on both sides, so
-a constructor injection is the only thing that cannot be missed. Nothing of that kind is true here.
-Against that cost, a creative player has every item in the game two clicks away and loses nothing but
-the convenience. **The trade would be paying this repo's one-mixin rule for a case that costs a
-player nothing**, which is the wrong way round.
+**This was written here twice as "the creative inventory simply does not get them", and both times
+that was wrong.** `CreativeModeInventoryScreen` does not have its own slots for the Survival
+Inventory tab - `selectTab` walks EVERY slot of `player.inventoryMenu` and repositions it from its
+index:
 
-Overturn it by writing the reversal beside this paragraph. The thing that would justify one is
-evidence that players actually reach for the tab and are confused, not that the asymmetry is untidy.
+```java
+int pos = ix - 9;
+x = 9 + (pos % 9) * 18;
+if (ix >= 36) { y = 112; } else { y = 54 + (pos / 9) * 18; }
+```
+
+Ours are indices 46 to 50, so they landed at x = 27, 45, 63, 81, 99 and **y = 112, the hotbar row**,
+drawing their silhouettes over hotbar slots one to five. **The overlap was in drawing only** - an
+earlier version of this section said they took clicks there, and that is wrong:
+`getHoveredSlot` returns the FIRST active slot in list order, and creative's own hotbar wrappers sit
+at those exact coordinates at indices 37 to 41, ahead of ours. `SlotWrapper` delegates
+`getNoItemIcon()` and `isActive()` straight through, so everything about them came along;
+only `ToolSlotStrip`, which correctly refuses to paint on anything that is not an `InventoryScreen`,
+stayed behind. The owner found it by opening the creative inventory.
+
+**Moving them is not available. `Slot.x` and `Slot.y` are final in 26.1.** Vanilla parks its own
+crafting slots off-screen by CONSTRUCTING wrappers at -2000, which only the screen building the list
+can do. What is left is `isActive()`, which the game consults for drawing the slot, for its
+empty-slot icon, and in `findSlot` - so a slot answering false is invisible and unclickable wherever
+somebody else has put it.
+
+**So the rule is: a screen either gets the panel AND the slots, or neither.** `ToolSlotStrip` sets
+`ToolSlotDisplay` on every frame from the same check that decides whether to paint, before its early
+return, and clears it whenever any screen initialises so that a screen which never draws a background
+cannot inherit a stale yes.
+
+**Both halves, and the first attempt only did one.** Hiding a slot is presentation; it does not stop
+items being routed into it. `moveItemStackTo` consults `mayPlace` and never `isActive`, and the
+creative inventory forwards a shift-click straight into `InventoryMenu.quickMoveStack`
+(`slotClicked` -> `player.inventoryMenu.clicked` with `QUICK_MOVE`), so `InventoryMenuMixin`'s
+quick-move injection has to read `ToolSlotDisplay` too. Without it, hiding the slots made things
+WORSE than the bug: a shift-clicked tool left the visible inventory and arrived in a slot nothing
+draws, recoverable only by switching to survival. **Fail-safe rather than fail-broken**, and that is the whole point - the bug was not that the
+creative screen was unhandled, it was that an unhandled screen showed the slots anyway. Another mod's
+inventory screen, or a vanilla one that does not exist yet, now gets nothing instead of five
+silhouettes in somebody else's hotbar. `a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out`
+pins the rule; the client wiring that feeds it is the untestable half.
+
+**Set every frame rather than when a screen opens**, deliberately: the creative inventory swaps its
+slot list on a tab change without reopening, so a value latched at open time is stale exactly when it
+matters.
+
+**The creative inventory still shows no tools, and that part of the old ruling stands** - it is now
+true rather than merely intended. Giving it real ones means a SECOND mixin on a different class with
+its own hardcoded index ranges, and the argument justifying the first does not transfer:
+`InventoryMenu` is rebuilt on join, respawn and dimension change on both sides, so a constructor
+injection is the only thing that cannot be missed. Nothing of that kind is true here, and a creative
+player has every item in the game two clicks away.
 
 ## Making a vanilla item do something new, without a second mixin
 

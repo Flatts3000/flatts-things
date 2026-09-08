@@ -2,6 +2,7 @@ package com.flatts.flattsthings.client;
 
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.config.FTConfig;
+import com.flatts.flattsthings.content.ToolSlotDisplay;
 import com.flatts.flattsthings.content.ToolSlotLayout;
 import com.flatts.flattsthings.content.ToolSlots;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -48,11 +49,40 @@ public final class ToolSlotStrip {
     private ToolSlotStrip() {
     }
 
+    /**
+     * <b>This handler now owns whether the slots are shown at all, not just the panel behind them.</b>
+     *
+     * <p>The two used to be separate and that was the bug. This method already refused to paint on
+     * anything that is not an {@code InventoryScreen}, but the slots themselves stayed active - so on
+     * the creative inventory, which repositions every {@code InventoryMenu} slot from its index, ours
+     * were sent to the hotbar row and drew their silhouettes over it with no panel behind them.
+     *
+     * <p>Setting {@link ToolSlotDisplay} here ties the two halves together: a screen either gets the
+     * panel AND the slots, or neither. It is set on every frame before the early return, so the
+     * answer always describes the screen actually being drawn - the creative inventory swaps its slot
+     * list on a tab change without reopening, so anything latched at open time would be stale.
+     */
+    /**
+     * Any screen opening hides the slots until something says otherwise.
+     *
+     * <p>The render hook below is the positive half and only speaks for screens that draw a
+     * background. A mod cancelling {@code ScreenEvent.Render.Pre} suppresses the whole extract, and
+     * without this the flag would still read true from the last inventory frame - so the slots would
+     * draw on that screen, which is the bug this is meant to prevent.
+     */
+    @SubscribeEvent
+    public static void onScreenInit(ScreenEvent.Init.Post event) {
+        ToolSlotDisplay.setShown(false);
+    }
+
     @SubscribeEvent
     public static void onRenderBackground(ScreenEvent.Render.Background event) {
-        if (!(event.getScreen() instanceof InventoryScreen screen) || !FTConfig.toolSlots()) {
+        boolean ours = event.getScreen() instanceof InventoryScreen;
+        ToolSlotDisplay.setShown(ours);
+        if (!ours || !FTConfig.toolSlots()) {
             return;
         }
+        InventoryScreen screen = (InventoryScreen) event.getScreen();
         GuiGraphicsExtractor graphics = event.getGuiGraphics();
         int left = screen.getGuiLeft() + ToolSlotLayout.STRIP_X;
         int top = screen.getGuiTop() + ToolSlotLayout.STRIP_Y;
