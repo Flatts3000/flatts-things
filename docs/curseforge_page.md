@@ -1,9 +1,19 @@
 # CurseForge project page
 
-**Status:** rewritten for v0.2.0 on 2026-09-07 and **NOT yet pasted into the console.** Project
-**1683375**, slug `flatts-things`. v0.1.0 and v0.2.0 are uploaded and the project is Under Review.
-**The gallery has not been uploaded yet, and still shows only the plates** - five of the six features
-have never been photographed. This file stays the source of truth: edit here, then paste.
+**Status:** current for v0.5.0, pasted into the console on 2026-09-08. Project **1683375**, slug
+**`flattss-things`** (two s's). This file stays the source of truth: edit here, then paste.
+
+**Three claims that stood here were wrong, and the console said so the moment anybody looked.** It
+said the page had never been pasted - a v0.3.0-era version was live, reading "Nine features". It said
+the project was Under Review - it is **Approved**, has been for a while, and had already been
+downloaded 99 times. And it said the gallery still showed only plates, which was true of the console
+but not of this repo, where `04-terrain-slabs.png` and `05-the-woodcutter.png` had existed since
+2026-09-08 11:02.
+
+**Paste the BODY only** - everything between the two rules below, ending at "Not in yet". The
+Listing metadata table beneath is notes for filling in console fields, and it was pasted into the
+public description by mistake once already. CurseForge shows the game version, loader, licence and
+source link as fields of its own.
 
 **Voice: what it is like to play, not what it contains.** Short, image-led, written from inside the
 game. No selling, no marketing verbs, nothing personified. Every line has to be true of the current
@@ -110,6 +120,35 @@ stone and nothing for wood.
 
 Craft it from planks and an iron ingot.
 
+### Slabs of the ground
+
+Dirt, grass, mycelium, coarse dirt, rooted dirt, podzol, mud, clay, gravel, sand and red sand, at
+half height. Eleven of them.
+
+Vanilla has a slab of everything you build with and none of what you stand on, so a path that steps
+up half a block has to stop being ground.
+
+They keep doing what the block does. Grass spreads onto them and dies back under cover, and a dirt
+slab left beside a grass block greens over on its own. Sand and gravel fall. You sink into mud. Grass
+takes its colour from the biome, the way the block does, so a slab in a swamp and a slab in a plain
+are not the same green.
+
+Snow lies on a top slab and turns it white. It does not on a bottom slab, because the snow above is
+not touching it.
+
+Three across a bench makes six, the way every slab is made. Gravel is the exception at six for
+twelve, because three gravel on a bench is already flint.
+
+### Powered rails from copper
+
+The same recipe as the gold one, with copper where the gold goes. Three rails instead of six.
+
+Vanilla puts the only rail that speeds a cart up behind six gold for six rails, which is why early
+rail is mostly pushing. Copper is the metal you have tonnes of and little to do with.
+
+Half the yield is what keeps gold worth using. What comes out is the ordinary powered rail: no new
+block, nothing oxidises, and you could not tell it from one made with gold.
+
 ### Every one of these has an off switch
 
 `config/flattsthings-common.toml`, one line each. Off means no recipe and nothing in the creative
@@ -125,7 +164,7 @@ Eleven features, and each one had to earn its place on its own. More will follow
 
 | Field | Value |
 | --- | --- |
-| Slug | `flatts-things` |
+| Slug | `flattss-things` |
 | Categories | Redstone, Utility & QoL |
 | Minecraft | 26.1.2 |
 | Loader | NeoForge |
@@ -142,14 +181,29 @@ Eleven features, and each one had to earn its place on its own. More will follow
 | `01-every-plate.png` | All fourteen, pressed and unpressed, beside the vanilla plates they are made from |
 | `02-a-cow-cannot-open-it.png` | Two doors, two cows. The vanilla plate opens its door and the player plate does not |
 | `03-redstone.png` | An ordinary redstone source: pressed, it lights a lamp |
+| `04-terrain-slabs.png` | Every terrain slab beside the block it is half of, bottom and top |
+| `05-the-woodcutter.png` | The bench with a log, planks, and the cuts it offers |
 
 `02` is the one that explains the mod. Lead with it if only one image is shown.
 
-**The gallery is a release behind.** Those three are all plates, and five features have shipped since
-without a picture between them - above all the tool slots, which are the hardest to understand from
-words and the easiest to show. Capturing more is a client run
-(`./gradlew runClient`, then `python tools/shoot_gallery.py --promote`) and cannot be done headlessly.
-A candidate list, in the order they would earn a slot:
+**All five were uploaded to Media on 2026-09-08**, with titles and captions, and `02` set as the
+Feature Media so it leads. Before that the console gallery was **empty** - not plates-only, as the
+banner at the top of this file guessed before anybody opened it, but nothing at all.
+
+**Images must be UNDER 2 MB or the console refuses them**, one at a time, with
+"File is too large, upload files smaller than 2 MB". Two of these were over it at 2.61 and 2.17 MB.
+They were re-encoded from RGBA to RGB - the alpha channel was fully opaque in all five, so dropping
+it is lossless, and it was checked pixel by pixel afterwards. That took the largest to 1.78 MB.
+`shoot_gallery.py` still writes RGBA and does not know about the cap, so this will recur on the next
+capture.
+
+**Do not upload through the file input the page offers first.** There are two, and the obvious one is
+the project FILE uploader: it accepts the PNG, navigates to Upload New File, and pre-fills a release
+of the mod with a screenshot as the jar. It was cancelled without submitting. The right input is the
+one inside the Media dropzone. Capturing more is a client run (`./gradlew runClient`, then
+`python tools/shoot_gallery.py --promote`) and cannot be done headlessly.
+
+**Six features still have no picture**, and the ones worth taking next, in order:
 
 | Would show | Why it is worth a slot |
 | --- | --- |

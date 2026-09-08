@@ -7,10 +7,14 @@ repository.
 9.5.1 via moddev 2.0.141. A grab bag of blocks, tools and small features vanilla never shipped. Mod
 id / package: `flattsthings` / `com.flatts.flattsthings`.
 
-**Status:** v0.5.0 uploaded to CurseForge 2026-09-08 as an **alpha**, the second that day after
-v0.4.0, following v0.3.0 and v0.2.0 on 2026-09-07 and v0.1.0 on 2026-09-05. The project is still
-Under Review, so nothing is visible to players yet. **Eleven features on `main`**, all of them in an
-uploaded build. Last reviewed 2026-09-08.
+**Status:** v0.5.0 published to CurseForge 2026-09-08 as an **alpha**, the second that day after
+v0.4.0, following v0.3.0 and v0.2.0 on 2026-09-07 and v0.1.0 on 2026-09-05. **Eleven features on
+`main`**, all of them in an uploaded build. Last reviewed 2026-09-08.
+
+**The project is APPROVED and public, and this banner said "still Under Review" for days after it
+stopped being true.** Every file is Approved, the page is live, and 99 downloads had happened before
+anybody looked. Nothing in this repo can observe moderation state, so the claim decayed silently the
+way undated claims do - which is the argument for the status banners, aimed at itself.
 
 | Feature | Config id | Where it is written up |
 | --- | --- | --- |
@@ -445,9 +449,14 @@ Not chased, because `tick freeze` stops time, weather and every other tick anywa
 
 ## Releasing
 
-CurseForge project **1683375**, slug `flatts-things`. **v0.1.0 was uploaded on 2026-09-05, v0.2.0 and
-v0.3.0 on 2026-09-07; the project is still Under Review.** A new project is invisible and its files do not
-synchronize until a moderator approves it, so an upload is not yet a release.
+CurseForge project **1683375**, slug **`flattss-things`** - two s's, and the URL is
+`https://www.curseforge.com/minecraft/mc-mods/flattss-things`. Three files in this repo said
+`flatts-things`, which is the repo name rather than the slug and 404s. Five uploads: v0.1.0 on
+2026-09-05, v0.2.0 and v0.3.0 on 2026-09-07, v0.4.0 and v0.5.0 on 2026-09-08.
+
+**The project is Approved and the page is live.** The old text here said a new project is invisible
+until a moderator approves it, which is true, and then kept saying it long after approval - see the
+banner at the top of this file.
 
 **Every 0.x upload is an ALPHA and the task hardcodes it** (`primary.releaseType = 'alpha'`). That is
 a claim about confidence rather than about features: the tool slots ship a screen no automated test

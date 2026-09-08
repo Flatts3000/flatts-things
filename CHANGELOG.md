@@ -2,9 +2,10 @@
 
 **Status:** current, reviewed 2026-09-08. **v0.5.0 was uploaded to CurseForge on 2026-09-08 as an
 ALPHA**, the second upload that day after v0.4.0, and following v0.3.0 and v0.2.0 on 2026-09-07 and
-v0.1.0 on 2026-09-05. The project is still Under Review: a new project is not visible to anyone and
-its files do not synchronize across CurseForge until a moderator approves it, so every one of these
-is uploaded rather than released.
+v0.1.0 on 2026-09-05. **The project is approved and public**, at
+<https://www.curseforge.com/minecraft/mc-mods/flattss-things>, and every file is Approved. Earlier
+entries here said it was Under Review; that was true when written and stopped being true without
+anything in this repo noticing.
 
 **Alpha is the honest label for the 0.x line**, and the publish task hardcodes it. Eleven features
 now, three of them (the tool slot strip, the woodcutter's screen and the grass slab's biome tint)
