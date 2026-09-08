@@ -228,6 +228,19 @@ recipe while reading it. The condition's registered name is part of that data fo
 `FTConditions` silently drops every recipe naming the old one, because an unknown condition type
 cannot be reported without refusing to load the world.
 
+**A TAG cannot be turned off that way, and the difference is invisible.** The sentence above is about
+recipes and does not generalise, which is worth stating because assuming it does costs nothing at the
+keyboard and everything at runtime. `TagFile` is
+`record TagFile(List<TagEntry> entries, boolean replace, List<TagEntry> remove)` - three fields, no
+conditions - and `TagLoader.load` parses it with `TagFile.CODEC.parse(new Dynamic<>(JsonOps.INSTANCE,
+element))`, plain `JsonOps` rather than `ConditionalOps`. Nothing ever evaluates a condition in a tag
+file. NeoForge has patched that record itself (`remove` is theirs), so the absence is a decision.
+
+The failure is the quiet kind: `RecordCodecBuilder` ignores unknown fields, so a
+`neoforge:conditions` block in a tag file parses without complaint, does nothing, and reads in review
+as a working switch. **A tag is gated by `required: false` on the entry, by the config switch on the
+Java that CONSULTS the tag, or not at all.**
+
 **Gating a live swap has to unwind it.** While a swap is in progress the player's own item exists only
 in the attachment, so a gate that merely stopped new swaps would strand it the instant somebody edited
 the config. `ToolSwapper.onPlayerTick` unwinds when the switch goes off.
@@ -632,6 +645,66 @@ weapon in your hand while you are mining and takes it away again. Tools go here;
 player's business. `a_weapon_does_not_belong_in_a_tool_slot` pins the shipped default, and there is
 no sword outline for the same reason - an outline promising one would be an invitation the slot then
 refuses. The fifth slot has no outline at all, because it is the free one.
+
+### What belongs in a tool slot, stated once, from both sides
+
+The weapons rule above is half of the entry policy and read as the whole of it for a while. The other
+half arrived with recompile compat (owner, 2026-09-08): **"the garbage vacuum doesn't break blocks
+and don't belong."** Together they are the rule:
+
+**A thing belongs in a tool slot when it breaks blocks AND breaking blocks is its job.** The second
+clause rejects a sword, which breaks blocks but is not for that. The first rejects recompile's
+Garbage Vacuum, which is a held tool a player would happily store here and breaks nothing at all.
+
+**Both halves are pinned, and each rejects things the other admits** -
+`a_weapon_does_not_belong_in_a_tool_slot` and `every_tool_slot_entry_breaks_blocks`.
+
+**But `every_tool_slot_entry_breaks_blocks` cannot see the recompile entries, and a review caught
+this file claiming otherwise.** It walks the RESOLVED tag, and without recompile installed - CI's
+ordinary state and the only one it runs in - those five entries resolve to nothing, leaving a loop
+over vanilla tools that all carry the component by construction. So a later PR adding a Garbage
+Vacuum entry would pass the whole suite green. What guards that is a second, file-level test,
+`theForeignEntriesInTheToolSlotTagAreTheOnesThatWereRuledIn`, pinning the shipped foreign entries as
+an ALLOW-LIST: any new one fails until somebody comes and reads the rule. That is the right shape
+rather than a fallback, because whether breaking blocks is a thing's JOB is a judgement, not
+something a test can compute for an item it cannot even load.
+
+**"Breaks blocks" has an exact form and it is `DataComponents.TOOL`.** Verified in both directions
+before the test was written, because a rule that quietly excludes something already shipped is worse
+than no rule. Every current member has one - **including shears**, which are the member most likely
+to be the counterexample, being the only entry that does not come from a `#minecraft:<tool>s` tag;
+`Items.java` gives them the component explicitly.
+
+**The weapons rule is about purpose, not about whether a thing can fight, and the tag already proves
+it.** `#minecraft:axes` has been in `tool_slot_valid` since the beginning and an axe is one of the
+better weapons in vanilla. So a mining tool that happens to hit hard is in - which is what admits
+recompile's sledgehammers, carrying knockback up to roughly Knockback II, and its prybar, which its
+own source calls "the trio's weak weapon". Neither is a reversal of the rule; both are what the rule
+always said once it was stated precisely.
+
+### Recompile's tools are in the tag, and the mod is not a dependency
+
+Five entries name `recompile` (issue #66, owner 2026-09-08: install it here rather than in a compat
+mod, and turn it off when recompile is absent). **Every one is `"required": false`, and that IS the
+"turn it off" - there is nothing else to it.** `TagEntry` defaults `required` to true; an optional
+entry whose id resolves to nothing is skipped and the rest of the tag builds normally.
+
+**Getting that wrong empties the tag rather than losing one entry, and this was measured rather than
+reasoned about.** Making a single entry required and running the suite without recompile installed -
+which is CI's ordinary state - failed SIX tool slot tests, including a netherite pickaxe being
+refused by a slot. `TagLoader.tryBuildTag` discards the whole tag, `ToolSlots.mayPlace` then answers
+false for everything, and the mod's headline feature is dead with one line in a log to say so.
+`everyForeignEntryInOurOwnTagsIsOptional` guards it by NAMESPACE rather than by a list of known mods,
+so the next compat entry is covered the day it is written.
+
+**Four ids and one tag reference, not eight ids.** `#recompile:sledgehammer` is used for the four
+sledgehammers because recompile maintains it and its stated purpose there is what a player may HOLD,
+which is exactly this question. A fifth tier would arrive on its own.
+
+**Nothing links the two repos, so the list will age.** It was derived from recompile's own
+`RCCreativeTabs` "Tools" section at `mod_version=0.20.0` rather than from memory, and no test on
+either side will notice a tool added there later. Re-derive from that file rather than trusting this
+paragraph.
 
 ### The tool slots are shown only on a screen that laid them out
 

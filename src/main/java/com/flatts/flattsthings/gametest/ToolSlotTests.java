@@ -3,10 +3,14 @@ package com.flatts.flattsthings.gametest;
 import com.flatts.flattsthings.content.ToolSlotDisplay;
 import com.flatts.flattsthings.content.ToolSlots;
 import com.flatts.flattsthings.content.ToolSlotsContainer;
+import com.flatts.flattsthings.registry.FTTags;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -212,6 +216,12 @@ final class ToolSlotTests {
         // already, so it fits with no knowledge of it here. Walking the vanilla set proves the tag
         // file actually resolves, which a hardcoded class check would never have needed and which
         // silently fails if the JSON is wrong.
+        //
+        // Since #66 the tag also names items from recompile, which is not a dependency and is absent
+        // from CI. That makes this test a guard against the whole-tag-drop failure described on
+        // every_tool_slot_entry_breaks_blocks below: if a foreign entry were ever written without
+        // "required": false, TagLoader would discard the entire tag and all six of these would be
+        // rejected at once.
         FTGameTests.test("the_tool_slot_tag_accepts_every_vanilla_tool_family", 20, helper -> {
             List<String> rejected = new ArrayList<>();
             for (var item : List.of(Items.WOODEN_PICKAXE, Items.NETHERITE_PICKAXE, Items.DIAMOND_AXE,
@@ -240,6 +250,42 @@ final class ToolSlotTests {
                 }
             }
             report(helper, accepted, "weapons the tool slots wrongly accept");
+        });
+
+        // EVERYTHING IN THE TAG MUST BREAK BLOCKS (owner, 2026-09-08), ruling on #66: "the garbage
+        // vacuum doesn't break blocks and don't belong."
+        //
+        // This is the entry rule the weapons test above states from the other side. Together they
+        // are the whole policy: a thing belongs in a tool slot when breaking blocks is its job. The
+        // weapons rule rejects a sword, which breaks blocks but is not for that; this one rejects
+        // recompile's Garbage Vacuum, which is a held tool a player would love to store here and
+        // breaks nothing at all.
+        //
+        // "Breaks blocks" has an exact form in 26.1 and it is DataComponents.TOOL. Verified in both
+        // directions before it was trusted, because a rule that quietly excludes something already
+        // shipped is worse than no rule: every current member has one, INCLUDING shears, which are
+        // the entry most likely to be the counterexample - they are the only member that does not
+        // come from a #minecraft:<tool>s tag, and Items.java gives them the component explicitly.
+        //
+        // THE EMPTY CASE IS ASSERTED FIRST, and that is not defensive noise. getTagOrEmpty answers
+        // an empty iterable for a tag that failed to load, so without this line a tag that had been
+        // discarded entirely would satisfy the loop and report green - which is precisely the
+        // failure mode the recompile entries introduce, since a foreign entry missing "required":
+        // false takes the whole tag down with it and CI has no recompile installed.
+        FTGameTests.test("every_tool_slot_entry_breaks_blocks", 20, helper -> {
+            List<String> toolless = new ArrayList<>();
+            int seen = 0;
+            for (Holder<Item> holder : BuiltInRegistries.ITEM.getTagOrEmpty(FTTags.TOOL_SLOT_VALID)) {
+                seen++;
+                if (!new ItemStack(holder.value()).has(DataComponents.TOOL)) {
+                    toolless.add(holder.value().toString());
+                }
+            }
+            helper.assertTrue(seen > 0,
+                "#flattsthings:tool_slot_valid resolved to nothing, so the tool slots accept no item"
+                    + " at all - the likeliest cause is an entry naming an absent mod without"
+                    + " \"required\": false, which makes TagLoader discard the whole tag");
+            report(helper, toolless, "items in #flattsthings:tool_slot_valid that break no blocks");
         });
 
         FTGameTests.test("a_slot_refuses_something_that_is_not_a_tool", 20, helper -> {

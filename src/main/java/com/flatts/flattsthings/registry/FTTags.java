@@ -16,6 +16,14 @@ public final class FTTags {
      * pickaxe already carries {@code #minecraft:pickaxes}, so it fits these slots with no compat
      * patch and no knowledge of it here. A pack that wants a wrench or a bucket in there widens the
      * tag in a datapack rather than waiting for a release.
+     *
+     * <p><b>The entry rule binds what this mod SHIPS, not what a pack adds</b>, and the two read as
+     * contradictory until that is said. A tool slot entry of ours has to break blocks and have that
+     * be its job - which is why recompile's Garbage Vacuum is out, and why the bucket above would
+     * never ship here. A pack is not held to it: {@code every_tool_slot_entry_breaks_blocks} sees
+     * only the tag as this repo ships it, and a bucket a pack adds is harmless anyway, since the
+     * auto-swap picks by destroy speed and a bucket never wins. Widen it freely; the rule is about
+     * what this mod would be answerable for.
      */
     public static final TagKey<Item> TOOL_SLOT_VALID = TagKey.create(
         Registries.ITEM, Identifier.fromNamespaceAndPath(FlattsThings.MOD_ID, "tool_slot_valid"));
