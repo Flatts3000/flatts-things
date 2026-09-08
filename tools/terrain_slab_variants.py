@@ -16,24 +16,19 @@ chosen over the coloured builder sets and over deriving the list from the regist
 terrain - soul sand, soul soil, netherrack, end stone, moss, packed mud - were NOT in the twelve and
 are deferred rather than rejected. Adding a row here is adding a block; it needs the Java row too.
 
-**Ten of the twelve are here. `grass_block` and `mycelium` are deliberately absent**, and the reason
-is the ruling itself rather than an oversight: the owner asked for slabs that behave, not models, and
-those two are the only families in the set whose behaviour is a SYSTEM rather than a property. They
-spread and die back, they carry the snowy state, and grass is bonemealable into flowers - none of
-which has an obvious reading on a half block, and all of which vanilla implements in
-`SpreadingSnowyBlock`, a class no slab can extend because `SlabBlock` is already the parent.
+**Eleven of the twelve. `snow_block` is the one that is not coming**, and that is a judgement rather
+than a deferral. A GameTest caught its recipe colliding with vanilla's own: three snow blocks in a
+row already make six snow LAYERS. Chasing the collision turned up the better reason to drop it - a
+snow layer is already a stackable partial snow block, and four of them is a snow slab in everything
+but name. A snow block slab therefore fails this mod's own entry test, which is that a thing should
+be something vanilla should plausibly have and does not.
 
-Shipping them as tinted models with none of that would be exactly the decorative grass slab that was
-rejected on the sibling issue, so they wait for a design rather than arriving half-built. The other
-ten need no system: falling, the snowy property and drops are all per-block behaviour that a slab can
-carry unchanged.
-
-**Nine, in the end. `snow_block` was dropped too, and that one is a judgement rather than a deferral.**
-A GameTest caught its recipe colliding with vanilla's own: three snow blocks in a row already make
-six snow LAYERS. Chasing the collision turned up the better reason to drop it - a snow layer is
-already a stackable partial snow block, and four of them is a snow slab in everything but name. A
-snow block slab therefore fails this mod's own entry test, which is that a thing should be something
-vanilla should plausibly have and does not.
+**Grass and mycelium arrived second, and deliberately so.** The other nine needed a PROPERTY: gravel
+falls, podzol carries a blockstate, mud has a shorter collision box. These two need a SYSTEM - they
+spread, they die back when covered, and grass is bonemealable. Vanilla implements all of it in
+`SpreadingSnowyBlock`, which no slab can extend because `SlabBlock` is already the parent, so every
+part of it had to be adapted rather than inherited. Shipping them as models with none of that would
+have been the decorative grass slab the owner rejected.
 """
 
 from __future__ import annotations
@@ -60,6 +55,11 @@ class Variant(NamedTuple):
     A column was tried first and failed for exactly this reason, which is worth knowing before
     someone tries it again.
 
+    `tinted` says the top face and the side overlay take the biome grass colour, and `overlay` names
+    the tinted side texture drawn over `side`. Only the grass block has either, and they are why it
+    cannot use vanilla's `block/slab` parent like everything else - that parent has no way to express
+    a tintindex or a second layer, so a grass slab built on it renders grey.
+
     `snowy` says the family carries vanilla's `snowy` blockstate property, which swaps the side
     texture for snow when a snow layer rests on top. Podzol is the only one of the ten that does -
     verified against `Blocks.java` rather than guessed, because coarse dirt LOOKS like it should and
@@ -74,6 +74,8 @@ class Variant(NamedTuple):
     bottom: str
     snowy: bool = False
     batch_recipe: bool = False
+    tinted: bool = False
+    overlay: str | None = None
 
     @property
     def block_id(self) -> str:
@@ -89,6 +91,17 @@ def _plain(family: str, display: str, texture: str) -> Variant:
 # spread, then the loose ones that fall, then the odd solids.
 VARIANTS: list[Variant] = [
     _plain("dirt", "Dirt", "minecraft:block/dirt"),
+    Variant(
+        "grass_block", "Grass Block",
+        "minecraft:block/grass_block_top", "minecraft:block/grass_block_side",
+        "minecraft:block/dirt",
+        snowy=True, tinted=True, overlay="minecraft:block/grass_block_side_overlay",
+    ),
+    Variant(
+        "mycelium", "Mycelium",
+        "minecraft:block/mycelium_top", "minecraft:block/mycelium_side", "minecraft:block/dirt",
+        snowy=True,
+    ),
     _plain("coarse_dirt", "Coarse Dirt", "minecraft:block/coarse_dirt"),
     Variant(
         "rooted_dirt", "Rooted Dirt",

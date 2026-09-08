@@ -960,6 +960,42 @@ landing on it. Losing a block to a falling anvil is a worse bug than making some
 defect, which is the slab silently vanishing - no error, no log line, no drop, and nothing else in
 the suite would see it.
 
+### Spreading runs in two directions and only one of them can be pushed
+
+Grass and mycelium slabs came second, and the reason is the split that runs through this whole
+feature: the other nine families needed a PROPERTY, these two need a SYSTEM. Vanilla puts all of it
+in `SpreadingSnowyBlock`, which no slab can extend because `SlabBlock` is already the parent.
+
+**The push is easy and the pull is the interesting half.** `SpreadingTerrainSlabBlock` converts
+nearby dirt, slab or full block, by adapting vanilla's 3x5x3 walk. What it cannot do is the reverse:
+vanilla's own `GrassBlock` looks for `Blocks.DIRT` and will never see a dirt slab, and there is no
+event or data hook that changes what it looks for. So `DirtTerrainSlabBlock` random-ticks and pulls -
+it looks for a vanilla grass or mycelium block near it and converts ITSELF. Between the two, every
+combination works and no second mixin is needed.
+
+**That is why the dirt slab random-ticks when vanilla dirt does not.** A block that has to notice its
+neighbours has to be given a moment to look.
+
+**Spreading only crosses between matching halves.** A bottom grass slab and a top dirt slab have half
+a block of air between them; grass creeping across would be growing on a surface nothing rests on.
+
+### `canStayAlive` asks the wrong question about a slab, and the answer is catastrophic
+
+**Every TOP grass slab died back to dirt on its first random tick, under open sky.** Vanilla's check
+is `LightEngine.getLightBlockInto(state, aboveState, UP, ...)`: how much light is blocked ENTERING
+this block from above. For a full grass block that is the same question as "is my surface covered",
+because the surface and the block boundary are the same plane.
+
+For a slab they are different questions. **`SlabBlock.useShapeForLightOcclusion()` returns true**, so
+the engine computes real shape occlusion instead of taking the opaque-block shortcut - and a top
+slab's own material seals its own top face. Passed its own state, the check reported 15 with nothing
+above it at all.
+
+The fix is to measure with a full block of dirt standing in for the slab, which asks what the block
+ABOVE does and is what vanilla is actually measuring. **Nothing in the suite saw this**, because every
+other spreading test happened to use a bottom slab; it surfaced only when a NEGATIVE test refused to
+fail during a red drive. A test that cannot fail is worth chasing down even when everything is green.
+
 ### The recipe collision, and why a file-existence test would have shipped it
 
 `every_terrain_slab_has_a_recipe_that_actually_crafts` resolves each recipe through the real crafting

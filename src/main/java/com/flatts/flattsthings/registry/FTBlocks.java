@@ -2,10 +2,13 @@ package com.flatts.flattsthings.registry;
 
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.content.block.PlayerPressurePlateBlock;
+import com.flatts.flattsthings.content.terrain.DirtTerrainSlabBlock;
 import com.flatts.flattsthings.content.terrain.FallingTerrainSlabBlock;
+import com.flatts.flattsthings.content.terrain.GrassTerrainSlabBlock;
 import com.flatts.flattsthings.content.terrain.MudSlabBlock;
 import com.flatts.flattsthings.content.terrain.RootedDirtSlabBlock;
 import com.flatts.flattsthings.content.terrain.SnowyTerrainSlabBlock;
+import com.flatts.flattsthings.content.terrain.SpreadingTerrainSlabBlock;
 import com.flatts.flattsthings.content.terrain.TerrainSlabBlock;
 import com.flatts.flattsthings.content.woodcutter.WoodcutterBlock;
 import java.util.LinkedHashMap;
@@ -110,8 +113,14 @@ public final class FTBlocks {
      * is subclassable, so only the material half is written here.
      */
     public enum SlabKind {
-        /** Nothing beyond being a slab: dirt, coarse dirt, clay. */
+        /** Nothing beyond being a slab: coarse dirt, clay. */
         PLAIN,
+        /** Greens itself next to vanilla grass or mycelium. Dirt, and only dirt. */
+        DIRT,
+        /** Spreads to nearby dirt and dies back when covered. Mycelium. */
+        SPREADING,
+        /** Spreading, and takes bonemeal. Grass, which is the only family that does both. */
+        GRASS,
         /** Falls when unsupported, and lands the right way up. Gravel and the two sands. */
         FALLING,
         /** Carries the snowy blockstate. Podzol is the only one of the ten. */
@@ -156,7 +165,9 @@ public final class FTBlocks {
      * JAVA side, and {@code RegistryCompletenessTests} catches one missing from the GENERATOR side.
      */
     public static final List<TerrainSlabVariant> TERRAIN_SLABS = List.of(
-        new TerrainSlabVariant("dirt", Blocks.DIRT, SlabKind.PLAIN),
+        new TerrainSlabVariant("dirt", Blocks.DIRT, SlabKind.DIRT),
+        new TerrainSlabVariant("grass_block", Blocks.GRASS_BLOCK, SlabKind.GRASS),
+        new TerrainSlabVariant("mycelium", Blocks.MYCELIUM, SlabKind.SPREADING),
         new TerrainSlabVariant("coarse_dirt", Blocks.COARSE_DIRT, SlabKind.PLAIN),
         new TerrainSlabVariant("rooted_dirt", Blocks.ROOTED_DIRT, SlabKind.ROOTED),
         new TerrainSlabVariant("podzol", Blocks.PODZOL, SlabKind.SNOWY),
@@ -176,13 +187,30 @@ public final class FTBlocks {
                 variant.blockId(),
                 props -> switch (variant.kind()) {
                     case PLAIN -> new TerrainSlabBlock(props);
+                    case DIRT -> new DirtTerrainSlabBlock(props);
+                    case SPREADING -> new SpreadingTerrainSlabBlock(props);
+                    case GRASS -> new GrassTerrainSlabBlock(props);
                     case FALLING -> new FallingTerrainSlabBlock(props);
                     case SNOWY -> new SnowyTerrainSlabBlock(props);
                     case ROOTED -> new RootedDirtSlabBlock(props);
                     case MUD -> new MudSlabBlock(props);
                 },
-                () -> propertiesOf(variant.vanilla())));
+                () -> terrainPropertiesOf(variant)));
         }
+    }
+
+    /**
+     * A terrain slab's properties, copied from its vanilla block and then given a random tick if the
+     * behaviour needs one.
+     *
+     * <p><b>The dirt slab is the one that needs adding to.</b> Vanilla dirt does not random-tick,
+     * because vanilla dirt has nothing to do; the dirt SLAB has to notice a grass block beside it,
+     * because vanilla grass cannot notice the slab. Grass and mycelium already tick, so the copy
+     * brings that along and this only has to cover dirt.
+     */
+    private static BlockBehaviour.Properties terrainPropertiesOf(TerrainSlabVariant variant) {
+        BlockBehaviour.Properties props = propertiesOf(variant.vanilla());
+        return variant.kind() == SlabKind.DIRT ? props.randomTicks() : props;
     }
 
     /** The slab for one terrain family. Throws rather than returning null - a typo here is a bug. */

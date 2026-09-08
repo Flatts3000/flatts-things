@@ -58,6 +58,8 @@ def _set_roots(base: Path) -> None:
 # because it is the same rule for every family and it is what vanilla does.
 DROPS: dict[str, tuple] = {
     "dirt": ("self", None),
+    "grass_block": ("slab", "dirt"),
+    "mycelium": ("slab", "dirt"),
     "coarse_dirt": ("self", None),
     "rooted_dirt": ("self", None),
     "podzol": ("slab", "dirt"),
@@ -95,10 +97,54 @@ def write_json(path: Path, payload: dict) -> None:
 # --------------------------------------------------------------------------- models
 
 
-# The grass block would need element geometry here rather than vanilla's `block/slab` parent,
-# because a biome-tinted top and a tinted side overlay are not expressible through it. That code was
-# written and then removed with the family, rather than left dead: it belongs with the spreading
-# behaviour it goes with, not stranded ahead of it. See `terrain_slab_variants.py` for why.
+def _box_faces(top_half: bool, overlay: bool) -> dict:
+    """The faces of a half-height box, for the one family that cannot use vanilla's slab parent.
+
+    Side UVs are cropped to the matching half of the texture, which is what puts a grass slab's
+    dirt-to-grass transition where it belongs instead of squashing the whole gradient into eight
+    pixels.
+
+    Culling is asymmetric on purpose: a bottom slab's DOWN face sits on the block boundary and can be
+    culled, while its UP face floats mid-block and must not be.
+    """
+    v0, v1 = (0, 8) if top_half else (8, 16)
+    side = {"uv": [0, v0, 16, v1], "texture": "#overlay" if overlay else "#side"}
+    if overlay:
+        side["tintindex"] = 0
+    faces = {d: dict(side, cullface=d) for d in ("north", "south", "east", "west")}
+    if overlay:
+        return faces
+    faces["down"] = {"uv": [0, 0, 16, 16], "texture": "#bottom"}
+    faces["up"] = {"uv": [0, 0, 16, 16], "texture": "#top", "tintindex": 0}
+    faces["up" if top_half else "down"]["cullface"] = "up" if top_half else "down"
+    return faces
+
+
+def tinted_model(v: Variant, top_half: bool) -> dict:
+    """A grass-style slab, built from elements because `block/slab` cannot tint or overlay.
+
+    Two boxes at the same coordinates, exactly as vanilla's own `block/grass_block` does it: the
+    first carries the dirt bottom, the tinted top and the plain side, the second lays the tinted
+    overlay over the four sides. Copied in structure rather than in numbers, since the numbers are
+    the half-height ones.
+    """
+    lo, hi = (8, 16) if top_half else (0, 8)
+    return {
+        "parent": "minecraft:block/block",
+        "textures": {
+            "particle": v.bottom,
+            "bottom": v.bottom,
+            "top": v.top,
+            "side": v.side,
+            "overlay": v.overlay,
+        },
+        "elements": [
+            {"from": [0, lo, 0], "to": [16, hi, 16], "faces": _box_faces(top_half, False)},
+            {"from": [0, lo, 0], "to": [16, hi, 16], "faces": _box_faces(top_half, True)},
+        ],
+    }
+
+
 def plain_model(v: Variant, top_half: bool) -> dict:
     parent = "minecraft:block/slab_top" if top_half else "minecraft:block/slab"
     return {
@@ -115,10 +161,17 @@ SNOW_SIDE = "minecraft:block/grass_block_snow"
 
 
 def write_models(v: Variant) -> None:
-    write_json(ASSETS / "models/block" / f"{v.block_id}.json", plain_model(v, False))
-    write_json(ASSETS / "models/block" / f"{v.block_id}_top.json", plain_model(v, True))
+    build = tinted_model if v.tinted else plain_model
+    write_json(ASSETS / "models/block" / f"{v.block_id}.json", build(v, False))
+    write_json(ASSETS / "models/block" / f"{v.block_id}_top.json", build(v, True))
     if v.snowy:
-        # The snowy pair swaps the SIDE only, and keeps podzol's own top.
+        # THE SNOWY PAIR IS NEVER TINTED, even for grass, and that is vanilla's own choice rather
+        # than a shortcut. Its `block/grass_block_snow` is a plain `cube_bottom_top` with no
+        # tintindex anywhere - the sides are buried in snow and the top is under a snow layer, so
+        # the biome colour has nothing left to colour. Building the snowy grass slab from the same
+        # plain parent keeps it identical to the block it is half of.
+        #
+        # The snowy pair swaps the SIDE only, and keeps the family's own top.
         #
         # Vanilla is sloppier here and we are deliberately not copying it: its snowy podzol borrows
         # `grass_block_snow` wholesale, which carries the GRASS top texture. It gets away with that
