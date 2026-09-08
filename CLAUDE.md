@@ -8,8 +8,9 @@ repository.
 id / package: `flattsthings` / `com.flatts.flattsthings`.
 
 **Status:** v0.3.0 uploaded to CurseForge 2026-09-07 as an **alpha**, after v0.2.0 the same day and
-v0.1.0 on 2026-09-05. The project is still Under Review, so nothing is visible to players yet. **Nine
-features on `main`**, all of them in an uploaded build. Last reviewed 2026-09-07.
+v0.1.0 on 2026-09-05. The project is still Under Review, so nothing is visible to players yet. **Ten
+features on `main`**, the terrain slabs being the newest and the only one not yet in an uploaded
+build. Last reviewed 2026-09-07.
 
 | Feature | Config id | Where it is written up |
 | --- | --- | --- |

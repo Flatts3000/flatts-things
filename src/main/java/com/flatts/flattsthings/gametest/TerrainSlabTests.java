@@ -239,6 +239,56 @@ final class TerrainSlabTests {
             });
         });
 
+        // A DOUBLE THAT CANNOT LAND IS WORTH TWO SLABS, and vanilla drops one. FallingBlockEntity
+        // spawns a single item of the block whatever state it carried, which is right for every
+        // vanilla falling block and wrong for a double slab. The loss is silent and small enough
+        // that a player would not be sure it had happened.
+        FTGameTests.test("a_double_slab_that_cannot_land_drops_both_halves", 100, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(SLAB, slab("gravel").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.BOTTOM));
+            helper.setBlock(ABOVE, Blocks.AIR);
+            helper.setBlock(HIGH, slab("gravel").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.DOUBLE));
+            helper.succeedWhen(() -> {
+                helper.assertBlockPresent(Blocks.AIR, HIGH);
+                long slabs = helper.getEntities(EntityType.ITEM).stream()
+                    .filter(e -> e instanceof ItemEntity item
+                        && item.getItem().is(slab("gravel").asItem()))
+                    .mapToLong(e -> ((ItemEntity) e).getItem().getCount())
+                    .sum();
+                if (slabs < 2) {
+                    helper.fail("a double gravel slab that could not land dropped " + slabs
+                        + " slab(s); it is worth two, and the rest is gone");
+                }
+            });
+        });
+
+        // A DOUBLE MUST NEVER COME TO REST WATERLOGGED. SlabBlock refuses that combination in both
+        // placeLiquid and canPlaceLiquid, because a double fills its position and there is nowhere
+        // for water to be. FallingBlockEntity asks neither and sets WATERLOGGED directly whenever
+        // the landing position holds water, so only a fall can produce it: a solid full block that
+        // is also a water source.
+        FTGameTests.test("a_double_slab_does_not_land_as_a_waterlogged_full_block", 100, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(SLAB, Blocks.WATER);
+            helper.setBlock(ABOVE, Blocks.AIR);
+            helper.setBlock(HIGH, slab("gravel").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.DOUBLE));
+            helper.succeedWhen(() -> {
+                helper.assertBlockPresent(slab("gravel"), SLAB);
+                BlockState landed = helper.getBlockState(SLAB);
+                if (landed.getValue(SlabBlock.TYPE) != SlabType.DOUBLE) {
+                    helper.fail("the double lost its DOUBLE state on landing");
+                }
+                if (landed.getValue(BlockStateProperties.WATERLOGGED)) {
+                    helper.fail("a double slab landed waterlogged, which is a solid full block that"
+                        + " is also a water source and which the game refuses to create any other"
+                        + " way");
+                }
+            });
+        });
+
         // A BOTTOM SLAB CAN NEVER BE SNOWY, and reading the block above regardless is the obvious
         // bug. A bottom slab's top face is half way up its own position, so a snow layer in the
         // block above floats eight pixels clear of it - painting a snowy side under snow the slab

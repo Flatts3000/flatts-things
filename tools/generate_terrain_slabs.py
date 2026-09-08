@@ -68,10 +68,22 @@ DROPS: dict[str, tuple] = {
     "red_sand": ("self", None),
 }
 
-# Gravel's flint chance is kept whole rather than halved. Flint is one indivisible item and the
-# fortune ladder vanilla ships is discrete, so halving it would mean inventing a table Mojang never
-# wrote. Keeping it makes a gravel slab very slightly better value than half a gravel block, which
-# is the smaller of the two distortions.
+# Flint comes from a WHOLE block's worth of gravel, so only a double slab rolls it.
+#
+# Two earlier versions of this were wrong in different ways and both are worth recording.
+#
+# The first put flint in a SECOND POOL, so a gravel slab dropped the slab AND flint instead of one
+# or the other. Vanilla's own table is a single nested `alternatives` - silk, else flint, else
+# gravel - and the branches are exclusive. With Fortune III the fortune ladder tops out at 1.0, so
+# every gravel slab broken with a Fortune III shovel returned itself plus a guaranteed flint: the
+# block paid for itself and gravel slabs became a free renewable flint source.
+#
+# The obvious repair, nesting it the way vanilla does, still leaves an exploit. Three gravel craft
+# six slabs, so if a half block rolled flint at a whole block's rate you would double your flint per
+# gravel by cutting it up first. Halving the chance means inventing numbers Mojang never wrote, so
+# the answer is the one that needs no new numbers: a DOUBLE slab is a whole block and rolls exactly
+# what gravel rolls, and a half slab returns itself. Cutting gravel up and recombining it is then
+# exactly neutral, which is the property worth having.
 FLINT_FAMILIES = {"gravel"}
 
 
@@ -214,32 +226,36 @@ def loot_table(v: Variant) -> dict:
             ],
         }
 
+    # NESTED, NOT TWO POOLS. Each pool rolls independently, so a second pool ADDS to whatever the
+    # first gave. Vanilla's gravel table is one pool whose branches exclude each other, and that
+    # exclusivity is the whole point: rolling flint COSTS you the block.
+    otherwise = main
+    if v.family in FLINT_FAMILIES:
+        otherwise = {
+            "type": "minecraft:alternatives",
+            "conditions": [{"condition": "minecraft:survives_explosion"}],
+            "children": [
+                {"type": "minecraft:item", "name": "minecraft:flint",
+                 "conditions": [
+                     {"condition": "minecraft:table_bonus",
+                      "enchantment": "minecraft:fortune",
+                      "chances": [0.1, 0.14285715, 0.25, 1.0]},
+                     _double_condition(block),
+                 ]},
+                main,
+            ],
+        }
+
     pools = [{
         "rolls": 1,
         "entries": [{
             "type": "minecraft:alternatives",
             "children": [
                 dict(silk, conditions=[_silk_condition()]),
-                main,
+                otherwise,
             ],
         }],
     }]
-
-    if v.family in FLINT_FAMILIES:
-        pools.append({
-            "rolls": 1,
-            "conditions": [{"condition": "minecraft:inverted", "term": _silk_condition()}],
-            "entries": [{
-                "type": "minecraft:alternatives",
-                "children": [
-                    {"type": "minecraft:item", "name": "minecraft:flint",
-                     "conditions": [{"condition": "minecraft:table_bonus",
-                                     "enchantment": "minecraft:fortune",
-                                     "chances": [0.1, 0.14285715, 0.25, 1.0]}]},
-                    {"type": "minecraft:empty"},
-                ],
-            }],
-        })
 
     return {"type": "minecraft:block", "pools": pools}
 

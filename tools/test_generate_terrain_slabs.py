@@ -70,13 +70,12 @@ def _slab_files(directory: Path) -> set[str]:
 def test_committed_tree_matches_a_fresh_generation() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp)
-        # The lang writer merges into whatever is already there, so it needs the real file to
-        # start from or it would write a file containing only the slab keys.
-        lang_src = ROOT / "src/main/resources/assets/flattsthings/lang/en_us.json"
-        lang_dst = out / "src/main/resources/assets/flattsthings/lang/en_us.json"
-        lang_dst.parent.mkdir(parents=True, exist_ok=True)
-        lang_dst.write_bytes(lang_src.read_bytes())
-
+        # NO LANG SEEDING, and the version that did it described behaviour this repo no longer
+        # has. `ft_lang.write` rebuilds en_us.json wholesale from STATIC_LANG plus both variant
+        # tables and ignores whatever is on disk, so there is nothing to seed - and the comment
+        # that used to sit here said the writer MERGES, which is the exact landmine ft_lang was
+        # created to remove. A reader following it would believe a hand-added key survives a
+        # regeneration.
         subprocess.run([sys.executable, str(GENERATOR), "--out", str(out)],
                        check=True, capture_output=True)
 

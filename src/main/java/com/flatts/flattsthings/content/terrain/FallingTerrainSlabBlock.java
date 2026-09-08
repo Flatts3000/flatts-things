@@ -12,11 +12,14 @@ import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Fallable;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.SlabType;
 
 /**
@@ -84,6 +87,45 @@ public class FallingTerrainSlabBlock extends TerrainSlabBlock implements Fallabl
             ? state.setValue(TYPE, SlabType.BOTTOM)
             : state;
         FallingBlockEntity.fall(level, pos, falling);
+    }
+
+    /**
+     * A double that could not be placed is worth TWO slabs, and vanilla drops one.
+     *
+     * <p>{@code FallingBlockEntity} calls this immediately before {@code spawnAtLocation(level,
+     * block)}, which spawns a single item of the block whatever state it was carrying. For every
+     * vanilla falling block that is correct, because a block is a block. A DOUBLE slab is two, so
+     * the player would silently lose half the material - no message, no log line, and the amount is
+     * small enough that nobody would be sure it had happened.
+     *
+     * <p>Reachable the same way the single-slab case is: a double gravel slab coming to rest on an
+     * existing slab, where {@code SlabBlock.canBeReplaced} refuses the empty stack that
+     * {@code DirectionalPlaceContext} carries and the entity takes the drop-as-item branch.
+     */
+    @Override
+    public void onBrokenAfterFall(Level level, BlockPos pos, FallingBlockEntity entity) {
+        if (entity.getBlockState().getValue(TYPE) == SlabType.DOUBLE) {
+            Block.popResource(level, pos, new ItemStack(this));
+        }
+    }
+
+    /**
+     * A double slab must never come to rest waterlogged, and only a fall can put it there.
+     *
+     * <p>{@code SlabBlock} refuses the combination deliberately: both {@code placeLiquid} and
+     * {@code canPlaceLiquid} return false for {@code DOUBLE}, because a double slab fills its
+     * position and there is nowhere for the water to be. {@code FallingBlockEntity} does not ask
+     * either of them - it sets {@code WATERLOGGED} directly whenever the landing position holds
+     * water - so dropping a double gravel slab into a one-deep pool produces a solid full block
+     * that is also a water source, a state the game will not otherwise create.
+     */
+    @Override
+    public void onLand(Level level, BlockPos pos, BlockState state, BlockState replaced,
+                       FallingBlockEntity entity) {
+        if (state.getValue(TYPE) == SlabType.DOUBLE
+                && state.getValue(BlockStateProperties.WATERLOGGED)) {
+            level.setBlock(pos, state.setValue(BlockStateProperties.WATERLOGGED, false), 3);
+        }
     }
 
     @Override

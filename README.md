@@ -1,7 +1,7 @@
 # Flatts's Things
 
 **Status:** v0.3.0 uploaded to CurseForge 2026-09-07 as an alpha. The project is still Under Review,
-so nothing is downloadable by anyone yet. Nine features. Last reviewed 2026-09-07.
+so nothing is downloadable by anyone yet. Ten features, the newest not yet uploaded. Last reviewed 2026-09-07.
 
 A grab bag of blocks, tools and small features that vanilla Minecraft never shipped.
 
@@ -170,7 +170,8 @@ when bonemealed, and refuses as a top slab where they would have nothing to hang
 pixels short, so you sink in.
 
 Mining one gives half of what the block gives: a podzol slab yields a dirt slab, clay yields two clay
-balls, gravel keeps its flint chance.
+balls. Flint comes only from a DOUBLE gravel slab, which is a whole block's worth, so cutting gravel
+up and recombining it is neutral.
 
 Three blocks in a row give six slabs. **Gravel is the exception at six for twelve**, the same rate in
 a bigger batch, because three gravel is already the flint recipe.

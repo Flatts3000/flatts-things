@@ -29,7 +29,9 @@ All notable changes to this project are documented here. Format follows
   not survive anyway. Mud is two pixels short, so you sink into it exactly as you do a mud block.
 
   **Mining one gives half of what the whole block gives.** A podzol slab yields a dirt slab, the way
-  a podzol block yields dirt. Clay gives two clay balls and gravel keeps its flint chance.
+  a podzol block yields dirt. Clay gives two clay balls. **Flint comes only from a DOUBLE gravel
+  slab**, which is a whole block's worth, so cutting gravel into slabs and putting it back together
+  is exactly neutral - and rolling flint costs you the block, the way it does in vanilla.
 
   **Gravel is crafted six-for-twelve rather than three-for-six**, at the same rate. Three gravel is
   already this mod's own gravel-to-flint recipe, which is shapeless, so it matches any arrangement
