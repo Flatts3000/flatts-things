@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from plate_variants import VARIANTS, block_id  # noqa: E402
+from terrain_slab_variants import VARIANTS as SLABS  # noqa: E402
 from shoot_plates import GROUND_Y, PLATE_Y, cmd, make_safe, run  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -164,7 +165,75 @@ def scene_redstone() -> str:
     return "03-redstone"
 
 
-SCENES = [scene_family, scene_the_point, scene_redstone]
+def scene_terrain_slabs() -> str:
+    """Every terrain slab beside the block it is half of.
+
+    The comparison is the point. A slab of dirt has to read as dirt, and the only way to show that
+    is to put the two side by side - which is also the check that catches a wrong texture id, since
+    the mod draws no art for these and points at vanilla's own textures.
+    """
+    first_x = -(len(SLABS) // 2)
+    blocks_z, bottom_z, top_z = 3, 6, 9
+    # CLEARED WELL WIDER THAN THE SUBJECT. The first capture had two stray blocks from an unrelated
+    # experiment sitting in the foreground corners, and patches of grass the mod's own slabs had
+    # spread onto the surrounding dirt while it was being tested. Both were outside a clear sized to
+    # the scene, and both are the sort of thing that only shows up once the picture is taken.
+    clear(first_x - 14, blocks_z - 12, first_x + len(SLABS) + 14, top_z + 10)
+
+    for index, v in enumerate(SLABS):
+        x = first_x + index
+        # Smooth stone under every column: three of these families fall, and a scene built over air
+        # would photograph them mid-drop.
+        for z in (blocks_z, bottom_z, top_z):
+            cmd(f"setblock {x} {GROUND_Y} {z} minecraft:smooth_stone", strict=False)
+        cmd(f"setblock {x} {PLATE_Y} {blocks_z} minecraft:{v.family}")
+        cmd(f"setblock {x} {PLATE_Y} {bottom_z} flattsthings:{v.block_id}[type=bottom]")
+        cmd(f"setblock {x} {PLATE_Y} {top_z} flattsthings:{v.block_id}[type=top]")
+
+    require(f"{first_x} {PLATE_Y} {bottom_z} flattsthings:{SLABS[0].block_id}[type=bottom]",
+            "the first terrain slab is a bottom slab")
+    look_from(first_x + len(SLABS) / 2 - 0.5, PLATE_Y + 7, blocks_z - 8, 0, 36)
+    shot("04-terrain-slabs")
+    return "04-terrain-slabs"
+
+
+def scene_woodcutter() -> str:
+    """The woodcutter raised on a plinth, with a log going in and its cuts coming out.
+
+    Laid out flat the first time, which read as a scattered row of brown blocks with the bench lost
+    among them. The bench is the product here, so it sits a block higher than everything else and
+    the material reads left to right: log in, planks and the shapes they cut into, out.
+    """
+    clear(-18, -14, 18, 16)
+    for x in range(-9, 10):
+        for z in range(0, 10):
+            cmd(f"setblock {x} {GROUND_Y} {z} minecraft:smooth_stone", strict=False)
+
+    # The bench, up a step so it is not one silhouette among many.
+    cmd(f"setblock 0 {PLATE_Y} 6 minecraft:smooth_stone")
+    cmd(f"setblock 0 {PLATE_Y + 1} 6 flattsthings:woodcutter")
+
+    # In on the left, out on the right, each on its own plinth so the row reads as a sequence.
+    # POSITIVE X IS SCREEN-LEFT here, because the camera faces +Z. Laying the input out at negative
+    # x read the sequence backwards in the first capture: the products came first and the log last.
+    going_in = ("oak_log", "oak_planks")
+    coming_out = ("oak_stairs", "oak_slab", "oak_button", "stripped_oak_log")
+    for index, block in enumerate(going_in):
+        x = 4 - index
+        cmd(f"setblock {x} {PLATE_Y} 6 minecraft:smooth_stone")
+        cmd(f"setblock {x} {PLATE_Y + 1} 6 minecraft:{block}")
+    for index, block in enumerate(coming_out):
+        x = -2 - index
+        cmd(f"setblock {x} {PLATE_Y} 6 minecraft:smooth_stone")
+        cmd(f"setblock {x} {PLATE_Y + 1} 6 minecraft:{block}")
+
+    require(f"0 {PLATE_Y + 1} 6 flattsthings:woodcutter", "the woodcutter is placed")
+    look_from(0.5, PLATE_Y + 3.1, 1.6, 0, 13)
+    shot("05-the-woodcutter")
+    return "05-the-woodcutter"
+
+
+SCENES = [scene_family, scene_the_point, scene_redstone, scene_terrain_slabs, scene_woodcutter]
 
 
 def main() -> None:

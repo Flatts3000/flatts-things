@@ -117,7 +117,7 @@ tab, and the behaviour stops. It never removes anything you have already built o
 
 ### Not in yet
 
-Nine features, and each one had to earn its place on its own. More will follow the same way.
+Ten features, and each one had to earn its place on its own. More will follow the same way.
 
 ---
 
