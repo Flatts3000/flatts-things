@@ -1,7 +1,7 @@
 # Flatts's Things
 
-**Status:** v0.2.0 uploaded to CurseForge 2026-09-07 as an alpha. The project is still Under Review,
-so nothing is downloadable by anyone yet. Six features. Last reviewed 2026-09-07.
+**Status:** v0.3.0 uploaded to CurseForge 2026-09-07 as an alpha. The project is still Under Review,
+so nothing is downloadable by anyone yet. Nine features. Last reviewed 2026-09-07.
 
 A grab bag of blocks, tools and small features that vanilla Minecraft never shipped.
 

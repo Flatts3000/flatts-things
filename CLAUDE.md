@@ -7,9 +7,9 @@ repository.
 9.5.1 via moddev 2.0.141. A grab bag of blocks, tools and small features vanilla never shipped. Mod
 id / package: `flattsthings` / `com.flatts.flattsthings`.
 
-**Status:** v0.2.0 uploaded to CurseForge 2026-09-07 as an **alpha**; v0.1.0 went up 2026-09-05 and
-the project is still Under Review, so nothing is visible to players yet. **Six features on `main`**,
-all of them now in an uploaded build. Last reviewed 2026-09-07.
+**Status:** v0.3.0 uploaded to CurseForge 2026-09-07 as an **alpha**, after v0.2.0 the same day and
+v0.1.0 on 2026-09-05. The project is still Under Review, so nothing is visible to players yet. **Nine
+features on `main`**, all of them in an uploaded build. Last reviewed 2026-09-07.
 
 | Feature | Config id | Where it is written up |
 | --- | --- | --- |
@@ -429,8 +429,8 @@ Not chased, because `tick freeze` stops time, weather and every other tick anywa
 
 ## Releasing
 
-CurseForge project **1683375**, slug `flatts-things`. **v0.1.0 was uploaded on 2026-09-05 and v0.2.0
-on 2026-09-07; the project is still Under Review.** A new project is invisible and its files do not
+CurseForge project **1683375**, slug `flatts-things`. **v0.1.0 was uploaded on 2026-09-05, v0.2.0 and
+v0.3.0 on 2026-09-07; the project is still Under Review.** A new project is invisible and its files do not
 synchronize until a moderator approves it, so an upload is not yet a release.
 
 **Every 0.x upload is an ALPHA and the task hardcodes it** (`primary.releaseType = 'alpha'`). That is
