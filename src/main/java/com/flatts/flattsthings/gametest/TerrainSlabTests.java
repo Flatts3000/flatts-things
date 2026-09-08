@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.shapes.CollisionContext;
 
@@ -188,6 +189,30 @@ final class TerrainSlabTests {
                 if (!recovered) {
                     helper.fail("the falling gravel slab is gone: it neither came to rest nor"
                         + " dropped as an item, so the player simply lost it");
+                }
+            });
+        });
+
+        // A WATERLOGGED SLAB LANDS DRY, and this pairing exists nowhere in vanilla so it is worth
+        // pinning rather than trusting. Slabs are waterloggable and no vanilla falling block is, so
+        // "a waterlogged block falls" is a state only this mod can reach. If the water came along
+        // for the ride, the slab would land full of water with none around it - a block that looks
+        // like a bug and cannot be drained.
+        //
+        // It lands dry because FallingBlockEntity only ever sets WATERLOGGED to true, when the
+        // landing position already holds water, and never carries a true value down. Correct, and
+        // inherited rather than written here, which is exactly why a change could lose it silently.
+        FTGameTests.test("a_waterlogged_slab_does_not_carry_water_down_with_it", 100, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(SLAB, Blocks.AIR);
+            helper.setBlock(ABOVE, Blocks.AIR);
+            helper.setBlock(HIGH, slab("gravel").defaultBlockState()
+                .setValue(BlockStateProperties.WATERLOGGED, true));
+            helper.succeedWhen(() -> {
+                helper.assertBlockPresent(slab("gravel"), SLAB);
+                if (helper.getBlockState(SLAB).getValue(BlockStateProperties.WATERLOGGED)) {
+                    helper.fail("the slab landed waterlogged with no water near it, which leaves"
+                        + " water sitting inside a block in open air");
                 }
             });
         });
