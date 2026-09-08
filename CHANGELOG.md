@@ -1,20 +1,31 @@
 # Changelog
 
-**Status:** current, reviewed 2026-09-08. **v0.4.0 was uploaded to CurseForge on 2026-09-08 as an
-ALPHA**, after v0.3.0 and v0.2.0 on 2026-09-07 and v0.1.0 on 2026-09-05. The project is still Under
-Review: a new project is not visible to anyone and its files do not synchronize across CurseForge
-until a moderator approves it, so every one of these is uploaded rather than released.
+**Status:** current, reviewed 2026-09-08. **v0.5.0 was uploaded to CurseForge on 2026-09-08 as an
+ALPHA**, the second upload that day after v0.4.0, and following v0.3.0 and v0.2.0 on 2026-09-07 and
+v0.1.0 on 2026-09-05. The project is still Under Review: a new project is not visible to anyone and
+its files do not synchronize across CurseForge until a moderator approves it, so every one of these
+is uploaded rather than released.
 
-**Alpha is the honest label for the 0.x line**, and the publish task hardcodes it. Ten features now,
-three of them (the tool slot strip, the woodcutter's screen and the grass slab's biome tint) with
-client code no automated test can reach, and none of it has been through a long play session by
+**Alpha is the honest label for the 0.x line**, and the publish task hardcodes it. Eleven features
+now, three of them (the tool slot strip, the woodcutter's screen and the grass slab's biome tint)
+with client code no automated test can reach, and none of it has been through a long play session by
 anybody but the author. The tint is the sharpest example the repo has: it shipped rendering flat grey
 with all 144 tests passing, and was found by looking at it.
+
+**A MINOR bump rather than a patch, and there is no patch precedent here to follow.** Every release
+so far has been x.y.0 because every one has carried a feature, and this one carries the eleventh -
+powered rails from copper. The recompile tool slot entries beside it are compatibility rather than a
+feature, and would not on their own have justified a release.
+
+**One thing in this release cannot be verified by anything in this repo.** Recompile's tools fit the
+tool slots because five optional tag entries name them, and every automated check here runs WITHOUT
+recompile installed - which is the state that can fail catastrophically, and so the right one to
+guard. The happy path is five entries resolving, and it wants a look in a client with both mods.
 
 All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## v0.5.0 - 2026-09-08 - "Interchange"
 
 ### Added
 
