@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -48,8 +49,66 @@ final class TerrainSlabTests {
     private TerrainSlabTests() {
     }
 
+    /**
+     * A lamp beside the scene, because skylight is not reliably there yet when a test runs.
+     *
+     * <p>Spreading needs {@code getMaxLocalRawBrightness(pos.above()) >= 9}, and in a freshly placed
+     * GameTest structure the light engine has not always finished propagating skylight by the time
+     * the body executes. That made two spreading tests FLAKY - they passed locally and in one CI run
+     * and failed in another, on the same commit, which is the worst way for a test to be wrong.
+     *
+     * <p>Placed to the SIDE rather than above. Anything directly over a grass slab covers it, and a
+     * covered grass slab dies back to dirt - which would have turned a light fix into a different
+     * false failure.
+     */
+    private static void lightTheScene(GameTestHelper helper) {
+        helper.setBlock(new BlockPos(0, 2, 1), Blocks.GLOWSTONE);
+    }
+
+    /**
+     * Assert the scene is actually lit before concluding anything about spreading.
+     *
+     * <p>Without this, a dark scene and broken spreading fail identically - "the slab stayed dirt" -
+     * and the flaky version of these tests reported exactly that while the code was fine. Checking
+     * the precondition separately means a future failure names which of the two it was.
+     */
+    private static void requireLit(GameTestHelper helper, BlockPos pos) {
+        int light = helper.getLevel().getMaxLocalRawBrightness(helper.absolutePos(pos).above());
+        if (light < 9) {
+            helper.fail("the scene is too dark to spread (light " + light + " above " + pos
+                + "), so this test cannot say anything about spreading");
+        }
+    }
+
     private static Block slab(String family) {
         return FTBlocks.terrainSlab(family).get();
+    }
+
+    /**
+     * Random-tick {@code driver} until {@code watched} becomes {@code want}, or give up.
+     *
+     * <p><b>The two positions are separate because spreading has two directions and they live on
+     * different blocks.</b> A dirt slab greening itself is the DIRT slab ticking; a grass slab
+     * greening a neighbour is the GRASS slab ticking. The first version of this took one position
+     * and ticked whatever it was watching, which made the push test tick the dirt slab - whose pull
+     * only ever looks for vanilla grass, so it could not have converted. That failed honestly.
+     *
+     * <p>The negative test was the dangerous one: it also ticked the wrong block, so it PASSED, and
+     * it would have passed just as well against a version that greened everything it touched.
+     *
+     * <p>Spreading picks four random offsets in a 3x5x3 box per tick, so one tick proves nothing
+     * either way. Two hundred is far past what an adjacent source needs and still instant.
+     */
+    private static boolean tickUntil(GameTestHelper helper, BlockPos driver, BlockPos watched,
+                                     Block want) {
+        for (int i = 0; i < 200; i++) {
+            helper.getBlockState(driver).randomTick(helper.getLevel(),
+                helper.absolutePos(driver), helper.getLevel().getRandom());
+            if (helper.getBlockState(watched).is(want)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void report(GameTestHelper helper, List<String> problems, String what) {
@@ -287,6 +346,202 @@ final class TerrainSlabTests {
                         + " way");
                 }
             });
+        });
+
+        // SPREADING IS DRIVEN BY CALLING randomTick DIRECTLY, and the isRandomlyTicking assertion
+        // beside it is what makes that honest. Waiting for the scheduler in a test is waiting on a
+        // coin flip; calling the method proves the LOGIC. But a block whose properties forgot
+        // .randomTicks() would pass every one of those calls and never tick once in a real world -
+        // the exact shape of green-test-broken-feature this repo has been bitten by before. So each
+        // of these asserts both: the block ticks, and what it does when it does.
+        FTGameTests.test("a_dirt_slab_greens_itself_beside_a_vanilla_grass_block", 40, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            lightTheScene(helper);
+            requireLit(helper, SLAB);
+            helper.setBlock(SLAB, slab("dirt"));
+            helper.setBlock(new BlockPos(2, 1, 1), Blocks.GRASS_BLOCK);
+
+            if (!helper.getBlockState(SLAB).isRandomlyTicking()) {
+                helper.fail("a dirt slab never random-ticks, so it can never notice the grass"
+                    + " beside it however good the logic is");
+            }
+            if (!tickUntil(helper, SLAB, SLAB, slab("grass_block"))) {
+                helper.fail("a dirt slab next to a grass block stayed dirt. Vanilla's GrassBlock"
+                    + " looks for Blocks.DIRT and cannot see a slab, so if the slab does not pull,"
+                    + " nothing ever will");
+            }
+            helper.succeed();
+        });
+
+        FTGameTests.test("a_grass_slab_spreads_to_a_dirt_slab_of_the_same_half", 40, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            lightTheScene(helper);
+            requireLit(helper, SLAB);
+            helper.setBlock(SLAB, slab("grass_block"));
+            helper.setBlock(new BlockPos(2, 1, 1), slab("dirt"));
+            if (!tickUntil(helper, SLAB, new BlockPos(2, 1, 1), slab("grass_block"))) {
+                helper.fail("a grass slab did not spread to the dirt slab beside it");
+            }
+            helper.succeed();
+        });
+
+        // MATCHING HALVES ONLY. A bottom grass slab and a top dirt slab do not touch - there is a
+        // half block of air between them - so grass creeping across would be growing on a surface
+        // nothing rests on.
+        FTGameTests.test("a_grass_slab_does_not_green_a_dirt_slab_of_the_other_half", 40, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            lightTheScene(helper);
+            requireLit(helper, SLAB);
+            helper.setBlock(SLAB, slab("grass_block").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.BOTTOM));
+            BlockPos other = new BlockPos(2, 1, 1);
+            helper.setBlock(other, slab("dirt").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.TOP));
+            if (tickUntil(helper, SLAB, other, slab("grass_block"))) {
+                helper.fail("a bottom grass slab greened a TOP dirt slab, which it does not touch");
+            }
+            helper.succeed();
+        });
+
+        // A TOP GRASS SLAB SURVIVES UNDER OPEN SKY, and it did not until the light check was fixed.
+        //
+        // Vanilla's canStayAlive asks LightEngine how much light is blocked ENTERING the block from
+        // above. For a full grass block that is the same question as "is my surface covered". For a
+        // slab it is not: SlabBlock.useShapeForLightOcclusion() is true, so the engine computes real
+        // shape occlusion, and a top slab's own material seals its own top face. Passed its own
+        // state the check reported 15 with nothing above it at all, so every top grass slab reverted
+        // to dirt on its first random tick, in daylight.
+        //
+        // Nothing in the suite saw it, because every other spreading test happened to use a bottom
+        // slab. It surfaced only when the matching-halves test refused to fail during a red drive.
+        FTGameTests.test("a_top_grass_slab_survives_under_open_sky", 40, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(SLAB, slab("grass_block").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.TOP));
+            helper.setBlock(ABOVE, Blocks.AIR);
+
+            if (tickUntil(helper, SLAB, SLAB, slab("dirt"))) {
+                helper.fail("a TOP grass slab with nothing above it died back to dirt");
+            }
+            helper.succeed();
+        });
+
+        FTGameTests.test("a_grass_slab_dies_back_to_a_dirt_slab_when_covered", 40, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(SLAB, slab("grass_block"));
+            helper.setBlock(ABOVE, Blocks.STONE);
+            if (!tickUntil(helper, SLAB, SLAB, slab("dirt"))) {
+                helper.fail("a covered grass slab stayed grass; a covered grass block reverts to"
+                    + " dirt and this should too");
+            }
+            helper.succeed();
+        });
+
+        // THE SAME CALL RootedDirtSlabBlock MAKES, for the same reason. Vanilla's bonemeal walk
+        // starts at pos.above() and scatters plants there. On a top or double slab that is the
+        // surface; on a bottom slab it is a full block higher, so every plant would sprout floating
+        // half a block over the grass that grew it.
+        FTGameTests.test("bonemeal_is_refused_on_a_bottom_grass_slab", 20, helper -> {
+            helper.setBlock(SLAB, slab("grass_block").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.BOTTOM));
+            helper.setBlock(ABOVE, Blocks.AIR);
+            boolean applied = BoneMealItem.applyBonemeal(new ItemStack(Items.BONE_MEAL),
+                helper.getLevel(), helper.absolutePos(SLAB), null);
+            if (applied) {
+                helper.fail("a bottom grass slab took the bonemeal, and the plants would sprout"
+                    + " floating half a block above it");
+            }
+            helper.succeed();
+        });
+
+        // VANILLA MYCELIUM IS NOT BONEMEALABLE and neither is its slab. Checked because "both of
+        // them spread" makes it easy to assume both of them do everything, and giving mycelium
+        // flowers would be inventing a feature vanilla declined to have.
+        FTGameTests.test("a_mycelium_slab_is_not_bonemealable", 20, helper -> {
+            if (slab("mycelium") instanceof net.minecraft.world.level.block.BonemealableBlock) {
+                helper.fail("the mycelium slab is bonemealable and vanilla mycelium is not");
+            }
+            helper.succeed();
+        });
+
+        // NOTHING GREW ON ANY TERRAIN SLAB, and this is the test for it.
+        //
+        // VegetationBlock.canSurvive asks the soil's canSustainPlant and then falls back to
+        // #minecraft:supports_vegetation. A modded block that answers neither supports nothing - so
+        // bone meal on a grass slab was accepted, consumed, and placed nothing at all, because every
+        // plant it tried to put down failed canSurvive on the way in. No player-placed flower or
+        // sapling would have stayed either.
+        //
+        // Pinned against the VANILLA block's own membership rather than against a list, so the
+        // hand-written `soil` column cannot drift from the tag it mirrors - including if Mojang
+        // changes what is in it.
+        FTGameTests.test("a_terrain_slab_supports_plants_exactly_when_its_block_does", 30,
+            helper -> {
+                List<String> wrong = new ArrayList<>();
+                for (TerrainSlabVariant variant : FTBlocks.TERRAIN_SLABS) {
+                    boolean vanillaSupports = variant.vanilla().defaultBlockState()
+                        .is(BlockTags.SUPPORTS_VEGETATION);
+                    boolean slabSupports = slab(variant.family()).defaultBlockState()
+                        .is(BlockTags.SUPPORTS_VEGETATION);
+                    if (vanillaSupports != slabSupports) {
+                        wrong.add(variant.blockId() + ": block=" + vanillaSupports
+                            + " slab=" + slabSupports);
+                    }
+                }
+                report(helper, wrong, "slabs disagreeing with their block about holding a plant");
+            });
+
+        // AND ONLY ON THE HALVES THAT HAVE A SURFACE THERE. A tag cannot say that, so the veto is in
+        // Java. A bottom slab's upper face is half way up its own position, so a plant on it goes in
+        // the block above and renders from the bottom of that space - sprouting eight pixels clear
+        // of the soil.
+        FTGameTests.test("a_plant_stands_on_a_top_grass_slab_and_not_a_bottom_one", 30, helper -> {
+            BlockState flower = Blocks.DANDELION.defaultBlockState();
+
+            helper.setBlock(SLAB, slab("grass_block").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.TOP));
+            if (!flower.canSurvive(helper.getLevel(), helper.absolutePos(ABOVE))) {
+                helper.fail("a flower cannot stand on a TOP grass slab, so nothing grows on one and"
+                    + " bone meal is consumed for nothing");
+            }
+
+            helper.setBlock(SLAB, slab("grass_block").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.BOTTOM));
+            if (flower.canSurvive(helper.getLevel(), helper.absolutePos(ABOVE))) {
+                helper.fail("a flower stands on a BOTTOM grass slab, where it would float half a"
+                    + " block above the soil");
+            }
+            helper.succeed();
+        });
+
+        // ALONE IN ITS OWN ENVIRONMENT, because vanilla's bonemeal scatter does not respect plot
+        // boundaries. performBonemeal walks outward one block at a time for attempt/16 steps, so it
+        // reaches up to seven blocks from the slab - well into whatever test is running beside it.
+        //
+        // That is not theoretical. This test PASSED in a batch with the supports_vegetation tag
+        // deleted and FAILED when run alone: something a neighbouring test grew had landed in the
+        // square being watched. A test that passes because of its neighbours is worse than no test.
+        FTGameTests.test("bonemeal_on_a_top_grass_slab_actually_grows_something", 40,
+            FTGameTests.aloneIn("bonemeal_growth"), helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            lightTheScene(helper);
+            helper.setBlock(SLAB, slab("grass_block").defaultBlockState()
+                .setValue(SlabBlock.TYPE, SlabType.TOP));
+            helper.setBlock(ABOVE, Blocks.AIR);
+
+            // The scatter is random and mostly lands away from the origin, so give it several goes.
+            // What is being pinned is that it can grow ANYTHING, not how much.
+            boolean grew = false;
+            for (int i = 0; i < 30 && !grew; i++) {
+                BoneMealItem.applyBonemeal(new ItemStack(Items.BONE_MEAL), helper.getLevel(),
+                    helper.absolutePos(SLAB), null);
+                grew = !helper.getBlockState(ABOVE).isAir();
+            }
+            if (!grew) {
+                helper.fail("bone meal on a top grass slab was consumed thirty times and grew"
+                    + " nothing");
+            }
+            helper.succeed();
         });
 
         // A BOTTOM SLAB CAN NEVER BE SNOWY, and reading the block above regardless is the obvious

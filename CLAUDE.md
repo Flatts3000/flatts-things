@@ -960,6 +960,87 @@ landing on it. Losing a block to a falling anvil is a worse bug than making some
 defect, which is the slab silently vanishing - no error, no log line, no drop, and nothing else in
 the suite would see it.
 
+### Spreading runs in two directions and only one of them can be pushed
+
+Grass and mycelium slabs came second, and the reason is the split that runs through this whole
+feature: the other nine families needed a PROPERTY, these two need a SYSTEM. Vanilla puts all of it
+in `SpreadingSnowyBlock`, which no slab can extend because `SlabBlock` is already the parent.
+
+**The push is easy and the pull is the interesting half.** `SpreadingTerrainSlabBlock` converts
+nearby dirt, slab or full block, by adapting vanilla's 3x5x3 walk. What it cannot do is the reverse:
+vanilla's own `GrassBlock` looks for `Blocks.DIRT` and will never see a dirt slab, and there is no
+event or data hook that changes what it looks for. So `DirtTerrainSlabBlock` random-ticks and pulls -
+it looks for a vanilla grass or mycelium block near it and converts ITSELF. Between the two, every
+combination works and no second mixin is needed.
+
+**That is why the dirt slab random-ticks when vanilla dirt does not.** A block that has to notice its
+neighbours has to be given a moment to look.
+
+**Spreading only crosses between matching halves.** A bottom grass slab and a top dirt slab have half
+a block of air between them; grass creeping across would be growing on a surface nothing rests on.
+
+### `canStayAlive` asks the wrong question about a slab, and the answer is catastrophic
+
+**Every TOP grass slab died back to dirt on its first random tick, under open sky.** Vanilla's check
+is `LightEngine.getLightBlockInto(state, aboveState, UP, ...)`: how much light is blocked ENTERING
+this block from above. For a full grass block that is the same question as "is my surface covered",
+because the surface and the block boundary are the same plane.
+
+For a slab they are different questions. **`SlabBlock.useShapeForLightOcclusion()` returns true**, so
+the engine computes real shape occlusion instead of taking the opaque-block shortcut - and a top
+slab's own material seals its own top face. Passed its own state, the check reported 15 with nothing
+above it at all.
+
+The fix is to measure with a full block of dirt standing in for the slab, which asks what the block
+ABOVE does and is what vanilla is actually measuring. **Nothing in the suite saw this**, because every
+other spreading test happened to use a bottom slab; it surfaced only when a NEGATIVE test refused to
+fail during a red drive. A test that cannot fail is worth chasing down even when everything is green.
+
+### A tintindex names a tint slot; something has to fill it
+
+**The grass slab shipped rendering flat white-grey next to a green vanilla grass block.** Its model
+carried `tintindex: 0` on the top face and the side overlay, copied faithfully from vanilla's own
+`block/grass_block`. What it did not carry, because a model cannot, is anything that FILLS that slot.
+Vanilla fills the grass block's from `BlockTintSources.grassBlock()` in `BlockColors`; a modded block
+gets nothing by default, so the raw `block/grass_block_top` texture rendered as drawn, which is
+greyscale.
+
+`client/TerrainSlabColors` registers the same source vanilla does, through
+`RegisterColorHandlersEvent.BlockTintSources`. Verified against `BlockColors.java:27`, which is
+`colors.register(List.of(BlockTintSources.grassBlock()), Blocks.GRASS_BLOCK)` - the identical call.
+That is what makes biome colour and cross-biome blending right by construction rather than by
+coincidence: `grassBlock().colorInWorld` resolves `BiomeColors.getAverageGrassColor(level, pos)` per
+position. The same grep confirms vanilla registers NO tint for mycelium or podzol, which paint their
+colour into the texture, so only grass is registered here.
+
+**The ITEM needs its own tint, and in 26.1 that is data rather than code.** A block tint source
+colours the block in the world and does nothing for the icon in a hand. Vanilla's own
+`items/grass_block.json` carries a `tints` entry with a fixed temperature and downfall for the
+neutral out-of-world green, and the generator writes the same.
+
+**No test in this repo could have caught any of it.** Tint is applied during chunk baking on the
+client, so the server has no opinion and every GameTest passes either way - which is precisely why
+`client/**` is excluded from the coverage gate. It was found by putting a slab next to its block in a
+dev client and looking at the two. `test_generate_terrain_slabs` now closes the DATA half (a tinted
+model must have a tinted item); the Java registration is still only checkable by eye.
+
+**Two false starts worth knowing about**, because both wasted a screenshot each. `TaskStop` on the
+gradle wrapper does NOT kill the spawned client, so two were running and `gamebridge` was talking to
+the stale one - the fix made no visible difference twice in a row while being correct on disk. And
+`fillbiome` does not repaint a chunk the client has already baked, so a biome comparison shot shows
+the old colours however many biomes you set.
+
+### The sides of a layered slab use the TOP half of the texture
+
+**(owner, 2026-09-08)** Grass, podzol and mycelium paint a fringe of the surface material across the
+top of their side texture. Vanilla's `block/slab` parent crops a bottom slab's sides to the BOTTOM
+half of the texture, which is right for a uniform texture and wrong for these: a bottom grass slab
+would show nothing but dirt on all four sides, with the green stopping dead at the top face.
+
+Taking the top half whichever half of the block it is makes the surface read as spilling over the
+edge. Vanilla has no layered slab to copy, so there is no precedent either way and this is a call.
+It is also why those three families need element geometry at all - that parent hardcodes its UVs.
+
 ### The recipe collision, and why a file-existence test would have shipped it
 
 `every_terrain_slab_has_a_recipe_that_actually_crafts` resolves each recipe through the real crafting

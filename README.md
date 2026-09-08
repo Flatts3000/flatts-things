@@ -160,8 +160,8 @@ because a blade is steel whatever bench it is bolted to and that is the part you
 
 ### Terrain slabs
 
-Nine half blocks of the ground: dirt, coarse dirt, rooted dirt, podzol, mud, clay, gravel, sand and
-red sand. Vanilla gives slabs to the things you build with and none to the things you build on.
+Eleven half blocks of the ground: dirt, grass, mycelium, coarse dirt, rooted dirt, podzol, mud, clay,
+gravel, sand and red sand. Vanilla gives slabs to the things you build with and none to the things you build on.
 
 They behave rather than only looking right. Gravel and sand fall, and a top slab lands as a bottom
 one rather than floating. Podzol goes snowy under snow, as a top or double slab - a bottom slab's
@@ -176,8 +176,9 @@ up and recombining it is neutral.
 Three blocks in a row give six slabs. **Gravel is the exception at six for twelve**, the same rate in
 a bigger batch, because three gravel is already the flint recipe.
 
-**Grass and mycelium are not here yet.** They spread and die back, which has no obvious reading on a
-half block, and they will arrive with that behaviour rather than as models of it.
+**Grass and mycelium spread and die back** the way their full blocks do, and a dirt slab beside a
+grass block greens itself - the direction vanilla cannot manage on its own, since its grass looks for
+a dirt block and never sees a slab. Spreading only crosses between matching halves.
 
 ## Every feature has a switch
 

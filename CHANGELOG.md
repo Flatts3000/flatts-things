@@ -16,6 +16,31 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Grass and mycelium slabs**, which completes the terrain set at eleven families. They were held
+  back from the first nine on purpose: the others needed a property, these need a system.
+
+  **They spread and die back the way their full blocks do.** Covered grass reverts to a dirt slab.
+  Uncovered grass creeps onto nearby dirt, whether that dirt is a slab or a full block. And a dirt
+  slab beside a vanilla grass block greens itself - which is the direction vanilla cannot do on its
+  own, because its grass looks for a dirt BLOCK and will never see a slab. Running it backwards from
+  the dirt slab covers that with no second mixin.
+
+  **Plants grow on them**, on the seven soil families and on a top or double slab only - a bottom
+  slab's surface is half way up its own block, so a flower on one would sprout floating. That needed
+  saying in two places at once: which families is a tag question, which halves is a blockstate
+  question, and a tag cannot answer the second.
+
+  **The sides show the surface spilling over the edge.** Grass, podzol and mycelium paint their
+  fringe across the top of their side texture, so a slab takes the top half of it whichever half of
+  the block it is - otherwise a bottom grass slab would be dirt on all four sides with the green
+  stopping dead at the top face.
+
+  Spreading only crosses between **matching halves**: a bottom grass slab does not green a top dirt
+  slab, because they do not touch. Bonemeal works on a grass slab except as a bottom one, where the
+  plants would sprout floating half a block above it. Mycelium is not bonemealable, because vanilla
+  mycelium is not either.
+
+
 - **Terrain slabs.** Nine half blocks of the ground rather than of the things you build with: dirt,
   coarse dirt, rooted dirt, podzol, mud, clay, gravel, sand and red sand. Vanilla gives stairs and
   slabs to bricks and planks and nothing at all to the floor. Three blocks in a row give six slabs,

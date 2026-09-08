@@ -3,8 +3,8 @@
   "textures": {
     "particle": "minecraft:block/dirt",
     "bottom": "minecraft:block/dirt",
-    "top": "minecraft:block/podzol_top",
-    "side": "minecraft:block/podzol_side"
+    "top": "minecraft:block/mycelium_top",
+    "side": "minecraft:block/mycelium_side"
   },
   "elements": [
     {

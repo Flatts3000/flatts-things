@@ -111,7 +111,7 @@ public final class FTConfig {
      * Terrain slabs: half blocks of dirt, gravel, sand and the rest of the ground you walk on.
      *
      * <p>Vanilla gives slabs to the things you build WITH and none to the things you build ON, which
-     * is less a principle than where Mojang stopped. Nine families are covered.
+     * is less a principle than where Mojang stopped. Eleven families are covered.
      *
      * <p><b>They behave, rather than merely looking right.</b> Gravel and sand fall and land the
      * right way up, podzol takes the snowy side under a snow layer, rooted dirt grows hanging roots
@@ -227,8 +227,8 @@ public final class FTConfig {
             "Terrain slabs: half blocks of the ground rather than of the things you build with.",
             "Vanilla gives stairs and slabs to bricks and planks and none to dirt, gravel or sand.",
             "",
-            "Nine families: dirt, coarse dirt, rooted dirt, podzol, mud, clay, gravel, sand and",
-            "red sand. Three blocks in a row give six slabs, which is vanilla's own rate for every",
+            "Eleven families: dirt, grass, mycelium, coarse dirt, rooted dirt, podzol, mud, clay,",
+            "gravel, sand and red sand. Three blocks in a row give six slabs, vanilla's own rate for",
             "slab it ships. Gravel is the one exception, at six for twelve: three gravel in a row is",
             "already this pack's flint recipe, and that recipe is shapeless, so it matches any",
             "arrangement of three and no three-gravel slab recipe could coexist with it.",
@@ -238,13 +238,20 @@ public final class FTConfig {
             "dirt grows hanging roots when bonemealed, except as a top slab, where they would have",
             "nothing to hang from. Mud is two pixels short, so you sink into it.",
             "",
+            "Grass and mycelium spread and die back the way their full blocks do. A dirt slab beside",
+            "a grass block greens itself, which is the direction vanilla cannot do on its own - its",
+            "grass looks for a dirt BLOCK and will never see a slab. Spreading only crosses between",
+            "matching halves: a bottom grass slab does not green a top dirt slab, because they do",
+            "not touch. Bonemeal works on a grass slab except as a bottom one, where the plants",
+            "would sprout floating half a block above it.",
+            "",
             "Mining one gives half of what the whole block gives: a podzol slab yields a dirt slab",
             "and clay yields two clay balls. Flint comes only from a DOUBLE gravel slab, which is a",
             "whole block's worth, so cutting gravel into slabs and recombining it is neutral.",
             "",
-            "Grass and mycelium are deliberately NOT here yet. They spread, die back and take the",
-            "snowy state, and none of that has an obvious reading on a half block. They will arrive",
-            "with that behaviour rather than as models that only look like grass.",
+            "Flowers, saplings and grass grow on the soil families - dirt, grass, mycelium, coarse",
+            "dirt, rooted dirt, podzol and mud - on a TOP or double slab. A bottom slab refuses,",
+            "because its surface is half way up its own block and a plant would sprout floating.",
             "",
             "Off removes them from the creative tab and drops their recipes. Slabs already placed",
             "keep working exactly as they did.");

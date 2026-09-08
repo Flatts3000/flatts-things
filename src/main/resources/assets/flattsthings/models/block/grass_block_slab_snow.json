@@ -3,19 +3,19 @@
   "textures": {
     "particle": "minecraft:block/dirt",
     "bottom": "minecraft:block/dirt",
-    "top": "minecraft:block/podzol_top",
-    "side": "minecraft:block/podzol_side"
+    "top": "minecraft:block/grass_block_top",
+    "side": "minecraft:block/grass_block_snow"
   },
   "elements": [
     {
       "from": [
         0,
-        8,
+        0,
         0
       ],
       "to": [
         16,
-        16,
+        8,
         16
       ],
       "faces": {
@@ -66,7 +66,8 @@
             16,
             16
           ],
-          "texture": "#bottom"
+          "texture": "#bottom",
+          "cullface": "down"
         },
         "up": {
           "uv": [
@@ -75,8 +76,7 @@
             16,
             16
           ],
-          "texture": "#top",
-          "cullface": "up"
+          "texture": "#top"
         }
       }
     }

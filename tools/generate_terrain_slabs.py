@@ -58,6 +58,8 @@ def _set_roots(base: Path) -> None:
 # because it is the same rule for every family and it is what vanilla does.
 DROPS: dict[str, tuple] = {
     "dirt": ("self", None),
+    "grass_block": ("slab", "dirt"),
+    "mycelium": ("slab", "dirt"),
     "coarse_dirt": ("self", None),
     "rooted_dirt": ("self", None),
     "podzol": ("slab", "dirt"),
@@ -95,10 +97,54 @@ def write_json(path: Path, payload: dict) -> None:
 # --------------------------------------------------------------------------- models
 
 
-# The grass block would need element geometry here rather than vanilla's `block/slab` parent,
-# because a biome-tinted top and a tinted side overlay are not expressible through it. That code was
-# written and then removed with the family, rather than left dead: it belongs with the spreading
-# behaviour it goes with, not stranded ahead of it. See `terrain_slab_variants.py` for why.
+def _layered_faces(top_half: bool, overlay: bool) -> dict:
+    """The faces of a half-height box for a family whose side texture has a fringe on top.
+
+    **The sides take the TOP half of the texture whichever half of the block this is** (owner,
+    2026-09-08), so the grass, podzol or mycelium band sits at the top edge of the slab and reads as
+    the surface spilling over. The obvious alternative - cropping the side to the matching half, the
+    way vanilla's own `block/slab` parent does - is right for a uniform texture and wrong here: a
+    bottom grass slab would show nothing but dirt on all four sides, with the green stopping dead at
+    the top face.
+
+    Vanilla has no layered slab to copy, so there is no precedent either way. This is the call.
+    """
+    side = {"uv": [0, 0, 16, 8], "texture": "#overlay" if overlay else "#side"}
+    if overlay:
+        side["tintindex"] = 0
+    faces = {d: dict(side, cullface=d) for d in ("north", "south", "east", "west")}
+    if overlay:
+        return faces
+    faces["down"] = {"uv": [0, 0, 16, 16], "texture": "#bottom"}
+    faces["up"] = {"uv": [0, 0, 16, 16], "texture": "#top"}
+    faces["up" if top_half else "down"]["cullface"] = "up" if top_half else "down"
+    return faces
+
+
+def layered_model(v: Variant, top_half: bool, snowed: bool = False) -> dict:
+    """A grass-style slab, built from elements because `block/slab` cannot do any of this.
+
+    Two things that parent cannot express: a tintindex, and a second overlay layer. Both are needed
+    for grass, and the UV choice above is needed for all three layered families.
+    """
+    lo, hi = (8, 16) if top_half else (0, 8)
+    textures = {"particle": v.bottom, "bottom": v.bottom, "top": v.top,
+                "side": SNOW_SIDE if snowed else v.side}
+    elements = [{"from": [0, lo, 0], "to": [16, hi, 16],
+                 "faces": _layered_faces(top_half, False)}]
+
+    # TINT ONLY WHEN NOT SNOWED, which is vanilla's own choice. Its `grass_block_snow` model carries
+    # no tintindex anywhere: the sides are buried and the top is under a snow layer, so the biome
+    # colour has nothing left to colour.
+    if v.tinted and not snowed:
+        elements[0]["faces"]["up"]["tintindex"] = 0
+        textures["overlay"] = v.overlay
+        elements.append({"from": [0, lo, 0], "to": [16, hi, 16],
+                         "faces": _layered_faces(top_half, True)})
+
+    return {"parent": "minecraft:block/block", "textures": textures, "elements": elements}
+
+
 def plain_model(v: Variant, top_half: bool) -> dict:
     parent = "minecraft:block/slab_top" if top_half else "minecraft:block/slab"
     return {
@@ -115,26 +161,42 @@ SNOW_SIDE = "minecraft:block/grass_block_snow"
 
 
 def write_models(v: Variant) -> None:
-    write_json(ASSETS / "models/block" / f"{v.block_id}.json", plain_model(v, False))
-    write_json(ASSETS / "models/block" / f"{v.block_id}_top.json", plain_model(v, True))
+    def build(top_half: bool, snowed: bool = False) -> dict:
+        if v.layered:
+            return layered_model(v, top_half, snowed)
+        return plain_model(v._replace(side=SNOW_SIDE) if snowed else v, top_half)
+
+    write_json(ASSETS / "models/block" / f"{v.block_id}.json", build(False))
+    write_json(ASSETS / "models/block" / f"{v.block_id}_top.json", build(True))
     if v.snowy:
-        # The snowy pair swaps the SIDE only, and keeps podzol's own top.
+        # THE SNOWY PAIR IS NEVER TINTED, even for grass, and that is vanilla's own choice rather
+        # than a shortcut. Its `block/grass_block_snow` is a plain `cube_bottom_top` with no
+        # tintindex anywhere - the sides are buried in snow and the top is under a snow layer, so
+        # the biome colour has nothing left to colour. Building the snowy grass slab from the same
+        # plain parent keeps it identical to the block it is half of.
+        #
+        # The snowy pair swaps the SIDE only, and keeps the family's own top.
         #
         # Vanilla is sloppier here and we are deliberately not copying it: its snowy podzol borrows
         # `grass_block_snow` wholesale, which carries the GRASS top texture. It gets away with that
         # because the top is under a snow layer and unseen. On a BOTTOM slab it would be seen, since
         # the snow sits a half block higher and the top face is exposed - so keeping podzol_top is
         # the correction that the slab shape makes necessary rather than a stylistic preference.
-        snowed = v._replace(side=SNOW_SIDE)
-        write_json(ASSETS / "models/block" / f"{v.block_id}_snow.json", plain_model(snowed, False))
-        write_json(ASSETS / "models/block" / f"{v.block_id}_top_snow.json", plain_model(snowed, True))
+        write_json(ASSETS / "models/block" / f"{v.block_id}_snow.json", build(False, True))
+        write_json(ASSETS / "models/block" / f"{v.block_id}_top_snow.json", build(True, True))
     # The double has no model of its own: the blockstate points at the vanilla full block, which
     # every family already has. That is not laziness, it is the only version that cannot drift - a
     # double podzol slab IS a podzol block, and will stay identical to one through any texture pack
     # or any change Mojang makes.
-    write_json(ASSETS / "items" / f"{v.block_id}.json", {
-        "model": {"type": "minecraft:model", "model": f"{NS}:block/{v.block_id}"}
-    })
+    # THE ITEM NEEDS ITS OWN TINT, and in 26.1 that is data rather than code. A block tint source
+    # registered in Java colours the block in the world and does nothing for the icon in a hand or a
+    # hotbar; vanilla's own `items/grass_block.json` carries a `tints` entry for exactly this, with
+    # the fixed temperature and downfall that give the neutral out-of-world green. Without it the
+    # item renders in the raw greyscale the texture is drawn in.
+    model = {"type": "minecraft:model", "model": f"{NS}:block/{v.block_id}"}
+    if v.tinted:
+        model["tints"] = [{"type": "minecraft:grass", "downfall": 1.0, "temperature": 0.5}]
+    write_json(ASSETS / "items" / f"{v.block_id}.json", {"model": model})
 
 
 def write_blockstate(v: Variant) -> None:
@@ -320,6 +382,15 @@ def write_tags() -> None:
     ids = [f"{NS}:{v.block_id}" for v in VARIANTS]
     write_json(VANILLA_DATA / "tags/block/mineable/shovel.json", {"values": ids})
     write_json(VANILLA_DATA / "tags/block/slabs.json", {"values": ids})
+    # WHAT CAN HOLD A PLANT. Without this nothing grows on any terrain slab at all:
+    # VegetationBlock.canSurvive asks the soil's canSustainPlant and then this tag, and a modded
+    # block that answers neither supports nothing. Bone meal on a grass slab was accepted, consumed
+    # and placed nothing, because every plant it tried to put down failed canSurvive on the way in.
+    #
+    # WHICH HALVES is not expressible here and is vetoed in Java instead - a bottom slab's surface
+    # is mid-block, so a plant on it would float. See TerrainSlabBlock.canSustainPlant.
+    write_json(VANILLA_DATA / "tags/block/supports_vegetation.json",
+               {"values": [f"{NS}:{v.block_id}" for v in VARIANTS if v.soil]})
     write_json(VANILLA_DATA / "tags/item/slabs.json", {"values": ids})
 
 
