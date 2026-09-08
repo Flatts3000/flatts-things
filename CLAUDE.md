@@ -644,8 +644,11 @@ if (ix >= 36) { y = 112; } else { y = 54 + (pos / 9) * 18; }
 ```
 
 Ours are indices 46 to 50, so they landed at x = 27, 45, 63, 81, 99 and **y = 112, the hotbar row**,
-drawing their silhouettes over hotbar slots one to five and taking clicks there. `SlotWrapper`
-delegates `getNoItemIcon()` and `isActive()` straight through, so everything about them came along;
+drawing their silhouettes over hotbar slots one to five. **The overlap was in drawing only** - an
+earlier version of this section said they took clicks there, and that is wrong:
+`getHoveredSlot` returns the FIRST active slot in list order, and creative's own hotbar wrappers sit
+at those exact coordinates at indices 37 to 41, ahead of ours. `SlotWrapper` delegates
+`getNoItemIcon()` and `isActive()` straight through, so everything about them came along;
 only `ToolSlotStrip`, which correctly refuses to paint on anything that is not an `InventoryScreen`,
 stayed behind. The owner found it by opening the creative inventory.
 
@@ -657,7 +660,16 @@ somebody else has put it.
 
 **So the rule is: a screen either gets the panel AND the slots, or neither.** `ToolSlotStrip` sets
 `ToolSlotDisplay` on every frame from the same check that decides whether to paint, before its early
-return. **Fail-safe rather than fail-broken**, and that is the whole point - the bug was not that the
+return, and clears it whenever any screen initialises so that a screen which never draws a background
+cannot inherit a stale yes.
+
+**Both halves, and the first attempt only did one.** Hiding a slot is presentation; it does not stop
+items being routed into it. `moveItemStackTo` consults `mayPlace` and never `isActive`, and the
+creative inventory forwards a shift-click straight into `InventoryMenu.quickMoveStack`
+(`slotClicked` -> `player.inventoryMenu.clicked` with `QUICK_MOVE`), so `InventoryMenuMixin`'s
+quick-move injection has to read `ToolSlotDisplay` too. Without it, hiding the slots made things
+WORSE than the bug: a shift-clicked tool left the visible inventory and arrived in a slot nothing
+draws, recoverable only by switching to survival. **Fail-safe rather than fail-broken**, and that is the whole point - the bug was not that the
 creative screen was unhandled, it was that an unhandled screen showed the slots anyway. Another mod's
 inventory screen, or a vanilla one that does not exist yet, now gets nothing instead of five
 silhouettes in somebody else's hotbar. `a_tool_slot_is_inert_on_a_screen_that_did_not_lay_it_out`

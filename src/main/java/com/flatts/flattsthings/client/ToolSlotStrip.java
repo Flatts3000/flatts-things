@@ -62,6 +62,19 @@ public final class ToolSlotStrip {
      * answer always describes the screen actually being drawn - the creative inventory swaps its slot
      * list on a tab change without reopening, so anything latched at open time would be stale.
      */
+    /**
+     * Any screen opening hides the slots until something says otherwise.
+     *
+     * <p>The render hook below is the positive half and only speaks for screens that draw a
+     * background. A mod cancelling {@code ScreenEvent.Render.Pre} suppresses the whole extract, and
+     * without this the flag would still read true from the last inventory frame - so the slots would
+     * draw on that screen, which is the bug this is meant to prevent.
+     */
+    @SubscribeEvent
+    public static void onScreenInit(ScreenEvent.Init.Post event) {
+        ToolSlotDisplay.setShown(false);
+    }
+
     @SubscribeEvent
     public static void onRenderBackground(ScreenEvent.Render.Background event) {
         boolean ours = event.getScreen() instanceof InventoryScreen;
