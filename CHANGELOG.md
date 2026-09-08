@@ -41,8 +41,8 @@ All notable changes to this project are documented here. Format follows
 
   **The Garbage Vacuums are deliberately not included.** They break no blocks, so the auto-swap could
   never pick one and storing one would be using the tool slots as pocket storage - a different
-  feature from the one that shipped. That rule is now pinned by a test, alongside the older one that
-  keeps weapons out: a thing belongs in a tool slot when it breaks blocks and breaking blocks is its
+  feature from the one that shipped. The rule it completes, alongside the older one that keeps
+  weapons out: a thing belongs in a tool slot when it breaks blocks and breaking blocks is its
   job.
 
 ## v0.4.0 - 2026-09-08 - "Common Ground"

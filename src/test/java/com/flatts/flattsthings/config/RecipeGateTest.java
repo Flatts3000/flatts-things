@@ -173,119 +173,183 @@ class RecipeGateTest {
     }
 
     /**
-     * Every entry this mod adds to a VANILLA tag is optional.
+     * Every tag entry that CAN fail to exist is optional, in every tag file this mod ships.
      *
-     * <p><b>This guards the worst bug in the repo's history so far, which shipped in a PR and was
-     * caught in review.</b> {@code TagLoader.tryBuildTag} drops an entire tag when any REQUIRED
+     * <p><b>This replaces two narrower tests and is a strict superset of both.</b> The first walked
+     * only {@code data/minecraft/tags} and flagged only {@code flattsthings:} entries on
+     * {@link #CONDITIONAL}. The second, added with the recompile entries, walked only
+     * {@code data/flattsthings/tags} and flagged only FOREIGN namespaces. Between them sat two holes
+     * that a review found, and both are worse than what either test covered:
+     *
+     * <ul>
+     *   <li>A foreign entry in a VANILLA tag. Writing {@code "recompile:junk_shovel"} as a plain
+     *       string into {@code data/minecraft/tags/block/mineable/shovel.json} discards
+     *       {@code #minecraft:mineable/shovel} on every install without recompile, so nothing in the
+     *       game is shovel-mineable. A strictly worse blast radius than either test's own case.</li>
+     *   <li>A CONDITIONAL entry of ours in a tag of ours. The namespace rule exempted
+     *       {@code flattsthings:} on the belief that this mod always registers what it names, which
+     *       is exactly what {@code CONDITIONAL} exists to say is untrue.</li>
+     * </ul>
+     *
+     * <p><b>The bug this all descends from is the worst the repo has shipped</b>, caught in review
+     * rather than by a test. {@code TagLoader.tryBuildTag} drops an ENTIRE tag when any required
      * entry is missing - the vanilla entries with it - and does nothing louder than one log line.
-     * The Blessing enchantment is conditionally loaded, so with its feature switched off the entry
-     * would have gone missing and taken {@code #minecraft:in_enchanting_table} with it: no
-     * enchanting table anywhere would offer anything, for any item, to any player, and the only
-     * evidence would be a line in a log nobody reads.
+     * {@code #minecraft:in_enchanting_table} listed the conditionally-loaded Blessing enchantment,
+     * so switching that feature off would have stopped every enchanting table in the game offering
+     * anything to anybody.
      *
-     * <p>So: anything this mod adds to a tag it does not own must be {@code "required": false},
-     * unless it is something this mod always registers unconditionally. The plate tags are the
-     * unconditional case - the blocks are registered in Java and cannot fail to exist - which is why
-     * this checks the vanilla-namespace tags for entries naming THIS mod and lets plain strings
-     * pass only when the feature that owns them cannot switch them off.
+     * <p>It is not hypothetical for the tool slots either, and that was measured rather than argued:
+     * making one recompile entry required and running the suite without recompile - CI's ordinary
+     * state - failed six tool slot tests, including a netherite pickaxe being refused by a slot.
+     *
+     * <p><b>By namespace and by condition, never by a list of known mods.</b> Anything outside
+     * {@code minecraft} can fail to load, so the rule is about where an entry comes from rather than
+     * which mod it is, and the next compat entry is covered the day it is written.
      */
     @Test
-    void everyEntryAddedToAVanillaTagIsOptional() throws IOException {
-        Path vanillaTags = Path.of(System.getProperty("flattsthings.projectDir", "."),
-            "src", "main", "resources", "data", "minecraft", "tags");
-        assertTrue(Files.isDirectory(vanillaTags), vanillaTags + " is missing");
+    void everyTagEntryThatCanFailToExistIsOptional() throws IOException {
+        // Every namespace, not just ours: DATA is data/flattsthings, and its parent is data.
+        // Derived rather than spelled out a second time, so the two cannot drift.
+        Path allData = DATA.getParent();
+        assertTrue(Files.isDirectory(allData), allData + " is missing");
+
+        List<Path> tagFiles;
+        try (Stream<Path> files = Files.walk(allData)) {
+            tagFiles = files.filter(Files::isRegularFile)
+                .filter(f -> f.toString().endsWith(".json"))
+                .filter(RecipeGateTest::underATagsDirectory)
+                .toList();
+        }
+        // A sweep that found nothing to sweep passes for the wrong reason. This mod ships tag files
+        // in two namespaces; if the walk ever finds none, the path moved rather than the risk going
+        // away.
+        assertTrue(!tagFiles.isEmpty(), "no tag files found under " + allData);
 
         List<String> problems = new ArrayList<>();
-        try (Stream<Path> files = Files.walk(vanillaTags)) {
-            for (Path file : files.filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".json")).toList()) {
-                JsonObject tag = JsonParser
-                    .parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
-                JsonArray values = tag.getAsJsonArray("values");
-                for (int index = 0; index < values.size(); index++) {
-                    // A plain string is a required entry. That is only safe for something this mod
-                    // registers unconditionally, which is true of the blocks and not of anything
-                    // loaded from data behind a feature condition.
-                    if (!values.get(index).isJsonPrimitive()) {
-                        continue;
-                    }
-                    String entry = values.get(index).getAsString();
-                    if (entry.startsWith("flattsthings:") && CONDITIONAL.contains(entry)) {
-                        problems.add(vanillaTags.relativize(file) + " requires " + entry
-                            + ", which is loaded behind a feature switch - turning that switch off"
-                            + " would delete the whole tag, vanilla entries included");
-                    }
+        for (Path file : tagFiles) {
+            JsonObject tag = JsonParser
+                .parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonArray values = tag.getAsJsonArray("values");
+            if (values == null) {
+                // A tag file may legitimately carry only "remove" and/or "replace". Skipping is
+                // right; skipping SILENTLY on a null this code did not expect is how a typo in
+                // "values" turns the whole sweep into a no-op, so it is named instead.
+                problems.add(allData.relativize(file) + " has no \"values\" array; if that is"
+                    + " deliberate this check needs to learn about it, and if it is a typo then the"
+                    + " tag is not doing anything");
+                continue;
+            }
+            for (int index = 0; index < values.size(); index++) {
+                // A plain string is a REQUIRED entry. An object may or may not be, so the id has to
+                // be read out of both shapes and only the object can pass.
+                boolean required = true;
+                String entry;
+                if (values.get(index).isJsonPrimitive()) {
+                    entry = values.get(index).getAsString();
+                } else {
+                    JsonObject object = values.get(index).getAsJsonObject();
+                    entry = object.get("id").getAsString();
+                    required = !object.has("required") || object.get("required").getAsBoolean();
+                }
+                if (required && canFailToExist(entry)) {
+                    problems.add(allData.relativize(file) + " requires " + entry
+                        + ", which need not exist when the tag is built - a missing required entry"
+                        + " makes TagLoader discard the WHOLE tag, vanilla entries included");
                 }
             }
         }
         assertTrue(problems.isEmpty(), String.join(NEWLINE_INDENT, problems));
+    }
+
+    /** Whether a path sits inside a {@code tags} directory, at any depth under a namespace. */
+    private static boolean underATagsDirectory(Path file) {
+        for (Path part : file) {
+            if (part.toString().equals("tags")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
-     * Every entry naming ANOTHER MOD, in a tag this mod owns, is optional.
+     * Whether a tag entry names something that might not be registered when the tag is built.
      *
-     * <p>The sibling test above guards the tags this mod adds to and does not own. This one guards
-     * the opposite direction and the hole between them, which #66 opened:
-     * {@code #flattsthings:tool_slot_valid} is ours, so nothing above looks at it, and it now names
-     * five things from recompile - a mod that is not a dependency and is absent from CI.
-     *
-     * <p><b>The consequence of getting it wrong is worse here than in a vanilla tag.</b>
-     * {@code TagLoader.tryBuildTag} discards an entire tag when a required entry is missing, so one
-     * plain-string {@code recompile:prybar} would delete {@code tool_slot_valid} on every install
-     * without recompile - which is nearly all of them. {@code ToolSlots.mayPlace} would then answer
-     * false for everything and the tool slots would accept no item at all, with nothing louder than
-     * one line in a log to say why.
-     *
-     * <p><b>Namespace, not mod list.</b> This deliberately does not enumerate which foreign mods are
-     * allowed: anything outside {@code minecraft} and {@code flattsthings} can fail to load, so the
-     * rule is about where an entry comes from rather than which mod it is. A future compat entry for
-     * some other mod is covered the day it is written.
+     * <p>Two ways that happens, and the second is the one a namespace check alone misses: the thing
+     * belongs to a mod that need not be installed, or it is ours but loaded from data behind a
+     * feature switch.
      */
-    @Test
-    void everyForeignEntryInOurOwnTagsIsOptional() throws IOException {
-        Path ourTags = Path.of(System.getProperty("flattsthings.projectDir", "."),
-            "src", "main", "resources", "data", "flattsthings", "tags");
-        assertTrue(Files.isDirectory(ourTags), ourTags + " is missing");
-
-        List<String> problems = new ArrayList<>();
-        try (Stream<Path> files = Files.walk(ourTags)) {
-            for (Path file : files.filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".json")).toList()) {
-                JsonObject tag = JsonParser
-                    .parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
-                JsonArray values = tag.getAsJsonArray("values");
-                for (int index = 0; index < values.size(); index++) {
-                    // A plain string is a REQUIRED entry. An object may or may not be, so the
-                    // namespace check has to run on both shapes and only the object can pass.
-                    boolean required = true;
-                    String entry;
-                    if (values.get(index).isJsonPrimitive()) {
-                        entry = values.get(index).getAsString();
-                    } else {
-                        JsonObject object = values.get(index).getAsJsonObject();
-                        entry = object.get("id").getAsString();
-                        required = !object.has("required") || object.get("required").getAsBoolean();
-                    }
-                    if (foreign(entry) && required) {
-                        problems.add(ourTags.relativize(file) + " requires " + entry
-                            + ", which comes from a mod that need not be installed - a missing"
-                            + " required entry makes TagLoader discard the WHOLE tag, so this would"
-                            + " silently empty the tag on every install without that mod");
-                    }
-                }
-            }
-        }
-        assertTrue(problems.isEmpty(), String.join(NEWLINE_INDENT, problems));
-    }
-
-    /** Whether a tag entry names something neither vanilla nor this mod registers. */
-    private static boolean foreign(String entry) {
+    private static boolean canFailToExist(String entry) {
         String id = entry.startsWith("#") ? entry.substring(1) : entry;
         int colon = id.indexOf(':');
         // No namespace at all means minecraft, which is always present.
         String namespace = colon < 0 ? "minecraft" : id.substring(0, colon);
-        return !namespace.equals("minecraft") && !namespace.equals("flattsthings");
+        if (!namespace.equals("minecraft") && !namespace.equals("flattsthings")) {
+            return true;
+        }
+        return CONDITIONAL.contains(id);
     }
+
+    /**
+     * The entries in {@code #flattsthings:tool_slot_valid} that need not exist, as an ALLOW-LIST.
+     *
+     * <p><b>"Need not exist" rather than "from another mod"</b>, which is what this said first and
+     * was caught by driving it red: {@link #canFailToExist} also answers true for one of OUR ids
+     * loaded behind a feature switch, and such an entry deserves the same look. The set is every
+     * entry whose presence is not guaranteed, whoever registers it.
+     *
+     * <p><b>This exists because the runtime test cannot cover those entries, and saying otherwise
+     * was an overstatement a review caught.</b> {@code every_tool_slot_entry_breaks_blocks} walks
+     * the RESOLVED tag, so without recompile installed - which is CI's ordinary state and the only
+     * one it runs in - all five optional entries resolve to nothing and the loop sees vanilla tools
+     * only, every one of which carries {@code DataComponents.TOOL} by construction. A follow-up PR
+     * adding {@code recompile:copper_garbage_vacuum} would pass the whole suite green and make the
+     * vacuum storable in a tool slot, which is the exact thing the owner ruled out on 2026-09-08.
+     *
+     * <p><b>An allow-list rather than a deny-list of vacuums</b>, deliberately. A deny-list pins one
+     * ruling; this fails on ANY new foreign entry, so whoever adds the next one has to come here and
+     * read the rule before the suite goes green. That is the point - the rule needs a human in front
+     * of it, because whether breaking blocks is a thing's JOB is not a question a test can answer
+     * for an item it cannot load.
+     *
+     * <p>The rule itself, from both sides: a thing belongs in a tool slot when it breaks blocks AND
+     * breaking blocks is its job. Every id below carries {@code DataComponents.TOOL} - read out of
+     * recompile's own source rather than assumed - and every one is a mining tool rather than a
+     * weapon.
+     */
+    @Test
+    void theOptionalEntriesInTheToolSlotTagAreTheOnesThatWereRuledIn() throws IOException {
+        Path tag = DATA.resolve(Path.of("tags", "item", "tool_slot_valid.json"));
+        JsonArray values = JsonParser
+            .parseString(Files.readString(tag, StandardCharsets.UTF_8)).getAsJsonObject()
+            .getAsJsonArray("values");
+
+        List<String> optional = new ArrayList<>();
+        for (int index = 0; index < values.size(); index++) {
+            String entry = values.get(index).isJsonPrimitive()
+                ? values.get(index).getAsString()
+                : values.get(index).getAsJsonObject().get("id").getAsString();
+            if (canFailToExist(entry)) {
+                optional.add(entry);
+            }
+        }
+
+        assertTrue(RULED_IN_OPTIONAL_ENTRIES.equals(optional),
+            "the entries in tool_slot_valid.json that need not exist are " + optional
+                + ", expected " + RULED_IN_OPTIONAL_ENTRIES
+                + ". Anything new here has to satisfy the entry rule -"
+                + " it breaks blocks, and breaking blocks is its job - which no test can check for"
+                + " an item it cannot load. Recompile's Garbage Vacuums were ruled OUT on that rule"
+                + " (owner, 2026-09-08): they break no blocks.");
+    }
+
+    /** The not-guaranteed entries ruled into the tool slots, in file order (issue 66). */
+    private static final List<String> RULED_IN_OPTIONAL_ENTRIES = List.of(
+        "#recompile:sledgehammer",
+        "recompile:cutting_torch",
+        "recompile:scrap_knife",
+        "recompile:prybar",
+        "recompile:junk_shovel");
+
 
     /** Things this mod loads from data behind a condition, so they can fail to exist. */
     private static final List<String> CONDITIONAL = List.of("flattsthings:blessing");

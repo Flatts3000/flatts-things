@@ -659,6 +659,16 @@ Garbage Vacuum, which is a held tool a player would happily store here and break
 **Both halves are pinned, and each rejects things the other admits** -
 `a_weapon_does_not_belong_in_a_tool_slot` and `every_tool_slot_entry_breaks_blocks`.
 
+**But `every_tool_slot_entry_breaks_blocks` cannot see the recompile entries, and a review caught
+this file claiming otherwise.** It walks the RESOLVED tag, and without recompile installed - CI's
+ordinary state and the only one it runs in - those five entries resolve to nothing, leaving a loop
+over vanilla tools that all carry the component by construction. So a later PR adding a Garbage
+Vacuum entry would pass the whole suite green. What guards that is a second, file-level test,
+`theForeignEntriesInTheToolSlotTagAreTheOnesThatWereRuledIn`, pinning the shipped foreign entries as
+an ALLOW-LIST: any new one fails until somebody comes and reads the rule. That is the right shape
+rather than a fallback, because whether breaking blocks is a thing's JOB is a judgement, not
+something a test can compute for an item it cannot even load.
+
 **"Breaks blocks" has an exact form and it is `DataComponents.TOOL`.** Verified in both directions
 before the test was written, because a rule that quietly excludes something already shipped is worse
 than no rule. Every current member has one - **including shears**, which are the member most likely
