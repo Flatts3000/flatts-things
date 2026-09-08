@@ -158,6 +158,26 @@ bevelled edge, and a slot cut down the middle where the blade rises - and the sa
 because a blade is steel whatever bench it is bolted to and that is the part you already recognise as
 "this block cuts things".
 
+### Terrain slabs
+
+Nine half blocks of the ground: dirt, coarse dirt, rooted dirt, podzol, mud, clay, gravel, sand and
+red sand. Vanilla gives slabs to the things you build with and none to the things you build on.
+
+They behave rather than only looking right. Gravel and sand fall, and a top slab lands as a bottom
+one rather than floating. Podzol goes snowy under snow, as a top or double slab - a bottom slab's
+face is half way up its own block, so snow above never touches it. Rooted dirt grows hanging roots
+when bonemealed, and refuses as a top slab where they would have nothing to hang from. Mud is two
+pixels short, so you sink in.
+
+Mining one gives half of what the block gives: a podzol slab yields a dirt slab, clay yields two clay
+balls, gravel keeps its flint chance.
+
+Three blocks in a row give six slabs. **Gravel is the exception at six for twelve**, the same rate in
+a bigger batch, because three gravel is already the flint recipe.
+
+**Grass and mycelium are not here yet.** They spread and die back, which has no obvious reading on a
+half block, and they will arrive with that behaviour rather than as models of it.
+
 ## Every feature has a switch
 
 `config/flattsthings-common.toml` carries one boolean per feature, all on by default.

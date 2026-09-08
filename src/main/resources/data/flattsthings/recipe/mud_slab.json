@@ -1,0 +1,20 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "terrain_slabs"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###"
+  ],
+  "key": {
+    "#": "minecraft:mud"
+  },
+  "result": {
+    "id": "flattsthings:mud_slab",
+    "count": 6
+  }
+}

@@ -42,6 +42,11 @@ public final class FTCreativeTabs {
                     if (FTConfig.woodCutting()) {
                         output.accept(FTItems.WOODCUTTER.get());
                     }
+
+                    // --- Building: the terrain slabs, in the ruled family order ---
+                    if (FTConfig.terrainSlabs()) {
+                        FTItems.TERRAIN.values().forEach(slab -> output.accept(slab.get()));
+                    }
                 })
                 .build());
 

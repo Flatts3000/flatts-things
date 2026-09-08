@@ -22,6 +22,7 @@ features on `main`**, all of them in an uploaded build. Last reviewed 2026-09-07
 | Cauldron transforms | `cauldron_transforms` | the cauldron section below |
 | Armoured elytra | `armored_elytra` | the components section below |
 | The woodcutter | `wood_cutting` | the woodcutter section below |
+| Terrain slabs | `terrain_slabs` | the terrain slab section below |
 
 **Derive that list from `FTConfig.features()` rather than trusting the table**, which is this file's
 own standing advice about lists that read as complete. The previous banner here said "one family
@@ -910,6 +911,69 @@ own test explains at length.
 **The screen still ships no art** and still cannot be tested: it blits vanilla's stonecutter
 background and button sprites, and `client/**` is excluded from the coverage gate because nothing
 automated reaches it. It wants a look through devbridge.
+
+## Slabs of the ground, and the three traps in them
+
+The terrain slabs are nine half blocks of dirt, gravel, sand and the rest. The feature is small
+because of one fact that had to be checked rather than assumed, and awkward in three places that
+nothing would have caught.
+
+**`SlabBlock` CAN be subclassed, unlike the other two vanilla blocks this mod wanted to extend.**
+`PressurePlateBlock` declares `codec()` as `MapCodec<PressurePlateBlock>` and `StonecutterBlock` the
+same, and generics are invariant, so neither can be subclassed - both are written up above as traps.
+`SlabBlock` declares `MapCodec<? extends SlabBlock>`, a wildcard, so it is open. **Check the codec
+before assuming the trap generalises**: had it been assumed, the type property, the shape,
+waterlogging and the doubling rule would all have been reimplemented by hand for no reason.
+
+**A falling slab cannot inherit falling.** `FallingBlock` extends `Block` and so does `SlabBlock`, so
+`FallingTerrainSlabBlock` copies the falling half - a scheduled tick, an `isFree` check, one call to
+`FallingBlockEntity.fall`. Copying the smaller half is the only option and falling is much the
+smaller. One deliberate difference: **a TOP slab falls as a BOTTOM one.** `FallingBlockEntity` carries
+the state it was handed and places it unchanged, so a top slab would land as a top slab, floating with
+a gap underneath and resting on nothing.
+
+**A BOTTOM slab can never be snowy, and copying `SnowyBlock` literally gets this wrong.** Vanilla asks
+what is in the block above. That is right for a top slab, whose upper face IS the block boundary, and
+wrong for a bottom slab, whose upper face is half way up its own position - a snow layer in the block
+above floats eight pixels clear of it. Same shape of error in `RootedDirtSlabBlock`, which refuses
+bonemeal on a top slab because hanging roots need a sturdy face at the boundary and a top slab has
+none; growing them would consume the bonemeal for roots that immediately pop off.
+
+**And in `MudSlabBlock`, where the mistake is the opposite direction.** Vanilla's `MudBlock` returns a
+FULL BLOCK for its support and visual shapes, which is true of a mud block and false of a mud slab.
+Restating it would tell the game a half block is a whole one. Only the COLLISION shape is short.
+
+### The recipe collision, and why a file-existence test would have shipped it
+
+`every_terrain_slab_has_a_recipe_that_actually_crafts` resolves each recipe through the real crafting
+lookup, and found two collisions that no file check could see:
+
+- **Three snow blocks is already vanilla's snow LAYER recipe.** Chasing it turned up the better
+  reason to drop the family entirely: a snow layer is already a stackable partial snow block, so
+  vanilla effectively has a snow slab, and this mod's entry test is that a thing should be something
+  vanilla should plausibly have and does NOT.
+- **Three gravel is already this mod's own `gravel_to_flint`, and it is SHAPELESS.** So it matches any
+  arrangement of three - a row, a column, an L - and no three-gravel shaped recipe can coexist with
+  it. A column was tried first on the assumption the flint recipe was shaped; it was not. Gravel now
+  takes **six for twelve**, the same 1-to-2 rate in a bigger batch, because six ingredients cannot
+  match a shapeless three.
+
+**Two shaped recipes with the same pattern do not merge and do not error.** The recipe manager returns
+whichever it finds first, so the player gets flint or a slab depending on load order and nothing
+anywhere reports a problem.
+
+### One owner for `en_us.json`
+
+**Two generators writing the same file wholesale is a landmine, and it was armed for about an hour.**
+`generate_plates.py` built the lang file from its own static table plus the plate names and wrote it
+out, which was fine while it was the only generator with names. The moment the slab generator also had
+names, running the plate generator silently deleted every slab name.
+
+Merging in each generator would have worked and would have been worse: the contents would then depend
+on which generator ran last, so the committed tree would be reproducible only in the right order and
+nothing would say what that order was. `tools/ft_lang.py` is now the single owner, assembling from
+every table, and both generators call it. Run either, or both, in any order, and the same file lands.
+The rule that a name is never typed into the json by hand is unchanged - it is what this preserves.
 
 ## Events that only fire on one side
 

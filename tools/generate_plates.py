@@ -23,6 +23,7 @@ from pathlib import Path
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ft_lang
 from plate_variants import VARIANTS, Variant, block_id, family, vanilla_plate  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -224,25 +225,15 @@ def generate(v: Variant) -> None:
 # Keys that are not per-variant. The generator owns en_us.json wholesale, so anything hand-added to
 # that file is silently erased on the next run - which is exactly the kind of quiet loss the rest of
 # this repo is built to prevent. New non-plate strings go here.
-STATIC_LANG = {
-    "itemGroup.flattsthings": "Flatts's Things",
-    "key.category.flattsthings.flattsthings": "Flatts's Things",
-    "enchantment.flattsthings.blessing": "Blessing",
-    "key.flattsthings.toggle_auto_swap": "Toggle Tool Auto-Swap",
-    "message.flattsthings.auto_swap.on": "Tool auto-swap on",
-    "message.flattsthings.auto_swap.off": "Tool auto-swap off",
-    "message.flattsthings.auto_swap.unavailable":
-        "Tool auto-swap is turned off in this pack's config",
-    "block.flattsthings.woodcutter": "Woodcutter",
-    "container.flattsthings.woodcutter": "Woodcutter",
-}
-
-
 def write_lang() -> None:
-    entries = dict(STATIC_LANG)
-    for v in VARIANTS:
-        entries[f"block.{NS}.{block_id(v)}"] = f"{v.display} Player Pressure Plate"
-    write_json(ASSETS / "lang/en_us.json", entries)
+    """Delegated to `ft_lang`, which is the single owner of this file.
+
+    It used to be built here from a static table plus the plate names, which was correct while the
+    plates were the only family with names. A second generator with names of its own turned that
+    into a file whose contents depended on which generator ran last. See `ft_lang` for the whole
+    argument; the rule that a name is never typed into the json by hand is unchanged.
+    """
+    ft_lang.write(ASSETS)
 
 
 def write_tags() -> None:

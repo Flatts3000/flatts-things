@@ -16,6 +16,32 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- **Terrain slabs.** Nine half blocks of the ground rather than of the things you build with: dirt,
+  coarse dirt, rooted dirt, podzol, mud, clay, gravel, sand and red sand. Vanilla gives stairs and
+  slabs to bricks and planks and nothing at all to the floor. Three blocks in a row give six slabs,
+  which is vanilla's own rate.
+
+  **They behave rather than only looking right.** Gravel and sand fall, and a top slab knocked loose
+  lands as a bottom one instead of coming to rest floating with a gap under it. Podzol takes the
+  snowy side under snow, but only as a top or double slab, because a bottom slab's upper face is
+  half way up its own block and a snow layer above it never touches. Rooted dirt grows hanging roots
+  when bonemealed, and refuses as a top slab, where the roots would start eight pixels low and could
+  not survive anyway. Mud is two pixels short, so you sink into it exactly as you do a mud block.
+
+  **Mining one gives half of what the whole block gives.** A podzol slab yields a dirt slab, the way
+  a podzol block yields dirt. Clay gives two clay balls and gravel keeps its flint chance.
+
+  **Gravel is crafted six-for-twelve rather than three-for-six**, at the same rate. Three gravel is
+  already this mod's own gravel-to-flint recipe, which is shapeless, so it matches any arrangement
+  of three and no three-gravel slab recipe could coexist with it.
+
+  Grass and mycelium were named in the same request and are deliberately not here. They spread, die
+  back and carry the snowy state, and none of that has an obvious reading on a half block. They will
+  arrive with that behaviour rather than as models that only look like grass. Snow blocks came out
+  too: three of them is already vanilla's snow layer recipe, and a snow layer is a stackable partial
+  snow block, so vanilla effectively has that one already.
+
+
 - **The woodcutter takes logs.** It only took planks, so a log put in the input offered nothing at
   all. A log now cuts into its planks at exactly the rate a crafting bench gives - four, or two for
   bamboo, which is the one family that breaks the pattern - and into a stripped log or a bark block

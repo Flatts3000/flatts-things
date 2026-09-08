@@ -2,6 +2,11 @@ package com.flatts.flattsthings.registry;
 
 import com.flatts.flattsthings.FlattsThings;
 import com.flatts.flattsthings.content.block.PlayerPressurePlateBlock;
+import com.flatts.flattsthings.content.terrain.FallingTerrainSlabBlock;
+import com.flatts.flattsthings.content.terrain.MudSlabBlock;
+import com.flatts.flattsthings.content.terrain.RootedDirtSlabBlock;
+import com.flatts.flattsthings.content.terrain.SnowyTerrainSlabBlock;
+import com.flatts.flattsthings.content.terrain.TerrainSlabBlock;
 import com.flatts.flattsthings.content.woodcutter.WoodcutterBlock;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -95,6 +100,98 @@ public final class FTBlocks {
                 props -> new PlayerPressurePlateBlock(variant.setType(), props),
                 () -> propertiesOf(variant.vanilla())));
         }
+    }
+
+    /**
+     * What behaviour a terrain family needs on top of being a slab.
+     *
+     * <p>Every one of these is a property of the MATERIAL rather than of the shape, and that split
+     * is what makes this feature small: vanilla's {@code SlabBlock} handles the half-block half and
+     * is subclassable, so only the material half is written here.
+     */
+    public enum SlabKind {
+        /** Nothing beyond being a slab: dirt, coarse dirt, clay. */
+        PLAIN,
+        /** Falls when unsupported, and lands the right way up. Gravel and the two sands. */
+        FALLING,
+        /** Carries the snowy blockstate. Podzol is the only one of the ten. */
+        SNOWY,
+        /** Grows hanging roots below when bonemealed. Rooted dirt. */
+        ROOTED,
+        /** Two pixels short, so you sink in. Mud. */
+        MUD
+    }
+
+    /**
+     * One terrain slab.
+     *
+     * @param family  the vanilla block id, so {@code coarse_dirt} gives {@code coarse_dirt_slab}
+     * @param vanilla the block this copies its properties from and is crafted out of
+     * @param kind    the material behaviour it needs beyond being a slab
+     */
+    public record TerrainSlabVariant(String family, Block vanilla, SlabKind kind) {
+        public String blockId() {
+            return family + "_slab";
+        }
+    }
+
+    /**
+     * The terrain families that get a slab, in creative-tab order (owner ruling, 2026-09-07, on the
+     * block-variants issue: the terrain set only, slabs only, one switch).
+     *
+     * <p><b>Nine, not the twelve the ruling named.</b> Snow blocks came out for a reason a test
+     * found rather than a reason anyone predicted: three of them in a row is already vanilla's snow
+     * LAYER recipe. Chasing that turned up the better argument - a snow layer is already a stackable
+     * partial snow block, so a snow slab is a thing vanilla effectively has, and this mod's entry
+     * test is that a thing should be something vanilla should plausibly have and does NOT.
+     *
+     * <p>And Grass and mycelium are absent on purpose: they
+     * spread, die back and take the snowy state, and vanilla implements all of that in
+     * {@code SpreadingSnowyBlock}, which no slab can extend because {@code SlabBlock} is already the
+     * parent. Shipping them as models with none of the behaviour is exactly the decorative grass
+     * slab that was rejected on the sibling issue, so they wait for a design of their own.
+     *
+     * <p>This list is mirrored by {@code tools/terrain_slab_variants.py}, and the same two tests
+     * close the loop that close it for the plates: a registry walk catches a family missing from the
+     * JAVA side, and {@code RegistryCompletenessTests} catches one missing from the GENERATOR side.
+     */
+    public static final List<TerrainSlabVariant> TERRAIN_SLABS = List.of(
+        new TerrainSlabVariant("dirt", Blocks.DIRT, SlabKind.PLAIN),
+        new TerrainSlabVariant("coarse_dirt", Blocks.COARSE_DIRT, SlabKind.PLAIN),
+        new TerrainSlabVariant("rooted_dirt", Blocks.ROOTED_DIRT, SlabKind.ROOTED),
+        new TerrainSlabVariant("podzol", Blocks.PODZOL, SlabKind.SNOWY),
+        new TerrainSlabVariant("mud", Blocks.MUD, SlabKind.MUD),
+        new TerrainSlabVariant("clay", Blocks.CLAY, SlabKind.PLAIN),
+        new TerrainSlabVariant("gravel", Blocks.GRAVEL, SlabKind.FALLING),
+        new TerrainSlabVariant("sand", Blocks.SAND, SlabKind.FALLING),
+        new TerrainSlabVariant("red_sand", Blocks.RED_SAND, SlabKind.FALLING));
+
+    /** Registered terrain slabs by family, in {@link #TERRAIN_SLABS} order. */
+    public static final Map<String, DeferredBlock<TerrainSlabBlock>> TERRAIN =
+        new LinkedHashMap<>();
+
+    static {
+        for (TerrainSlabVariant variant : TERRAIN_SLABS) {
+            TERRAIN.put(variant.family(), BLOCKS.registerBlock(
+                variant.blockId(),
+                props -> switch (variant.kind()) {
+                    case PLAIN -> new TerrainSlabBlock(props);
+                    case FALLING -> new FallingTerrainSlabBlock(props);
+                    case SNOWY -> new SnowyTerrainSlabBlock(props);
+                    case ROOTED -> new RootedDirtSlabBlock(props);
+                    case MUD -> new MudSlabBlock(props);
+                },
+                () -> propertiesOf(variant.vanilla())));
+        }
+    }
+
+    /** The slab for one terrain family. Throws rather than returning null - a typo here is a bug. */
+    public static DeferredBlock<TerrainSlabBlock> terrainSlab(String family) {
+        DeferredBlock<TerrainSlabBlock> block = TERRAIN.get(family);
+        if (block == null) {
+            throw new IllegalArgumentException("no terrain slab for family: " + family);
+        }
+        return block;
     }
 
     /**

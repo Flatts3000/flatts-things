@@ -1,0 +1,21 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "terrain_slabs"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###",
+    "###"
+  ],
+  "key": {
+    "#": "minecraft:gravel"
+  },
+  "result": {
+    "id": "flattsthings:gravel_slab",
+    "count": 12
+  }
+}

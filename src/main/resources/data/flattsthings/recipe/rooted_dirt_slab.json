@@ -1,0 +1,20 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "flattsthings:feature_enabled",
+      "feature": "terrain_slabs"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###"
+  ],
+  "key": {
+    "#": "minecraft:rooted_dirt"
+  },
+  "result": {
+    "id": "flattsthings:rooted_dirt_slab",
+    "count": 6
+  }
+}
