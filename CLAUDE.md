@@ -9,8 +9,8 @@ id / package: `flattsthings` / `com.flatts.flattsthings`.
 
 **Status:** v0.4.0 uploaded to CurseForge 2026-09-08 as an **alpha**, after v0.3.0 and v0.2.0 on
 2026-09-07 and v0.1.0 on 2026-09-05. The project is still Under Review, so nothing is visible to
-players yet. **Ten features on `main`**, all of them in an uploaded build. Last reviewed
-2026-09-08.
+players yet. **Eleven features on `main`**, the copper powered rails being the newest and the only
+one not yet in an uploaded build. Last reviewed 2026-09-08.
 
 | Feature | Config id | Where it is written up |
 | --- | --- | --- |

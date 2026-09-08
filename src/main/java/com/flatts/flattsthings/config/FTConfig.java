@@ -134,6 +134,12 @@ public final class FTConfig {
      * ruling cut all of it: no new block, no oxidation, no weaker push. Vanilla's powered rail, made
      * out of copper.
      *
+     * <p><b>No accessor, deliberately.</b> Nothing in Java asks about this feature: the switch acts
+     * entirely in data, through the {@code flattsthings:feature_enabled} condition on the recipe,
+     * which resolves the id as a string. {@code gravel_to_flint} and {@code silk_touch_budding_amethyst}
+     * are the same shape and ship none either. A method nobody calls would also be an uncovered line
+     * in a package the merged coverage gate measures.
+     *
      * <p><b>Three rails rather than six, and that number is the whole balance of it.</b> A straight
      * substitution would leave the gold recipe with nothing to offer - copper is the metal vanilla
      * gives players tonnes of - so the cheaper ingredient buys fewer rails and gold stays the
@@ -381,10 +387,6 @@ public final class FTConfig {
 
     public static boolean enchantedGoldenApple() {
         return enabled(ENCHANTED_GOLDEN_APPLE);
-    }
-
-    public static boolean copperPoweredRails() {
-        return enabled(COPPER_POWERED_RAILS);
     }
 
     public static boolean terrainSlabs() {

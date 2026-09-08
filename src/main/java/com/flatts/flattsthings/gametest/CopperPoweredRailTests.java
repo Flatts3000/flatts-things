@@ -73,8 +73,17 @@ final class CopperPoweredRailTests {
             helper.succeed();
         });
 
-        // THE CONTROL. Two shaped recipes on the same footprint differing by one ingredient is the
-        // shape where one shadows the other, and the manager reports nothing when it happens.
+        // THE CONTROL, and NOT for the reason this comment used to give.
+        //
+        // It said two shaped recipes on one footprint differing by an ingredient is the shape where
+        // one shadows the other. That is wrong and was disproved by driving it red: pointing the
+        // copper recipe at gold left this test passing, because a grid of gold matches only
+        // vanilla's recipe and a grid of copper only ours. Different ingredients cannot collide.
+        //
+        // Kept and corrected rather than deleted, because the javadoc above was fixed while this was
+        // left standing - so for a while the class asserted one thing at the top and the opposite
+        // sixty lines down. What this guards is in the javadoc: the plausible EDIT that loosens the
+        // ingredient to a tag matching gold too.
         FTGameTests.test("gold_still_crafts_six_powered_rails", 30, helper -> {
             Optional<RecipeHolder<CraftingRecipe>> found = craft(helper, Items.GOLD_INGOT);
             helper.assertTrue(found.isPresent(),

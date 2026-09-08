@@ -1,7 +1,8 @@
 # Flatts's Things
 
 **Status:** v0.4.0 uploaded to CurseForge 2026-09-08 as an alpha. The project is still Under Review,
-so nothing is downloadable by anyone yet. Ten features. Last reviewed 2026-09-08.
+so nothing is downloadable by anyone yet. Eleven features, the newest not yet uploaded. Last
+reviewed 2026-09-08.
 
 A grab bag of blocks, tools and small features that vanilla Minecraft never shipped.
 
@@ -187,8 +188,8 @@ Vanilla puts the only rail that accelerates behind six gold, which is why early 
 pushing.
 
 Half the yield is the point: a straight swap would leave the gold recipe with nothing to offer.
-Copper buys rails early, gold stays worth using once you have it. It makes the ordinary powered rail
-- there is no copper rail block and nothing oxidises.
+Copper buys rails early, gold stays worth using once you have it. It makes the ordinary powered
+rail: there is no copper rail block and nothing oxidises.
 
 ## Every feature has a switch
 
