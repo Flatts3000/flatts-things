@@ -3,6 +3,7 @@ package com.flatts.flattsthings.gametest;
 import java.util.ArrayList;
 import java.util.List;
 import com.flatts.flattsthings.content.woodcutter.WoodCuttingRecipe;
+import com.flatts.flattsthings.content.woodcutter.WoodcutterMenu;
 import com.flatts.flattsthings.registry.FTRecipes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -44,6 +45,38 @@ final class WoodCuttingTests {
             .getRecipesFor(FTRecipes.WOOD_CUTTING_TYPE.get(), new SingleRecipeInput(input),
                 helper.getLevel())
             .toList();
+    }
+
+    private static Item itemOf(String path) {
+        return BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace(path));
+    }
+
+    /** The log-ish block a family is cut from, or null if it has none under a known name. */
+    private static Item logFor(String wood) {
+        for (String suffix : new String[] {"_log", "_stem", "_block"}) {
+            Identifier id = Identifier.withDefaultNamespace(wood + suffix);
+            if (BuiltInRegistries.ITEM.containsKey(id)) {
+                return BuiltInRegistries.ITEM.getValue(id);
+            }
+        }
+        return null;
+    }
+
+    /** How many {@code want} one {@code input} cuts into, or 0 if that cut is not offered. */
+    private static int yieldOf(net.minecraft.gametest.framework.GameTestHelper helper,
+                               ItemStack input, Item want) {
+        for (RecipeHolder<WoodCuttingRecipe> holder : cuttingFor(helper, input)) {
+            ItemStack result = holder.value().assemble(new SingleRecipeInput(input));
+            if (result.is(want)) {
+                return result.getCount();
+            }
+        }
+        return 0;
+    }
+
+    private static int plankYield(net.minecraft.gametest.framework.GameTestHelper helper,
+                                  Item log, Item planks) {
+        return yieldOf(helper, new ItemStack(log), planks);
     }
 
     /**
@@ -123,21 +156,126 @@ final class WoodCuttingTests {
             helper.succeed();
         });
 
-        // AND IT MUST NOT HAVE TAUGHT THE STONECUTTER ANYTHING ELSE. Adding recipes to a vanilla
-        // recipe type is a wide door: the negative here is that a plank does not become a door, a
-        // sign or somebody else's block, which is what a typo in the generator would produce.
-        FTGameTests.test("cutting_planks_makes_only_stairs_and_slabs", 20, helper -> {
-            ItemStack planks = new ItemStack(Items.OAK_PLANKS);
-            List<String> unexpected = new ArrayList<>();
-            for (RecipeHolder<WoodCuttingRecipe> holder : cuttingFor(helper, planks)) {
-                ItemStack result = holder.value()
-                    .assemble(new SingleRecipeInput(planks));
-                if (!result.is(Items.OAK_STAIRS) && !result.is(Items.OAK_SLAB)) {
-                    unexpected.add(result.getItem().toString());
+        // THE AUDITED SET AND NOTHING MORE, which is the negative that keeps the balance argument
+        // honest. A cut consumes exactly ONE input, so anything costing more than one plank on a
+        // bench would come out proportionally cheaper - a door twice, a trapdoor three times, a
+        // fence gate five. Only planks, sticks, buttons, slabs and stairs cost a plank or less, and
+        // this fails the moment something dearer appears.
+        FTGameTests.test("cutting_planks_makes_only_the_audited_set", 40, helper -> {
+            // EVERY FAMILY, NOT JUST OAK. This looked at oak alone, which was defensible while every
+            // recipe came out of one uniform loop. log_cuts now branches per family - bamboo has no
+            // bark form and a different plank rate - so a mistake in crimson, warped or bamboo had
+            // nothing looking at it.
+            List<String> wrong = new ArrayList<>();
+            for (String wood : woodFamilies()) {
+                ItemStack planks = new ItemStack(BuiltInRegistries.ITEM.getValue(
+                    Identifier.withDefaultNamespace(wood + "_planks")));
+                List<Item> allowed = List.of(
+                    itemOf(wood + "_stairs"), itemOf(wood + "_slab"),
+                    itemOf(wood + "_button"), Items.STICK);
+
+                List<Item> offered = cuttingFor(helper, planks).stream()
+                    .map(holder -> holder.value().assemble(new SingleRecipeInput(planks)).getItem())
+                    .toList();
+
+                for (Item result : offered) {
+                    if (!allowed.contains(result)) {
+                        wrong.add(wood + " planks -> " + result);
+                    }
+                }
+                // AND EXACTLY THOSE FOUR. Listing what is allowed only catches something dearer
+                // sneaking in; it says nothing about one of the four going missing.
+                for (Item want : allowed) {
+                    if (!offered.contains(want)) {
+                        wrong.add(wood + " planks no longer cut " + want);
+                    }
                 }
             }
-            helper.assertTrue(unexpected.isEmpty(),
-                "a stonecutter offered more from oak planks than stairs and a slab: " + unexpected);
+            helper.assertTrue(wrong.isEmpty(),
+                "planks must cut into exactly stairs, a slab, a button and sticks: " + wrong);
+            helper.succeed();
+        });
+
+        // THE THREE THE AUDIT ADDED, each at exactly the bench rate. A stick is what cutting wood
+        // makes and was the most obviously missing thing on the bench; a button is one plank either
+        // way; a shelf is six stripped logs for six, so one for one.
+        FTGameTests.test("planks_and_logs_cut_the_things_a_bench_makes_from_them", 20, helper -> {
+            ItemStack planks = new ItemStack(Items.OAK_PLANKS);
+            helper.assertTrue(yieldOf(helper, planks, Items.STICK) == 2,
+                "two planks make four sticks on a bench, so one plank should cut two; cut "
+                    + yieldOf(helper, planks, Items.STICK));
+            helper.assertTrue(yieldOf(helper, planks, Items.OAK_BUTTON) == 1,
+                "a button is one plank either way; cut "
+                    + yieldOf(helper, planks, Items.OAK_BUTTON));
+
+            ItemStack stripped = new ItemStack(Items.STRIPPED_OAK_LOG);
+            helper.assertTrue(yieldOf(helper, stripped, Items.OAK_SHELF) == 1,
+                "six stripped logs make six shelves, so one should cut one; cut "
+                    + yieldOf(helper, stripped, Items.OAK_SHELF));
+            helper.succeed();
+        });
+
+        // A LOG BELONGS ON A SAW BENCH, and the first version of this feature refused one - reported
+        // with a screenshot of a log in the input offering nothing at all. Derived from the registry
+        // the same way the plank sweep is: every family whose planks come from a log-ish tag must
+        // cut that log into planks, at vanilla's own rate.
+        FTGameTests.test("every_log_cuts_into_its_planks", 40, helper -> {
+            List<String> missing = new ArrayList<>();
+            List<String> unnamed = new ArrayList<>();
+            for (String wood : woodFamilies()) {
+                Item logItem = logFor(wood);
+                if (logItem == null) {
+                    // NOT A SKIP. This used to `continue`, which made the sweep claim more than it
+                    // checked: a family whose source block is named by some fourth convention - the
+                    // way pale oak arrived - would be quietly passed over while the woodcutter
+                    // refused its log, which is the exact failure this test exists to catch.
+                    unnamed.add(wood);
+                    continue;
+                }
+                ItemStack log = new ItemStack(logItem);
+                boolean planks = cuttingFor(helper, log).stream()
+                    .map(holder -> holder.value().assemble(new SingleRecipeInput(log)))
+                    .anyMatch(result -> result.getItem() == BuiltInRegistries.ITEM.getValue(
+                        Identifier.withDefaultNamespace(wood + "_planks")));
+                if (!planks) {
+                    missing.add(wood);
+                }
+            }
+            helper.assertTrue(unnamed.isEmpty(),
+                "no log-ish block found for these families under _log, _stem or _block, so this"
+                    + " sweep cannot speak for them and logFor needs the new name: " + unnamed);
+            helper.assertTrue(missing.isEmpty(),
+                "these logs could not be cut into their planks: " + missing);
+            helper.succeed();
+        });
+
+        // THE RATE IS VANILLA'S, NOT A BETTER ONE. A bench turns any log-family block into four
+        // planks, and bamboo into two - the one family that breaks the pattern, which is exactly why
+        // this asserts a specific number rather than "some planks".
+        FTGameTests.test("cutting_a_log_yields_what_a_bench_yields", 20, helper -> {
+            helper.assertTrue(plankYield(helper, Items.OAK_LOG, Items.OAK_PLANKS) == 4,
+                "an oak log should cut into four planks, cut "
+                    + plankYield(helper, Items.OAK_LOG, Items.OAK_PLANKS));
+            helper.assertTrue(plankYield(helper, Items.BAMBOO_BLOCK, Items.BAMBOO_PLANKS) == 2,
+                "a bamboo block should cut into two, the way a bench does, cut "
+                    + plankYield(helper, Items.BAMBOO_BLOCK, Items.BAMBOO_PLANKS));
+            helper.succeed();
+        });
+
+        // AND THE OTHER THING A SAW DOES TO A LOG. Stripping is the cut the report actually asked
+        // for by name, and the bark form is the third.
+        FTGameTests.test("a_log_can_be_stripped_and_barked", 20, helper -> {
+            ItemStack log = new ItemStack(Items.OAK_LOG);
+            List<Item> offered = cuttingFor(helper, log).stream()
+                .map(holder -> holder.value().assemble(new SingleRecipeInput(log)).getItem())
+                .toList();
+
+            helper.assertTrue(offered.contains(Items.STRIPPED_OAK_LOG),
+                "a log should offer a stripped log, offered " + offered);
+            helper.assertTrue(offered.contains(Items.OAK_WOOD),
+                "and the bark block, offered " + offered);
+            helper.assertTrue(offered.size() <= WoodcutterMenu.MAX_OPTIONS,
+                "and no more than the menu can show, offered " + offered.size());
             helper.succeed();
         });
 

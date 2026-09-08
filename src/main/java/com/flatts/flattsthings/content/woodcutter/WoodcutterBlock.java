@@ -26,7 +26,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A saw bench for wood: planks in, stairs or a slab out.
+ * A saw bench for wood: logs into planks, planks into shapes.
  *
  * <p><b>Extends {@code Block} rather than {@code StonecutterBlock}, and that is forced.</b>
  * {@code StonecutterBlock.codec()} returns {@code MapCodec<StonecutterBlock>}; generics are

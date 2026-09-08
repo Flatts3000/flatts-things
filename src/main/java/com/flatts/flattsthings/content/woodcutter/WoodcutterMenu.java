@@ -49,10 +49,14 @@ public class WoodcutterMenu extends AbstractContainerMenu {
     /**
      * How many cuts one input may offer.
      *
-     * <p>Everything this mod ships offers two - a stair and a slab - so this is headroom for a data
-     * pack, not a number anything needs today. It is a fixed count because the slots have to exist
-     * before the recipes are known: a menu's slot list is built in the constructor and is the thing
-     * being synced.
+     * <p>The most any shipped input offers is FOUR: planks cut into stairs, a slab, a button or
+     * sticks. It was two when this was written, and the number here is the sort of headroom that
+     * quietly stops being headroom - if a future addition takes an input past eight,
+     * {@code refreshOptions} truncates with {@code limit} and the extra cuts simply never appear.
+     * {@code a_woodcutter_offers_exactly_the_audited_cuts} is what would notice.
+     *
+     * <p>It is a fixed count because the slots have to exist before the recipes are known: a menu's
+     * slot list is built in the constructor and is the thing being synced.
      */
     public static final int MAX_OPTIONS = 8;
 
