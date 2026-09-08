@@ -7,6 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EntityType;
@@ -109,6 +114,23 @@ final class TerrainSlabTests {
             }
         }
         return false;
+    }
+
+    /**
+     * Swing a hoe at the top face of a block, the way a player does.
+     *
+     * <p><b>Through {@code ItemStack.useOn}, not {@code Item.useOn}.</b> The stack method is where
+     * NeoForge posts {@code UseItemOnBlockEvent} and routes into {@code CommonHooks}; the item
+     * method is downstream of both. Calling the item directly - which this did at first - means an
+     * event handler that tilled slabs would never be seen, and an event handler is precisely how
+     * this mod adds behaviour to vanilla items everywhere else.
+     */
+    private static void useHoeOn(GameTestHelper helper, BlockPos pos) {
+        BlockPos abs = helper.absolutePos(pos);
+        ItemStack hoe = new ItemStack(Items.IRON_HOE);
+        UseOnContext context = new UseOnContext(helper.getLevel(), null, InteractionHand.MAIN_HAND,
+            hoe, new BlockHitResult(Vec3.atCenterOf(abs), Direction.UP, abs, false));
+        context.getItemInHand().useOn(context);
     }
 
     private static void report(GameTestHelper helper, List<String> problems, String what) {
@@ -540,6 +562,57 @@ final class TerrainSlabTests {
             if (!grew) {
                 helper.fail("bone meal on a top grass slab was consumed thirty times and grew"
                     + " nothing");
+            }
+            helper.succeed();
+        });
+
+        // NO TILLING ON SLABS (owner, 2026-09-08), and this needed no code - only pinning.
+        //
+        // NOT because of HoeItem.TILLABLES, which is what the first version of this comment said.
+        // That map is @Deprecated with "Forge: This map is patched out of vanilla code" and appears
+        // nowhere but its own declaration; a put into it does nothing. What actually decides is
+        // IBlockExtension.getToolModifiedState, which HoeItem.useOn consults and whose default
+        // hardcodes GRASS_BLOCK, DIRT_PATH, DIRT, COARSE_DIRT and ROOTED_DIRT - no slabs.
+        //
+        // So the ruling and the behaviour agree by accident, which is the situation most worth a
+        // test: nothing in this repo says "do not till", so nothing would object if that changed.
+        //
+        // DRIVEN THROUGH ItemStack.useOn RATHER THAN Item.useOn, and that is the point of the test
+        // rather than a detail. ItemStack.useOn is where NeoForge posts UseItemOnBlockEvent; the
+        // Item method skips it. This repo's stated way of changing vanilla item behaviour is an
+        // event rather than a mixin - the enchanted apple and the cauldron transforms both do it -
+        // so the likeliest way a slab ever becomes tillable is the one path calling the Item
+        // directly cannot see.
+        //
+        // ALL THREE HALVES, because the ruling says "on any half" and getToolModifiedState takes a
+        // BlockState rather than a Block, so a half-sensitive regression is representable.
+        //
+        // WITH A VANILLA CONTROL, per the house rule. A test that only checks the hoe did nothing
+        // passes just as well when the hoe was never swung, the position was wrong, or the API
+        // moved. The control tills real dirt in the same test with the same call.
+        FTGameTests.test("a_hoe_tills_dirt_and_refuses_a_dirt_slab", 30, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(ABOVE, Blocks.AIR);
+
+            // The control first: if this does not till, nothing below means anything.
+            helper.setBlock(SLAB, Blocks.DIRT);
+            useHoeOn(helper, SLAB);
+            if (!helper.getBlockState(SLAB).is(Blocks.FARMLAND)) {
+                helper.fail("the control failed: a hoe did not till plain dirt, so this test cannot"
+                    + " say anything about what it does to a slab");
+            }
+
+            for (String family : List.of("dirt", "grass_block", "coarse_dirt", "rooted_dirt")) {
+                for (SlabType half : SlabType.values()) {
+                    helper.setBlock(SLAB, slab(family).defaultBlockState()
+                        .setValue(SlabBlock.TYPE, half));
+                    useHoeOn(helper, SLAB);
+                    if (!helper.getBlockState(SLAB).is(slab(family))) {
+                        helper.fail("a hoe changed the " + half + " " + family + " slab into "
+                            + helper.getBlockState(SLAB).getBlock()
+                            + "; slabs are not tillable on any half (owner, 2026-09-08)");
+                    }
+                }
             }
             helper.succeed();
         });

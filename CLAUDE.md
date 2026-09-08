@@ -996,6 +996,39 @@ ABOVE does and is what vanilla is actually measuring. **Nothing in the suite saw
 other spreading test happened to use a bottom slab; it surfaced only when a NEGATIVE test refused to
 fail during a red drive. A test that cannot fail is worth chasing down even when everything is green.
 
+### No tilling on slabs, and the ruling agrees with the code by accident
+
+**(owner, 2026-09-08)** A hoe does nothing to a terrain slab, on any half. That was already true
+before the ruling, for a reason nobody chose.
+
+**`HoeItem.TILLABLES` is NOT that reason, and the first version of this section said it was.** That
+map carries `@Deprecated` and the javadoc "Forge: This map is patched out of vanilla code"; a grep of
+the whole patched tree finds it in exactly one place, its own declaration. Nothing reads it, so a
+`put` into it changes nothing at all. The section was written after reading the map and stopping
+there - the `@Deprecated` was on screen at the time and went unfollowed.
+
+**What actually decides it is `IBlockExtension.getToolModifiedState`.** `HoeItem.useOn` asks
+`level.getBlockState(pos).getToolModifiedState(context, ItemAbilities.HOE_TILL, false)` and does
+nothing when that is null. The default implementation hardcodes `GRASS_BLOCK`, `DIRT_PATH`, `DIRT`,
+`COARSE_DIRT` and `ROOTED_DIRT`, and a slab of any of them is not among them.
+
+**So there are two live seams, and both are open**: overriding `getToolModifiedState` on a block, and
+`UseItemOnBlockEvent`. The second matters most here, because this repo's stated preference is to
+change vanilla item behaviour through events rather than mixins - the enchanted apple and the
+cauldron transforms both do exactly that, and `CauldronTransforms` names `UseItemOnBlockEvent`. The
+most plausible way this mod ever tills a slab is the way it already adds behaviour everywhere else.
+
+`a_hoe_tills_dirt_and_refuses_a_dirt_slab` pins it **through `ItemStack.useOn`**, which is where
+`UseItemOnBlockEvent` is posted, rather than through `Item.useOn`, which skips it. Calling the item
+directly would have left the suite green against the one regression worth fearing. It also carries a
+**vanilla control**, because a test that only checks the hoe did nothing passes just as well when the
+hoe was never swung, the position was wrong, or the API moved.
+
+**The shovel is the opposite case, and saying the two were "keyed the same way" got both wrong.**
+`ShovelItem.FLATTENABLES` IS still read, by `getShovelPathingState`, which `IBlockExtension` calls. A
+`put` there really would work. Slabs are absent from it, which is why shovelling one into a dirt path
+does nothing - but that is a live map, not a dead one.
+
 ### A tintindex names a tint slot; something has to fill it
 
 **The grass slab shipped rendering flat white-grey next to a green vanilla grass block.** Its model
