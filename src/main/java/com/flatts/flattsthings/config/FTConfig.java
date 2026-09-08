@@ -253,6 +253,10 @@ public final class FTConfig {
             "dirt, rooted dirt, podzol and mud - on a TOP or double slab. A bottom slab refuses,",
             "because its surface is half way up its own block and a plant would sprout floating.",
             "",
+            "A hoe does NOT till a slab, on any half. Half a block of farmland would need a",
+            "farmland slab to become, and a crop planted on one would render floating over a bottom",
+            "slab, so slabs stay untilled and the hoe does nothing.",
+            "",
             "Off removes them from the creative tab and drops their recipes. Slabs already placed",
             "keep working exactly as they did.");
 

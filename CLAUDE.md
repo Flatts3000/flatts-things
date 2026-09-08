@@ -996,6 +996,23 @@ ABOVE does and is what vanilla is actually measuring. **Nothing in the suite saw
 other spreading test happened to use a bottom slab; it surfaced only when a NEGATIVE test refused to
 fail during a red drive. A test that cannot fail is worth chasing down even when everything is green.
 
+### No tilling on slabs, and the ruling agrees with the code by accident
+
+**(owner, 2026-09-08)** A hoe does nothing to a terrain slab, on any half. That was already true
+before the ruling and for a reason nobody chose: `HoeItem.TILLABLES` is a `Map` keyed on specific
+vanilla `Block` instances - `GRASS_BLOCK`, `DIRT_PATH`, `DIRT`, `COARSE_DIRT`, `ROOTED_DIRT` - so a
+slab of any of them is simply not in it.
+
+**Nothing in this repo's code says "do not till", which is exactly why it needed a test.** The map is
+`Maps.newHashMap(...)` rather than immutable, and it exists for mods to add to; one `put` somewhere,
+ours or another mod's, silently reverses the ruling. A farmland slab is a block this mod does not
+have, so the result would be a hoe that deletes the slab.
+
+`a_hoe_tills_dirt_and_refuses_a_dirt_slab` pins it **with a vanilla control**, because a test that
+only checks the hoe did nothing passes just as well when the hoe was never swung, the position was
+wrong, or the API moved. Shovelling a slab into a dirt path is unaffected and equally impossible for
+the same reason: `ShovelItem.FLATTENABLES` is keyed the same way.
+
 ### A tintindex names a tint slot; something has to fill it
 
 **The grass slab shipped rendering flat white-grey next to a green vanilla grass block.** Its model

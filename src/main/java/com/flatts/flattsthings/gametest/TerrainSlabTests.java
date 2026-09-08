@@ -7,6 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.EntityType;
@@ -109,6 +114,15 @@ final class TerrainSlabTests {
             }
         }
         return false;
+    }
+
+    /** Swing a hoe at the top face of a block, the way a player does. */
+    private static void useHoeOn(GameTestHelper helper, BlockPos pos) {
+        BlockPos abs = helper.absolutePos(pos);
+        UseOnContext context = new UseOnContext(helper.getLevel(), null, InteractionHand.MAIN_HAND,
+            new ItemStack(Items.IRON_HOE),
+            new BlockHitResult(Vec3.atCenterOf(abs), Direction.UP, abs, false));
+        Items.IRON_HOE.useOn(context);
     }
 
     private static void report(GameTestHelper helper, List<String> problems, String what) {
@@ -540,6 +554,46 @@ final class TerrainSlabTests {
             if (!grew) {
                 helper.fail("bone meal on a top grass slab was consumed thirty times and grew"
                     + " nothing");
+            }
+            helper.succeed();
+        });
+
+        // NO TILLING ON SLABS (owner, 2026-09-08), and this needed no code - only pinning.
+        //
+        // HoeItem.TILLABLES is a Map keyed on specific vanilla Block instances - GRASS_BLOCK,
+        // DIRT_PATH, DIRT, COARSE_DIRT, ROOTED_DIRT - so a hoe already does nothing to a slab of
+        // any of them. The ruling and the behaviour agree by accident rather than by design, which
+        // is exactly the situation worth a test: nothing in the code says "do not till", so nothing
+        // would object if a later change made it happen.
+        //
+        // And it could. That map is `Maps.newHashMap(...)` rather than an immutable one, and it is
+        // there for mods to add to. A single put() somewhere - ours or another mod's - silently
+        // reverses a ruling, and a farmland slab is a block this mod does not have, so the result
+        // would be a hoe that deletes the slab.
+        //
+        // WITH A VANILLA CONTROL, per the house rule. A test that only checks the hoe did nothing
+        // passes just as well when the hoe was never swung, the position was wrong, or the API
+        // moved. The control tills real dirt in the same test with the same call.
+        FTGameTests.test("a_hoe_tills_dirt_and_refuses_a_dirt_slab", 30, helper -> {
+            helper.setBlock(FLOOR, Blocks.STONE);
+            helper.setBlock(ABOVE, Blocks.AIR);
+
+            // The control first: if this does not till, nothing below means anything.
+            helper.setBlock(SLAB, Blocks.DIRT);
+            useHoeOn(helper, SLAB);
+            if (!helper.getBlockState(SLAB).is(Blocks.FARMLAND)) {
+                helper.fail("the control failed: a hoe did not till plain dirt, so this test cannot"
+                    + " say anything about what it does to a slab");
+            }
+
+            for (String family : List.of("dirt", "grass_block", "coarse_dirt", "rooted_dirt")) {
+                helper.setBlock(SLAB, slab(family));
+                useHoeOn(helper, SLAB);
+                if (!helper.getBlockState(SLAB).is(slab(family))) {
+                    helper.fail("a hoe changed the " + family + " slab into "
+                        + helper.getBlockState(SLAB).getBlock()
+                        + "; slabs are not tillable (owner, 2026-09-08)");
+                }
             }
             helper.succeed();
         });
